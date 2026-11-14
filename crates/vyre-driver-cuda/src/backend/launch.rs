@@ -455,26 +455,6 @@ impl CudaBackend {
         Ok(())
     }
 
-    pub(crate) fn launch_resolved_function(
-        &self,
-        func: CUfunction,
-        kernel_args: &mut SmallVec<[*mut std::ffi::c_void; 8]>,
-        launch: &LaunchPlan,
-        stream: CUstream,
-        synchronize: bool,
-        cooperative: bool,
-    ) -> Result<(), BackendError> {
-        self.validate_resolved_launch_function(func, launch, cooperative)?;
-        self.launch_prevalidated_function(
-            func,
-            kernel_args,
-            launch,
-            stream,
-            synchronize,
-            cooperative,
-        )
-    }
-
     pub(crate) fn launch_prevalidated_function(
         &self,
         func: CUfunction,

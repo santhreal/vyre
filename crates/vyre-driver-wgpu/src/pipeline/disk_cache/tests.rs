@@ -386,8 +386,8 @@ mod cache_key_contracts {
         );
 
         assert_eq!(
-            vyre_driver::normalized_program_cache_digest(&a),
-            vyre_driver::normalized_program_cache_digest(&b),
+            vyre_driver::try_normalized_program_cache_digest(&a).unwrap(),
+            vyre_driver::try_normalized_program_cache_digest(&b).unwrap(),
             "storage buffer lengths must not perturb the compile fingerprint"
         );
     }

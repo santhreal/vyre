@@ -1,9 +1,7 @@
 //! Cross-emitter parity: every descriptor in the corpus verifies and emits
-//! through Naga, PTX, and SPIR-V, and every audit layer reports the kernel id
-//! and target it was handed. A failure in any target breaks the
+//! through Naga, PTX, and SPIR-V. A failure in any target breaks the
 //! substrate-neutral `KernelDescriptor` contract for that shape.
 
-use vyre_emit::ptx::ComputeCapability;
 use vyre_foundation::ir::{BinOp, DataType};
 use vyre_lower::descriptor_builder::{
     body, descriptor, effect, global_rw, lit, op, store_literal_kernel,
@@ -156,20 +154,6 @@ fn corpus() -> [KernelDescriptor; 8] {
     ]
 }
 
-/// Every audit layer, substrate-neutral and per-target, reports the kernel id
-/// it was handed and the target it was asked about.
-fn assert_audits_carry_kernel_id(desc: &KernelDescriptor, target: ComputeCapability) {
-    assert_eq!(
-        vyre_lower::audit(desc, &vyre_lower::analyses::AnalysisFacts::none()).kernel_id,
-        desc.id
-    );
-    assert_eq!(vyre_emit::naga::patterns::audit(desc).kernel_id, desc.id);
-    let ptx = vyre_emit::ptx::patterns::audit(desc, target);
-    assert_eq!(ptx.kernel_id, desc.id);
-    assert_eq!(ptx.target, target);
-    assert_eq!(vyre_emit::spirv::patterns::audit(desc).kernel_id, desc.id);
-}
-
 #[test]
 fn every_descriptor_emits_through_every_target() {
     for desc in corpus() {
@@ -204,9 +188,6 @@ fn every_descriptor_emits_through_every_target() {
             .unwrap_or_else(|error| panic!("SPIR-V emit failed for `{id}`: {error:?}"));
         assert_eq!(spirv.first().copied(), Some(vyre_emit::spirv::SPIRV_MAGIC));
         assert!(spirv.len() > 16, "SPIR-V for `{id}` is a bare header");
-
-        assert_audits_carry_kernel_id(&desc, ComputeCapability::SM_80);
-        assert_audits_carry_kernel_id(&verified, ComputeCapability::SM_70);
     }
 }
 

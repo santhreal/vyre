@@ -6,32 +6,25 @@ mod indirect;
 mod launch_geometry;
 mod outputs;
 
-pub use dispatch_params::{
-    dispatch_element_count, dispatch_element_count_for_program, dispatch_param_words_into,
-    try_dispatch_param_words, try_dispatch_param_words_into,
-};
+pub use dispatch_params::{dispatch_element_count_for_program, try_dispatch_param_words_into};
 pub use grid::{
-    admit_dispatch_grid, auto_grid, coerce_to_pow2_with_tail_mask, infer_dispatch_grid,
-    infer_dispatch_grid_for_count, infer_launch_grid, try_coerce_to_pow2_with_tail_mask,
-    TailMaskPolicy,
+    admit_dispatch_grid, infer_dispatch_grid, infer_dispatch_grid_for_count, infer_launch_grid,
 };
 pub use indirect::{find_indirect_dispatch, IndirectDispatch};
 pub(crate) use launch_geometry::program_uses_launch_geometry_ids;
 pub use outputs::{
-    element_size_bytes, enforce_actual_output_budget, output_binding_layout,
-    output_binding_layout_parts, output_binding_layouts, output_binding_layouts_into,
-    output_layout_from_program, OutputBindingLayout, OutputLayout,
+    element_size_bytes, enforce_actual_output_budget, output_binding_layout_parts,
+    output_binding_layouts, output_layout_from_program, OutputBindingLayout, OutputLayout,
 };
 
-// Inline: `program_walks` is a `pub(crate)` module, so `infer_dispatch_grid` and
-// `dispatch_param_words_into` are unreachable from an integration test.
+// Inline: `program_walks` is a `pub(crate)` module, so `infer_dispatch_grid` is
+// unreachable from an integration test.
 #[cfg(test)]
 mod tests {
     use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 
-    use super::{dispatch_param_words_into, infer_dispatch_grid};
+    use super::infer_dispatch_grid;
     use crate::backend::DispatchConfig;
-    use crate::binding::{Binding, BindingRole};
     use vyre_foundation::ir::{Expr, Node};
 
     fn singleton_atomic_byte_flag_program() -> Program {
@@ -184,41 +177,5 @@ mod tests {
             .expect("Fix: read-write live-out buffers should size the dispatch span");
 
         assert_eq!(grid, [1, 1, 1]);
-    }
-
-    #[test]
-    fn dispatch_param_words_into_reuses_output_buffer() {
-        let bindings = vec![
-            Binding {
-                name: std::sync::Arc::from("a"),
-                binding: 0,
-                buffer_index: 0,
-                role: BindingRole::Input,
-                element_size: 4,
-                preferred_alignment: 4,
-                element_count: 7,
-                static_byte_len: Some(28),
-                input_index: Some(0),
-                output_index: None,
-            },
-            Binding {
-                name: std::sync::Arc::from("dynamic"),
-                binding: 4,
-                buffer_index: 4,
-                role: BindingRole::Output,
-                element_size: 4,
-                preferred_alignment: 4,
-                element_count: 0,
-                static_byte_len: None,
-                input_index: None,
-                output_index: Some(0),
-            },
-        ];
-        let mut words = Vec::with_capacity(8);
-        let ptr = words.as_ptr();
-        dispatch_param_words_into(&bindings, 11, &mut words)
-            .expect("Fix: dispatch_param_words_into must succeed for valid bindings");
-        assert_eq!(words, vec![11, 7, 0, 0, 0, 11]);
-        assert_eq!(words.as_ptr(), ptr);
     }
 }

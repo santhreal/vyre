@@ -29,7 +29,6 @@ pub mod analyses;
 /// test, so this is not part of the shipped surface: enable `test-fixtures` to reach it.
 #[cfg(any(test, feature = "test-fixtures"))]
 pub mod artifact_golden;
-pub(crate) mod audit;
 pub(crate) mod canonicalize;
 pub(crate) mod descriptor;
 /// Fixture builders for kernel descriptors. Every consumer is a test, so this
@@ -47,7 +46,6 @@ mod level_stage;
 pub(crate) mod lower;
 pub(crate) mod op_facts;
 pub mod operand_class;
-pub mod pattern_audit;
 /// Backend-neutral `Program` corpus shared by byte-stability goldens.
 /// Test-only, like `descriptor_builder`: enable `test-fixtures` to reach it.
 #[cfg(any(test, feature = "test-fixtures"))]
@@ -60,10 +58,6 @@ pub(crate) mod target;
 pub mod variant_space;
 mod verified_lowering;
 pub(crate) mod verify;
-
-pub use audit::{
-    audit, audit_with_histogram, PerfAuditReport, Recommendation, RecommendationCategory,
-};
 
 /// Verify a raw descriptor, apply bounded representation canonicalization, and
 /// verify the emitter-ready result.
@@ -100,144 +94,6 @@ impl VerifyFailure {
     }
 }
 
-/// Run every read-only descriptor analysis and verification in one call.
-///
-/// `facts` carries the device capacities the target reported, passed through
-/// to [`audit`]. A caller with none passes [`analyses::AnalysisFacts::none`]
-/// and the report carries no section that would need one.
-#[must_use]
-pub fn full_report(desc: &KernelDescriptor, facts: &analyses::AnalysisFacts) -> FullReport {
-    let verify = verify::verify(desc);
-    let fix_text = build_full_report_fix_text(&verify);
-    FullReport {
-        descriptor_id: desc.id.clone(),
-        summary: desc.summary(),
-        histogram: analyses::op_histogram::analyze(desc),
-        perf: audit::audit(desc, facts),
-        verify,
-        fix_text,
-    }
-}
-
-/// Read-only descriptor analysis bundle.
-#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
-pub struct FullReport {
-    #[serde(default)]
-    /// Stable descriptor identifier.
-    pub descriptor_id: String,
-    /// Descriptor summary.
-    pub summary: String,
-    /// Input operation histogram.
-    pub histogram: analyses::op_histogram::OpHistogram,
-    /// Input performance audit.
-    pub perf: PerfAuditReport,
-    /// Descriptor verification result.
-    pub verify: verify::VerifyResult,
-    #[serde(default)]
-    /// Actionable verification failure guidance.
-    pub fix_text: String,
-}
-
-impl FullReport {
-    /// Return the stable verification status label.
-    #[must_use]
-    pub fn verify_status(&self) -> &'static str {
-        verification_status(&self.verify)
-    }
-
-    /// One-line headline drawn from the underlying parts. Useful for
-    /// log lines.
-    pub fn format_short(&self) -> String {
-        format!(
-            "{} | id {} | {} | {} | verify {}",
-            self.summary,
-            self.descriptor_id,
-            self.histogram.format_short(),
-            self.perf.format_short(),
-            self.verify_status(),
-        )
-    }
-
-    /// Multi-line human-readable view, suitable for `--verbose` CLI
-    /// output. Each section has a header and is indented for readability.
-    pub fn format_long(&self) -> String {
-        let mut out = String::new();
-        use std::fmt::Write as _;
-        let _ = writeln!(out, "Kernel:");
-        let _ = writeln!(out, "  descriptor id: {}", self.descriptor_id);
-        let _ = writeln!(out, "  summary: {}", self.summary);
-        let _ = writeln!(out, "Histogram:");
-        let _ = writeln!(out, "  {}", self.histogram.format_short());
-        if let Some((cat, n)) = self.histogram.dominant() {
-            let _ = writeln!(out, "  dominant: {cat} ({n})");
-        }
-        let _ = writeln!(out, "Perf audit:");
-        let _ = writeln!(out, "  {}", self.perf.format_short());
-        for r in &self.perf.recommendations {
-            let _ = writeln!(
-                out,
-                "  - [p{}] {:?}: {} (≤{:.2}× speedup)",
-                r.priority, r.category, r.message, r.estimated_speedup_upper_bound
-            );
-        }
-        let _ = writeln!(out, "Verify:");
-        write_verify_section(&mut out, &self.verify);
-        if !self.fix_text.is_empty() {
-            let _ = writeln!(out, "Fix:");
-            let _ = writeln!(out, "  {}", self.fix_text);
-        }
-        out
-    }
-}
-
-fn verification_status(result: &verify::VerifyResult) -> &'static str {
-    if result.is_ok() {
-        "OK"
-    } else {
-        "FAIL"
-    }
-}
-
-fn write_verify_section(out: &mut String, result: &verify::VerifyResult) {
-    use std::fmt::Write as _;
-    match result {
-        Ok(()) => {
-            let _ = writeln!(out, "  OK");
-        }
-        Err(errs) => {
-            let _ = writeln!(out, "  FAIL ({} errors)", errs.len());
-            for e in errs {
-                let _ = writeln!(out, "    {:?}", e);
-            }
-        }
-    }
-}
-
-fn build_full_report_fix_text(verification: &verify::VerifyResult) -> String {
-    let mut messages = Vec::new();
-    push_verify_fix_text(verification, &mut messages);
-    messages.join(" ")
-}
-
-fn push_verify_fix_text(result: &verify::VerifyResult, messages: &mut Vec<String>) {
-    if let Err(errs) = result {
-        if errs.is_empty() {
-            messages.push("Fix: descriptor verification returned an empty error list; treat this as a verifier contract bug and preserve the descriptor for triage.".to_string());
-        } else {
-            messages.push(format!(
-                "Fix: descriptor verification failed with {} error(s); repair the descriptor before emission. First error: {:?}",
-                errs.len(),
-                errs[0]
-            ));
-        }
-    }
-}
-
-impl std::fmt::Display for FullReport {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&self.format_short())
-    }
-}
 pub use descriptor::{
     body_contains_grid_fence, descriptor_trap_tags, dispatch_segments,
     scan_construct_intent_mapping, AsyncTransaction, AsyncTransactionError, AsyncWaitSpec,

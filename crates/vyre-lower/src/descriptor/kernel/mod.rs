@@ -39,6 +39,15 @@ impl std::hash::Hash for KernelDescriptor {
 }
 
 impl KernelDescriptor {
+    /// Kernel id for display; `<unnamed>` when the descriptor has none.
+    fn display_id(&self) -> &str {
+        if self.id.is_empty() {
+            "<unnamed>"
+        } else {
+            &self.id
+        }
+    }
+
     /// One-line human-readable summary. Useful for diagnostic output.
     /// Format: `"<id>: N ops, M bindings, K child bodies, L literals,
     /// dispatch [x, y, z]"`.
@@ -46,7 +55,7 @@ impl KernelDescriptor {
     pub fn summary(&self) -> String {
         format!(
             "{}: {} ops, {} bindings, {} child bodies, {} literals, dispatch {:?}",
-            crate::pattern_audit::display_kernel_id(&self.id),
+            self.display_id(),
             self.body.ops.len(),
             self.bindings.slots.len(),
             self.body.child_bodies.len(),
@@ -62,7 +71,7 @@ impl KernelDescriptor {
     pub fn summary_compact(&self) -> String {
         format!(
             "{}({} ops, {} bindings)",
-            crate::pattern_audit::display_kernel_id(&self.id),
+            self.display_id(),
             self.body.ops.len(),
             self.bindings.slots.len(),
         )

@@ -4,7 +4,7 @@
 
 use vyre_driver::DispatchConfig;
 use vyre_driver::PipelineFeatureFlags;
-use vyre_driver_cuda::{cuda_factory, CudaBackend, CudaDeviceCaps, CudaMegakernelDeviceKey};
+use vyre_driver_cuda::{cuda_factory, CudaBackend, CudaDeviceCaps};
 use vyre_foundation::fp_parity::FloatLoweringMode;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
@@ -133,34 +133,6 @@ fn cuda_backend_caps_match_driver_attributes() {
     assert!(
         flags.contains(PipelineFeatureFlags::TENSOR_CORES),
         "Fix: CUDA pipeline cache keys must include tensor-core lowering bits now that PTX emits mma.sync."
-    );
-    let megakernel_device_key = CudaMegakernelDeviceKey::from(&backend.caps);
-    assert_eq!(
-        megakernel_device_key.sm_major as u32, expected.compute_capability.0,
-        "Fix: CUDA megakernel plan cache key must include probed SM major version."
-    );
-    assert_eq!(
-        megakernel_device_key.sm_minor as u32, expected.compute_capability.1,
-        "Fix: CUDA megakernel plan cache key must include probed SM minor version."
-    );
-    assert_eq!(
-        megakernel_device_key.warp_size as u32, expected.warp_size as u32,
-        "Fix: CUDA megakernel plan cache key must include probed warp size."
-    );
-    assert_eq!(
-        megakernel_device_key.supports_grid_sync,
-        backend.hardware_supports_grid_sync(),
-        "Fix: CUDA megakernel plan cache key must include live cooperative grid-sync capability."
-    );
-    assert_eq!(
-        megakernel_device_key.supports_tensor_cores,
-        backend.hardware_supports_tensor_cores(),
-        "Fix: CUDA megakernel plan cache key must include live tensor-core capability."
-    );
-    assert_eq!(
-        megakernel_device_key.max_workgroup_size,
-        backend.max_threads_per_block(),
-        "Fix: CUDA megakernel plan cache key must include live max workgroup size."
     );
     assert_eq!(
         backend.caps.compute_capability.0, expected.compute_capability.0,

@@ -8,46 +8,7 @@
 
 use crate::fixture_target;
 
-use std::collections::HashSet;
 use vyre_aot::{emit_launcher_rust, ArtifactEnvelope, LauncherError, LauncherOpts, TargetId};
-use vyre_driver::registered_aot_launcher_emitters;
-
-#[test]
-fn launcher_registry_has_unique_owner_per_target() {
-    let emitters = registered_aot_launcher_emitters();
-    let mut seen_targets = HashSet::new();
-
-    for emitter in emitters {
-        let target = &emitter.target;
-        assert!(
-            seen_targets.insert(target.clone()),
-            "Fix: duplicate AOT launcher emitter detected for target `{target}`"
-        );
-    }
-}
-
-/// The shared fixture target must stay launcher-unregistered for this binary.
-///
-/// `inventory::submit!` registers at link time wherever it is written, so an
-/// emitter added for the shared fixture anywhere in this test binary silently
-/// converts the bundle refusal contracts into passes that assert nothing. This
-/// fails first and names the cause, instead of leaving that to a packaging test
-/// two files away that reports only an unexpected success.
-#[test]
-fn shared_fixture_target_owns_no_launcher_emitter() {
-    let shared = fixture_target::fixture_target();
-    let owned: Vec<_> = registered_aot_launcher_emitters()
-        .into_iter()
-        .filter(|emitter| emitter.target == shared)
-        .map(|emitter| emitter.target.to_string())
-        .collect();
-    assert!(
-        owned.is_empty(),
-        "Fix: `{shared}` is the target the bundle contracts use to prove packaging refuses an \
-         unregistered launcher, so it must own no emitter. Register the new emitter under a \
-         target of its own, as `fixture-launcher-target` does. Found: {owned:?}"
-    );
-}
 
 #[test]
 fn launcher_rejects_unsupported_target_payload() {

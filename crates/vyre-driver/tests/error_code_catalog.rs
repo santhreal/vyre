@@ -25,7 +25,6 @@ use std::path::PathBuf;
 
 use vyre_driver::error_catalog::render_catalog_toml;
 use vyre_driver::ErrorCode;
-use vyre_driver::DEPRECATED_OP_CODE;
 
 fn catalog_path() -> PathBuf {
     vyre_test_support::monorepo::vyre_workspace_root()
@@ -126,25 +125,6 @@ fn every_variant_is_catalogued_with_its_stable_id_and_a_description() {
         );
         seen_ids.push(id);
     }
-}
-
-#[test]
-fn the_deprecation_warning_is_catalogued() {
-    let rendered = render_catalog_toml();
-    let table: toml::Table = toml::from_str(&rendered).expect("rendered catalog parses as TOML");
-
-    let codes: Vec<&str> = table["diagnostic"]
-        .as_array()
-        .expect("diagnostic is an array of tables")
-        .iter()
-        .map(|row| row["code"].as_str().expect("code is a string"))
-        .collect();
-
-    assert!(
-        codes.contains(&DEPRECATED_OP_CODE),
-        "the only non-validation diagnostic code this crate emits is uncatalogued: \
-         have {codes:?}"
-    );
 }
 
 /// Every variant the enum declares reaches the catalog.

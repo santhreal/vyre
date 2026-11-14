@@ -13,7 +13,6 @@ mod adversarial_emit_program_matrix;
 #[path = "barrier_scope_parity.rs"]
 mod barrier_scope_parity;
 
-
 /// Integration tests from `tests/divergent_trap_and_grid_barrier.rs`.
 #[path = "divergent_trap_and_grid_barrier.rs"]
 mod divergent_trap_and_grid_barrier;
@@ -38,21 +37,9 @@ mod nested_return_branch;
 #[path = "nvrtc_compile_gate/mod.rs"]
 mod nvrtc_compile_gate;
 
-/// Integration tests from `tests/pattern_analysis_contracts/mod.rs`.
-#[path = "pattern_analysis_contracts/mod.rs"]
-mod pattern_analysis_contracts;
-
-/// Integration tests from `tests/ping_pong_schedule_contracts.rs`.
-#[path = "ping_pong_schedule_contracts.rs"]
-mod ping_pong_schedule_contracts;
-
 /// Integration tests from `tests/regression_emit_fixes.rs`.
 #[path = "regression_emit_fixes.rs"]
 mod regression_emit_fixes;
-
-/// Integration tests from `tests/shared_branch_walk_equality.rs`.
-#[path = "shared_branch_walk_equality.rs"]
-mod shared_branch_walk_equality;
 
 /// Integration tests from `tests/ulp_budget_is_not_an_admission_gate.rs`.
 #[path = "ulp_budget_is_not_an_admission_gate.rs"]

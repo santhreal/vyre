@@ -48,9 +48,7 @@ serde_json.workspace = true
 # dependency is not target-gated.
 [dev-dependencies]
 toml = { workspace = true }
-# The shared external-import contract harness lives behind this feature, so the
-# Metal answer to it states its handles and the combination it refuses and
-# nothing else.
+# Parity-gate scaffolding shared by the concrete backends' tests.
 vyre-driver = { workspace = true, features = ["test-fixtures"] }
 
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]

@@ -180,11 +180,6 @@ pub mod div_zero_shift_mask_cuda_parity;
 #[path = "dominator_frontier_gpu_parity.rs"]
 pub mod dominator_frontier_gpu_parity;
 
-/// Integration tests from `tests/egraph_device_image_upload/mod.rs`.
-#[cfg(feature = "device-tests")]
-#[path = "egraph_device_image_upload/mod.rs"]
-pub mod egraph_device_image_upload;
-
 /// Integration tests from `tests/emitted_ptx_byte_stability.rs`.
 #[cfg(feature = "device-tests")]
 #[path = "emitted_ptx_byte_stability.rs"]
@@ -459,16 +454,6 @@ pub mod resident_grid_sync_fixpoint_abi;
 #[path = "resident_handle_ownership_contracts.rs"]
 pub mod resident_handle_ownership_contracts;
 
-/// Integration tests from `tests/resident_work_queue_scale_scheduler_contracts.rs`.
-#[cfg(feature = "device-tests")]
-#[path = "resident_work_queue_scale_scheduler_contracts.rs"]
-pub mod resident_work_queue_scale_scheduler_contracts;
-
-/// Integration tests from `tests/resident_work_queue_wave_policy_parity.rs`.
-#[cfg(feature = "device-tests")]
-#[path = "resident_work_queue_wave_policy_parity.rs"]
-pub mod resident_work_queue_wave_policy_parity;
-
 /// Integration tests from `tests/rle_segment_lengths_gpu_parity.rs`.
 #[cfg(all(test, feature = "device-tests"))]
 #[path = "rle_segment_lengths_gpu_parity.rs"]
@@ -654,9 +639,6 @@ pub mod unsupported_ir_errors;
 #[path = "vectorized_memory_live_cuda.rs"]
 pub mod vectorized_memory_live_cuda;
 
-/// Integration tests from `tests/external_resource_cuda_contracts.rs`.
-#[path = "external_resource_cuda_contracts.rs"]
-pub mod external_resource_cuda_contracts;
 /// Integration tests from `tests/widening_cast_64_cuda_parity.rs`.
 #[cfg(feature = "device-tests")]
 #[path = "widening_cast_64_cuda_parity.rs"]

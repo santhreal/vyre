@@ -9,12 +9,10 @@
 
 use vyre_foundation::ir::{BinOp, DataType};
 use vyre_lower::analyses::vec_pack;
-use vyre_lower::analyses::AnalysisFacts;
 use vyre_lower::analyses::{
     analyze_bank_conflict, analyze_coalesce, analyze_layout_aos_to_soa, analyze_shared_mem_promote,
     analyze_texture_promote, analyze_workgroup_uniform,
 };
-use vyre_lower::audit;
 
 /// Bank count the snapshot corpus states; the analysis holds no default.
 const BANKS: std::num::NonZeroU32 = match std::num::NonZeroU32::new(32) {
@@ -28,12 +26,6 @@ const SHARED_BYTES: std::num::NonZeroU32 = match std::num::NonZeroU32::new(48 * 
     None => unreachable!(),
 };
 
-/// Both capacities the corpus states, for the combined audit.
-fn corpus_facts() -> AnalysisFacts {
-    AnalysisFacts::none()
-        .with_shared_memory_banks(BANKS)
-        .with_shared_memory_bytes(SHARED_BYTES)
-}
 use vyre_lower::{
     BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
     KernelOp, KernelOpKind, LiteralValue, MemoryClass,
@@ -425,23 +417,6 @@ fn snapshot_layout_transform_candidate_counts() {
         .map(|k| analyze_layout_aos_to_soa(k).candidates.len())
         .collect();
     assert_eq!(counts, vec![0, 0, 0, 0, 1, 0, 0, 0, 0]);
-}
-
-#[test]
-fn snapshot_audit_waste_score_ordering() {
-    let kernels = corpus();
-    let scores: Vec<f32> = kernels
-        .iter()
-        .map(|k| audit(k, &corpus_facts()).waste_score)
-        .collect();
-    // Strided > all others; empty/coalesced/fma_chain == 0.
-    assert!(scores[0] < 0.001, "coalesced should have ~0 waste");
-    assert!(scores[1] > 0.5, "strided should have measurable waste");
-    assert!(
-        scores[2] > 0.0,
-        "promotion candidate has waste from unrealized promo"
-    );
-    assert!(scores[8] < 0.001, "empty kernel has 0 waste");
 }
 
 #[test]

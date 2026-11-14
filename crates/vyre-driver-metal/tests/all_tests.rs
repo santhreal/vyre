@@ -28,9 +28,6 @@ pub mod metal_icb_dispatch_replay;
 #[path = "resident_async.rs"]
 pub mod resident_async;
 
-/// Integration tests from `tests/external_resource_metal_contracts.rs`.
-#[path = "external_resource_metal_contracts.rs"]
-pub mod external_resource_metal_contracts;
 /// Integration tests from `tests/target_compiler.rs`.
 #[cfg(feature = "device-tests")]
 #[path = "target_compiler.rs"]

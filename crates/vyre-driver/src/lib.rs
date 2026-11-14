@@ -42,11 +42,6 @@ pub(crate) mod diagnostics;
 pub(crate) mod dispatch_shape;
 /// Bounded, backend-neutral durability flush for a set of written files.
 pub mod durable_fanout;
-/// Backend-neutral external resource import shared by every concrete driver.
-pub mod external_import;
-/// The external-import contract every concrete driver's importer answers.
-#[cfg(any(test, feature = "test-fixtures"))]
-pub mod external_import_contracts;
 /// Backend-neutral fixpoint-iteration resolution.
 pub(crate) mod fixpoint_iterations;
 /// Backend-neutral replayable graph-capture binding planning.
@@ -76,12 +71,8 @@ pub mod parity_harness;
 pub(crate) mod pipeline;
 /// The dispatch-boundary rule that makes a read-only binding declaration true.
 pub(crate) mod read_only_alias;
-/// Read-only semantic operation projections, migrations, and policy.
-pub(crate) mod registry;
 /// Backend-neutral reservation policy adapters.
 pub mod reservation_policy;
-/// Backend-neutral resident-resource reuse telemetry.
-pub(crate) mod residency;
 /// Canonical resident transfer fusion test model shared by the neutral fusion
 /// tests and the concrete driver crates' adapter gates.
 #[cfg(any(test, feature = "test-fixtures"))]
@@ -116,7 +107,6 @@ pub mod trap_record;
 /// Shared validation caches and launch-geometry contracts.
 pub mod validation;
 
-
 /// Pure [`vyre_foundation::ir::Program`] analysis shared by all backends.
 pub(crate) mod program_walks;
 
@@ -148,52 +138,33 @@ pub(crate) mod launch_facts;
 pub mod launch_fixtures;
 /// The failure domain of a poisoned lock, and the two answers an owner may give.
 pub mod lock_policy;
-/// Backend-neutral megakernel wave barrier planning.
-pub mod megakernel_barrier;
-/// Backend-neutral persistent megakernel execution planning.
-pub mod megakernel_execution;
-/// Canonical megakernel wave-policy corpora shared by the neutral planner tests
-/// and the concrete driver crates' parity gates.
-#[cfg(any(test, feature = "test-fixtures"))]
-pub mod megakernel_fixtures;
-/// Backend-neutral megakernel frontier memory planning.
-pub mod megakernel_frontier;
 /// Backend-neutral numeric boundary conversions.
 pub mod numeric;
 /// G7: persistent-thread engine + device-side work queue.
 /// Eliminates per-file kernel-launch overhead for streams of
 /// many small scan jobs.
 pub mod persistent;
-/// Domain-neutral semantic resource ABI, logical image/view types, and zero-copy timeline synchronization.
-mod semantic_resource_abi;
 
 /// The `inventory` crate `register_backend!` submits through. A concrete
 /// driver expands the macro and needs no `inventory` dependency of its own.
 pub use ::inventory;
 
-pub use aot::AotTargetId;
 pub use aot::{
-    emit_aot_launcher_target, registered_aot_launcher_emitters, AotLauncherEmitter,
-    AotLauncherFiles, AotLauncherRequest, LauncherDependency,
+    emit_aot_launcher_target, AotLauncherEmitter, AotLauncherFiles, AotLauncherRequest,
+    LauncherDependency,
 };
 /// Error-code catalog rendering for the driver-tier diagnostics surface.
 pub use backend::error_catalog;
-/// Backend-neutral lowering entry points concrete drivers compose.
-pub use backend::lowering;
 /// Marker trait that seals the driver traits against outside implementations.
 pub use backend::sealed;
 pub use backend::{
     acquire, acquire_preferred_dispatch_backend, backend_dispatches, backend_precedence,
     backend_registration, core_supported_ops, default_supported_ops,
-    default_supported_ops_with_trap, dialect_and_language_supported_ops,
-    dialect_only_supported_ops, node_op_id, registered_backends, registered_backends_by_precedence,
+    default_supported_ops_with_trap, dialect_only_supported_ops, node_op_id, registered_backends,
     registered_backends_by_precedence_slice, registered_target_operation_facets,
-    replace_output_buffers_preserving_slots_with_memory_stats,
-    replace_output_buffers_preserving_slots_with_stats, validate_program, Backend,
+    replace_output_buffers_preserving_slots_with_memory_stats, validate_program, Backend,
     BackendCapability, BackendPrecedence, ErrorCode, OutputReplacementStats, OutputSlotByteStats,
-    OutputSlotStats, RegexAcceleratorCapability, RegexAcceleratorClass, RegexAcceleratorEvidence,
-    RegexAcceleratorMatchSchema, RegexAcceleratorStreamMode,
-    REGEX_ACCELERATOR_EVIDENCE_SCHEMA_VERSION,
+    OutputSlotStats,
 };
 pub use backend::{
     borrowed_input_slices, default_dispatch_with_device_buffers,
@@ -202,86 +173,48 @@ pub use backend::{
     CompiledPipeline, Completion, Device, DeviceBuffer, DeviceIdentity, DispatchConfig,
     HostShimBuffer, OutputBuffers, PendingDispatch, ResidentDispatchStep, ResidentHandle,
     ResidentOwner, ResidentReadRange, ResidentSequenceTiming, Resource, Submission,
-    TimedDispatchResult, TypedDispatchExt, VyreBackend, DEVICE_BUFFER_FEATURE,
+    TimedDispatchResult, VyreBackend, DEVICE_BUFFER_FEATURE,
 };
 pub use binding::{
-    binding_plans_share_layout, dynamic_element_count_from_bytes, BackendLayoutClass,
-    BackendLayoutFingerprint, BackendLayoutSlot, Binding, BindingPlan, BindingRole,
-    BindingSetFingerprint,
+    dynamic_element_count_from_bytes, BackendLayoutClass, BackendLayoutFingerprint,
+    BackendLayoutSlot, Binding, BindingPlan, BindingRole,
 };
 pub use device_profile::{DeviceProfile, DeviceTimingQuality};
-pub use device_signature::{DeviceSignature, DeviceSignatureTable};
+pub use device_signature::DeviceSignatureTable;
 pub use diagnostics::{Diagnostic, DiagnosticCode, OpLocation, Severity};
 pub use diagnostics::{DiagnosticCause, DiagnosticStage, RetryClass};
 pub use dispatch_shape::dispatch_configs_share_launch_shape;
 pub use fixpoint_iterations::{resolve_fixpoint_iterations, resolve_fixpoint_iterations_usize};
-pub use launch::{
-    launch_width_measurements, record_launch_measurement, resolve_launch_workgroup,
-    resolve_launch_workgroup_for_geometry, LaunchGeometry,
-};
 pub use launch::{program_vsa_fingerprint, program_vsa_fingerprint_words, LaunchPlan};
+pub use launch::{
+    record_launch_measurement, resolve_launch_workgroup, resolve_launch_workgroup_for_geometry,
+    LaunchGeometry,
+};
 pub use launch_directive::LaunchDirective;
 pub use pipeline::{
-    dispatch_policy_cache_digest, dispatch_policy_cache_string, normalized_program_cache_digest,
-    pipeline_cache_limits_from_env, push_lower_hex, try_normalized_program_cache_digest,
-    update_dispatch_policy_cache_hash, PipelineCacheAudit, PipelineCacheAuditReport,
-    DEFAULT_1D_WORKGROUP_SIZE, DEFAULT_PIPELINE_CACHE_BYTES, DEFAULT_PIPELINE_CACHE_ENTRIES,
+    dispatch_policy_cache_digest, dispatch_policy_cache_string, pipeline_cache_limits_from_env,
+    push_lower_hex, try_normalized_program_cache_digest, update_dispatch_policy_cache_hash,
 };
 pub use pipeline::{
-    hex_encode, hex_short, DiskPipelineCache, PipelineCacheIdentity, PipelineCacheKey,
-    PipelineCacheMissEvidence, PipelineCacheMissReason, PipelineCacheSnapshot,
-    PipelineDeviceFingerprint, PipelineFeatureFlags, CURRENT_PIPELINE_CACHE_KEY_VERSION,
+    hex_encode, hex_short, PipelineCacheIdentity, PipelineCacheMissReason, PipelineCacheSnapshot,
+    PipelineDeviceFingerprint, PipelineFeatureFlags,
 };
 pub use program_walks::{
-    admit_dispatch_grid, coerce_to_pow2_with_tail_mask, dispatch_element_count,
-    dispatch_element_count_for_program, dispatch_param_words_into, element_size_bytes,
+    admit_dispatch_grid, dispatch_element_count_for_program, element_size_bytes,
     enforce_actual_output_budget, find_indirect_dispatch, infer_dispatch_grid,
-    infer_dispatch_grid_for_count, infer_launch_grid, output_binding_layout,
-    output_binding_layout_parts, output_binding_layouts, output_layout_from_program,
-    try_coerce_to_pow2_with_tail_mask, try_dispatch_param_words, try_dispatch_param_words_into,
-    IndirectDispatch, OutputBindingLayout, OutputLayout, TailMaskPolicy,
+    infer_dispatch_grid_for_count, infer_launch_grid, output_binding_layout_parts,
+    output_binding_layouts, output_layout_from_program, try_dispatch_param_words_into,
+    IndirectDispatch, OutputBindingLayout, OutputLayout,
 };
-pub use program_walks::{auto_grid, output_binding_layouts_into};
 pub use read_only_alias::ReadOnlyAliasCheck;
-pub use registry::DEPRECATED_OP_CODE;
-pub use registry::{
-    deprecation_diagnostic, AttrMap, AttrValue, Deprecation, Migration, MigrationError,
-    MigrationRegistry, Semver,
-};
-pub use registry::{
-    validate_intrinsic_lowering, Chain, EnforceGate, EnforceVerdict, IntrinsicRegistrationError,
-    MutationClass,
-};
-pub use residency::{ResidentGraphReuseTelemetry, ResidentGraphReuseTelemetryError};
-pub use semantic_resource_abi::{
-    all_address_modes, all_alias_set_kinds, all_border_colors, all_color_interpretations,
-    all_compare_functions, all_external_event_kinds, all_external_memory_kinds, all_filter_modes,
-    all_format_classes, all_image_formats, all_image_view_kinds, all_layout_states,
-    all_lifetime_state_kinds, all_mipmap_filter_modes, all_plane_kinds, all_provenance_kinds,
-    all_swizzle_components, all_sync_protocols, all_usage_flags, authenticate_external_import,
-    AddressMode, AdmissionState, AdmittedResourceRecord, AdmittedResourceRecordExt, BorderColor,
-    ColorInterpretation, CompareFunction, ComponentSwizzle, DeviceLossInvalidationReport,
-    ExternalEventCapability, ExternalEventKind, ExternalMemoryCapability, ExternalMemoryKind,
-    ExternalResourceRegistry, FilterMode, FormatClass, ImageDimensions, ImageFormat, ImagePlane,
-    ImageViewDescriptor, ImageViewKind, ImportedResource, MipmapFilterMode, PlaneKind,
-    ResourceAbiError, ResourceAliasSet, ResourceLayoutState, ResourceLifetimeState,
-    ResourceOwnershipState, ResourcePermittedUsages, ResourceProvenance,
-    ResourceTransitionSchedule, ResourceUsageTransition, SamplerCapability, SamplerDescriptor,
-    SubresourceRange, SwizzleComponent, TimelineSyncProtocol, TransitionExecutionReport,
-};
-pub use specialization::{versioned_specialization_artifact_key, vsa_specialization_key};
-pub use specialization::{SpecCacheKey, SpecMap, SpecValue};
+pub use specialization::SpecCacheKey;
 pub use speculate::{
-    dispatch_prefilter_confirm, encode_counter_tail, parse_counter_tail, AdaptiveSpeculator,
-    SpeculationMode, SpeculationReport, SpeculativeDispatchOutcome, SpeculativeDispatchPlan,
-    COUNTER_TAIL_BYTES, DEFAULT_THRESHOLD_PCT,
+    dispatch_prefilter_confirm, AdaptiveSpeculator, SpeculationMode, SpeculativeDispatchOutcome,
+    SpeculativeDispatchPlan,
 };
 pub use speculate::{
     record_speculative_variant_race, SpeculativeVariantDecision, SpeculativeVariantKeys,
     SpeculativeVariantKind, SpeculativeVariantRace,
 };
-pub use subgroup::{
-    reduction_offsets, reduction_offsets_into, try_reduction_offsets, try_reduction_offsets_into,
-};
-pub use subgroup::{SubgroupCaps, SubgroupOp};
+pub use subgroup::SubgroupCaps;
 pub use target::Target;

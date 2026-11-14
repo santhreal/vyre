@@ -302,19 +302,3 @@ fn descriptor_verification_handles_random_descriptors_without_panic() {
         assert_eq!(vyre_lower::verify(&verified), Ok(()));
     }
 }
-
-#[test]
-fn audit_handles_random_descriptors_without_panic() {
-    use vyre_lower::analyses::AnalysisFacts;
-    use vyre_lower::audit;
-    for seed in 600..650u64 {
-        let desc = gen_descriptor(seed, 15);
-        let report = audit(&desc, &AnalysisFacts::none());
-        // waste_score should be finite and non-negative.
-        assert!(
-            report.waste_score >= 0.0 && report.waste_score.is_finite(),
-            "audit produced bad waste_score for seed {seed:#x}: {}",
-            report.waste_score
-        );
-    }
-}

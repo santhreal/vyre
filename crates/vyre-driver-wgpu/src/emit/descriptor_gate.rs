@@ -2,7 +2,6 @@
 
 use vyre_foundation::ir::Program;
 use vyre_foundation::lower::LoweringError;
-use vyre_lower::pattern_audit::PatternAudit;
 
 pub(crate) fn validate_and_analyze(
     program: &Program,
@@ -12,20 +11,7 @@ pub(crate) fn validate_and_analyze(
             "physical lowering failed before wgpu emission: {error}. Fix: add the missing neutral mapping to vyre-lower instead of concrete-driver lowering."
         ))
     })?;
-    let descriptor = lowered.into_descriptor();
-    // The portable adapter reports no shared-memory bank geometry here, so the
-    // neutral audit runs without a bank-conflict section rather than against an
-    // assumed layout.
-    let neutral = vyre_lower::audit(&descriptor, &vyre_lower::analyses::AnalysisFacts::none());
-    let concrete = vyre_emit::naga::patterns::audit(&descriptor);
-    tracing::trace!(
-        target: "vyre_driver_wgpu::descriptor",
-        kernel = %descriptor.id,
-        neutral = %neutral.format_short(),
-        concrete = %concrete.format_short(),
-        "descriptor analysis completed before wgpu emission",
-    );
-    Ok(descriptor)
+    Ok(lowered.into_descriptor())
 }
 
 // Inline: covers `validate_and_analyze`, which no integration test can name.

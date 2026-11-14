@@ -54,7 +54,7 @@ pub fn replace_output_buffers_preserving_slots(
 }
 
 /// Replace output buffers and return allocation-reuse accounting.
-pub fn replace_output_buffers_preserving_slots_with_stats(
+pub(crate) fn replace_output_buffers_preserving_slots_with_stats(
     incoming: OutputBuffers,
     outputs: &mut OutputBuffers,
 ) -> OutputSlotStats {

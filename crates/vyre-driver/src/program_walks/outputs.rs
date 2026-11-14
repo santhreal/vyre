@@ -100,7 +100,7 @@ pub fn output_binding_layouts(program: &Program) -> Result<Vec<OutputBindingLayo
 ///
 /// Returns when there is no output buffer, an index is invalid, or layout
 /// math fails.
-pub fn output_binding_layouts_into(
+pub(crate) fn output_binding_layouts_into(
     program: &Program,
     outputs: &mut Vec<OutputBindingLayout>,
 ) -> Result<(), BackendError> {
@@ -129,7 +129,9 @@ pub fn output_binding_layouts_into(
 /// # Errors
 ///
 /// Returns when counts, element size, or declared byte range are inconsistent.
-pub fn output_binding_layout(output: &BufferDecl) -> Result<OutputBindingLayout, BackendError> {
+pub(crate) fn output_binding_layout(
+    output: &BufferDecl,
+) -> Result<OutputBindingLayout, BackendError> {
     output_binding_layout_parts(
         output.binding(),
         &output.name,

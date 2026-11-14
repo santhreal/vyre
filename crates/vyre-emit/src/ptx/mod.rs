@@ -54,7 +54,6 @@
 mod emitter;
 mod error;
 mod index_facts;
-pub mod patterns;
 mod reg;
 mod target;
 

@@ -63,7 +63,6 @@ pub(crate) mod resident_upload_fusion;
 /// Shared fallible staging reservation helpers for backend hot paths.
 pub(crate) mod staging_reserve;
 /// Stream-ordered device allocator over the driver's default memory pool.
-pub(crate) mod stream_ordered_pool;
 /// Atomic CUDA runtime telemetry counters.
 pub(crate) mod telemetry;
 pub(crate) mod transient_memory_budget;
@@ -118,5 +117,4 @@ pub use cuda_graph::CachedCudaGraph;
 pub use dispatch::CudaBackend;
 pub use module_cache::CudaPtxSourceCacheSnapshot;
 pub use resident::CudaResidentBuffer;
-pub use stream_ordered_pool::CudaStreamOrderedPool;
 pub use telemetry::CudaTelemetrySnapshot;

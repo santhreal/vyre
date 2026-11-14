@@ -86,10 +86,6 @@ pub mod resident_work_queue_allocation_bounds;
 #[path = "resident_work_queue_barrier_elision_variant_closure.rs"]
 pub mod resident_work_queue_barrier_elision_variant_closure;
 
-/// Integration tests from `tests/resident_work_queue_builder_delegation_parity.rs`.
-#[path = "resident_work_queue_builder_delegation_parity.rs"]
-pub mod resident_work_queue_builder_delegation_parity;
-
 /// Integration tests from `tests/resident_work_queue_core_contracts.rs`.
 #[path = "resident_work_queue_core_contracts.rs"]
 pub mod resident_work_queue_core_contracts;

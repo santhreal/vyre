@@ -11,7 +11,6 @@
 mod artifact_lifecycle;
 mod capability;
 mod dialect_supported_ops;
-pub mod lowering;
 mod registry;
 pub(crate) mod validation;
 
@@ -24,10 +23,8 @@ mod error;
 pub mod error_catalog;
 mod forward;
 mod pending_dispatch;
-mod regex_accelerator;
 mod resident_sequence;
 mod resource;
-mod typed_dispatch;
 mod vyre_backend;
 #[cfg(test)]
 mod vyre_backend_tests;
@@ -37,12 +34,12 @@ pub use artifact_lifecycle::{
     DeviceIdentity, Submission,
 };
 pub use capability::Backend;
-pub use dialect_supported_ops::{dialect_and_language_supported_ops, dialect_only_supported_ops};
+pub use dialect_supported_ops::dialect_only_supported_ops;
 pub use registry::{
     acquire, acquire_preferred_dispatch_backend, backend_dispatches, backend_precedence,
     backend_registration, core_supported_ops, registered_backends,
-    registered_backends_by_precedence, registered_backends_by_precedence_slice,
-    registered_target_operation_facets, BackendCapability, BackendPrecedence, BackendRegistration,
+    registered_backends_by_precedence_slice, registered_target_operation_facets, BackendCapability,
+    BackendPrecedence, BackendRegistration,
 };
 pub use validation::{
     default_supported_ops, default_supported_ops_with_trap, node_op_id, validate_program,
@@ -56,19 +53,12 @@ pub use device_buffer::{
 pub use dispatch_config::DispatchConfig;
 pub use dispatch_result::{
     replace_output_buffers_preserving_slots,
-    replace_output_buffers_preserving_slots_with_memory_stats,
-    replace_output_buffers_preserving_slots_with_stats, OutputBuffers, OutputReplacementStats,
-    OutputSlotByteStats, OutputSlotStats, TimedDispatchResult,
+    replace_output_buffers_preserving_slots_with_memory_stats, OutputBuffers,
+    OutputReplacementStats, OutputSlotByteStats, OutputSlotStats, TimedDispatchResult,
 };
 pub use error::{BackendError, ErrorCode};
 pub use pending_dispatch::PendingDispatch;
-pub use regex_accelerator::{
-    RegexAcceleratorCapability, RegexAcceleratorClass, RegexAcceleratorEvidence,
-    RegexAcceleratorMatchSchema, RegexAcceleratorStreamMode,
-    REGEX_ACCELERATOR_EVIDENCE_SCHEMA_VERSION,
-};
 pub use resource::{ResidentHandle, ResidentOwner, Resource};
-pub use typed_dispatch::TypedDispatchExt;
 pub use vyre_backend::{
     ResidentDispatchStep, ResidentReadRange, ResidentSequenceTiming, VyreBackend,
 };
@@ -130,26 +120,6 @@ pub(crate) fn resize_batch_output_slots(
         outputs.resize_with(batch_len, Vec::new);
     } else {
         outputs.truncate(batch_len);
-    }
-    Ok(())
-}
-
-pub(crate) fn resize_typed_output_slots<T>(
-    outputs: &mut Vec<Vec<T>>,
-    output_len: usize,
-    field: &'static str,
-) -> Result<(), BackendError> {
-    crate::allocation::try_reserve_vec_to_capacity(outputs, output_len).map_err(|error| {
-        BackendError::InvalidProgram {
-            fix: format!(
-                "Fix: failed to reserve {field} for {output_len} typed output slot(s): {error}. Split the dispatch or decode into a caller-owned output arena."
-            ),
-        }
-    })?;
-    if outputs.len() < output_len {
-        outputs.resize_with(output_len, Vec::new);
-    } else {
-        outputs.truncate(output_len);
     }
     Ok(())
 }

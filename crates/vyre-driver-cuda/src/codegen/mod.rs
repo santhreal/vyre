@@ -59,7 +59,7 @@ pub fn program_to_ptx_for_sm_and_subgroup(
             ..AdapterCaps::conservative()
         },
     );
-    let descriptor = descriptor_gate::validate_and_analyze(&subgroup_lowered, target_sm)?;
+    let descriptor = descriptor_gate::validate_and_analyze(&subgroup_lowered)?;
     if trace {
         tracing::debug!(
             "[cuda-codegen] +{}ms descriptor ops={} bindings={}",

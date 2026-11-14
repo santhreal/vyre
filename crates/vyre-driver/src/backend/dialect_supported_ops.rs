@@ -11,21 +11,6 @@ use std::sync::{Arc, LazyLock};
 use vyre_foundation::ir::OpId;
 use vyre_foundation::operation::OperationRegistry;
 
-/// The union of every canonical semantic operation id and frozen language-level
-/// IR operation id. The set is computed once and reused by all consumers.
-#[must_use]
-pub fn dialect_and_language_supported_ops() -> &'static HashSet<OpId> {
-    static OPS: LazyLock<HashSet<OpId>> = LazyLock::new(|| {
-        let language_ops = super::validation::default_supported_ops();
-        let semantic_ops = dialect_only_supported_ops();
-        let mut set = HashSet::with_capacity(language_ops.len().saturating_add(semantic_ops.len()));
-        set.extend(language_ops.iter().cloned());
-        set.extend(semantic_ops.iter().cloned());
-        set
-    });
-    &OPS
-}
-
 /// Canonical semantic operation ids without language-level IR node ids.
 #[must_use]
 pub fn dialect_only_supported_ops() -> &'static HashSet<OpId> {
@@ -63,20 +48,5 @@ mod tests {
                 operation.id
             );
         }
-    }
-
-    /// The union is exactly its two sources, with no third contributor.
-    #[test]
-    fn union_is_exactly_language_plus_semantic() {
-        let union = dialect_and_language_supported_ops();
-        let language = super::super::validation::default_supported_ops();
-        let semantic = dialect_only_supported_ops();
-
-        assert!(union.contains(&OpId::from("vyre.node.store")));
-        for id in language.iter().chain(semantic.iter()) {
-            assert!(union.contains(id), "union dropped `{id}`");
-        }
-        let expected: HashSet<&OpId> = language.iter().chain(semantic.iter()).collect();
-        assert_eq!(union.len(), expected.len());
     }
 }

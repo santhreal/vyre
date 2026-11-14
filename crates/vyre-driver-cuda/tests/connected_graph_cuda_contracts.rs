@@ -820,8 +820,8 @@ fn cuda_executes_independent_concurrent_arms_connected_graph() {
 /// from becoming vacuous: an empty registry fails instead of passing.
 #[test]
 fn every_registered_production_backend_must_acquire_its_device() {
-    let registrations =
-        vyre_driver::registered_backends_by_precedence().expect("backend registry initialization");
+    let registrations = vyre_driver::registered_backends_by_precedence_slice()
+        .expect("backend registry initialization");
     assert!(
         !registrations.is_empty(),
         "no backend is linked into this test binary. Fix: link a concrete driver crate."
@@ -871,8 +871,8 @@ fn every_registered_production_backend_must_acquire_its_device() {
 
 #[test]
 fn unavailable_requested_device_is_refused_by_name() {
-    let registrations =
-        vyre_driver::registered_backends_by_precedence().expect("backend registry initialization");
+    let registrations = vyre_driver::registered_backends_by_precedence_slice()
+        .expect("backend registry initialization");
     let absent = "cuda-not-installed";
     assert!(
         registrations.iter().all(|reg| reg.id != absent),

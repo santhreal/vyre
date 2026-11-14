@@ -53,7 +53,3 @@ summary = "A request was abandoned before producing a result because a newer gen
 variant = "Unknown"
 id = 1999
 summary = "The backend reported a failure it could not classify, produced by BackendError::new. A code that stays Unknown across releases is a missing variant, not a category."
-
-[[diagnostic]]
-code = "W-OP-DEPRECATED"
-summary = "A resolved op is marked deprecated in the migration registry; the diagnostic carries the op location and the migration note as its suggested fix."

@@ -334,31 +334,6 @@ pub struct CaseReport {
     pub artifacts: Vec<String>,
 }
 
-pub const LOWER_FULL_REPORT_ARTIFACT_KIND: &str = "vyre.lower.full_report.json";
-
-#[derive(Serialize)]
-struct LowerFullReportArtifact<'a> {
-    kind: &'static str,
-    descriptor_id: &'a str,
-    verify_status: &'static str,
-    histogram: &'a vyre_lower::analyses::OpHistogram,
-    fix_text: &'a str,
-    full_report: &'a vyre_lower::FullReport,
-}
-
-pub fn lower_full_report_artifact(
-    report: &vyre_lower::FullReport,
-) -> Result<String, serde_json::Error> {
-    serde_json::to_string(&LowerFullReportArtifact {
-        kind: LOWER_FULL_REPORT_ARTIFACT_KIND,
-        descriptor_id: &report.descriptor_id,
-        verify_status: report.verify_status(),
-        histogram: &report.histogram,
-        fix_text: &report.fix_text,
-        full_report: report,
-    })
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ReportSummary {
     pub total_cases: usize,
@@ -667,52 +642,6 @@ mod tests {
                 vec!["speedup below release floor".to_string()]
             },
         }
-    }
-
-    #[test]
-    fn lower_full_report_artifact_carries_lower_evidence_surface() {
-        let desc = vyre_lower::KernelDescriptor {
-            id: "bench_bad".to_string(),
-            bindings: vyre_lower::BindingLayout { slots: vec![] },
-            dispatch: vyre_lower::Dispatch::new(0, 1, 1),
-            body: vyre_lower::KernelBody {
-                ops: vec![vyre_lower::KernelOp {
-                    kind: vyre_lower::KernelOpKind::Literal,
-                    operands: vec![0],
-                    result: Some(0),
-                }],
-                child_bodies: vec![],
-                literals: vec![vyre_lower::LiteralValue::U32(7)],
-            },
-        };
-        let lower_report =
-            vyre_lower::full_report(&desc, &vyre_lower::analyses::AnalysisFacts::none());
-        let artifact =
-            lower_full_report_artifact(&lower_report).expect("Fix: serialize lower full report");
-
-        assert!(artifact.contains("\"kind\":\"vyre.lower.full_report.json\""));
-        assert!(artifact.contains("\"descriptor_id\":\"bench_bad\""));
-        assert!(artifact.contains("\"verify_status\":\"FAIL\""));
-        assert!(artifact.contains("\"histogram\""));
-        assert!(artifact.contains("\"full_report\""));
-        assert!(
-            artifact.contains("\"fix_text\":\"Fix:"),
-            "Fix: invalid lower descriptors must put repair text in benchmark artifacts."
-        );
-
-        let mut case = case_report(
-            "failed",
-            Correctness::Invalid {
-                reason: lower_report.fix_text.clone(),
-            },
-            None,
-        );
-        case.artifacts.push(artifact);
-        let serialized_case =
-            serde_json::to_string(&case).expect("Fix: serialize benchmark case evidence");
-        assert!(serialized_case.contains(LOWER_FULL_REPORT_ARTIFACT_KIND));
-        assert!(serialized_case.contains("bench_bad"));
-        assert!(serialized_case.contains("Fix:"));
     }
 
     #[test]

@@ -57,10 +57,6 @@ pub(crate) fn cuda_profiler_ranges_enabled() -> bool {
     *CUDA_PROFILER_RANGES
 }
 
-pub(crate) fn cuda_descriptor_audit_enabled() -> bool {
-    *CUDA_DESCRIPTOR_AUDIT
-}
-
 pub(crate) fn cuda_graph_replay_enabled() -> bool {
     *CUDA_GRAPH_REPLAY
 }
@@ -80,8 +76,6 @@ pub(crate) fn cuda_resident_sync_before_launch_enabled() -> bool {
 static CUDA_STAGE_TRACE: LazyLock<bool> = LazyLock::new(|| env_flag("VYRE_CUDA_STAGE_TRACE"));
 static CUDA_PROFILER_RANGES: LazyLock<bool> =
     LazyLock::new(|| env_flag("VYRE_CUDA_NVTX_RANGES") || env_flag("VYRE_CUDA_PROFILE_RANGES"));
-static CUDA_DESCRIPTOR_AUDIT: LazyLock<bool> =
-    LazyLock::new(|| env_flag("VYRE_CUDA_DESCRIPTOR_AUDIT"));
 static CUDA_GRAPH_REPLAY: LazyLock<bool> =
     LazyLock::new(|| env_enabled_default_true("VYRE_CUDA_GRAPH_REPLAY"));
 static CUDA_VALIDATE_DISPATCH: LazyLock<bool> =

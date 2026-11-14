@@ -1,23 +1,11 @@
 //! Generated catalog of machine-readable codes this crate emits.
 //!
-//! Two families live here. [`ErrorCode`] classifies a backend dispatch
-//! failure and carries a stable u32 a consumer can filter on without parsing
-//! message text. Diagnostic codes are the string ids attached to warnings the
-//! decoder surfaces. Both are rendered from the definitions that emit them, so
-//! the catalog cannot drift from the binary: the only way to change a row is to
-//! change the code that produces it.
+//! [`ErrorCode`] classifies a backend dispatch failure and carries a stable u32
+//! a consumer can filter on without parsing message text. The catalog renders
+//! from `ErrorCode::ALL`, so a row changes only when the code that produces it
+//! changes.
 
 use super::ErrorCode;
-use crate::registry::migration::DEPRECATED_OP_CODE;
-
-/// String-coded diagnostics this crate emits, with the invariant each one
-/// reports. Rendered into the catalog beside the integer codes.
-const DIAGNOSTIC_CODES: &[(&str, &str)] = &[(
-    DEPRECATED_OP_CODE,
-    "A resolved op is marked deprecated in the migration registry; the \
-     diagnostic carries the op location and the migration note as its \
-     suggested fix.",
-)];
 
 /// Render the catalog as TOML.
 ///
@@ -37,12 +25,6 @@ pub fn render_catalog_toml() -> String {
         out.push_str(&format!("variant = {:?}\n", format!("{code:?}")));
         out.push_str(&format!("id = {}\n", code.stable_id()));
         out.push_str(&format!("summary = {:?}\n", code.summary()));
-    }
-
-    for (code, summary) in DIAGNOSTIC_CODES {
-        out.push_str("\n[[diagnostic]]\n");
-        out.push_str(&format!("code = {code:?}\n"));
-        out.push_str(&format!("summary = {summary:?}\n"));
     }
 
     out

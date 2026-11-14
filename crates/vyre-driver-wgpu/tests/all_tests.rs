@@ -147,11 +147,6 @@ pub mod crc32_gpu_parity;
 #[path = "decode_hex_gpu_parity.rs"]
 pub mod decode_hex_gpu_parity;
 
-/// Integration tests from `tests/default_workgroup_contract.rs`.
-#[cfg(feature = "device-tests")]
-#[path = "default_workgroup_contract.rs"]
-pub mod default_workgroup_contract;
-
 /// Integration tests from `tests/determinism_contract.rs`.
 #[cfg(feature = "device-tests")]
 #[path = "determinism_contract.rs"]
@@ -381,11 +376,6 @@ pub mod resident_timed_outputs;
 #[path = "resident_work_queue_emit.rs"]
 pub mod resident_work_queue_emit;
 
-/// Integration tests from `tests/runtime_indirect_contracts.rs`.
-#[cfg(feature = "device-tests")]
-#[path = "runtime_indirect_contracts.rs"]
-pub mod runtime_indirect_contracts;
-
 /// Integration tests from `tests/runtime_router_contracts.rs`.
 #[cfg(feature = "device-tests")]
 #[path = "runtime_router_contracts.rs"]
@@ -510,9 +500,6 @@ pub mod unary_int_parity;
 #[path = "validation_cross_backend.rs"]
 pub mod validation_cross_backend;
 
-/// Integration tests from `tests/external_resource_wgpu_contracts.rs`.
-#[path = "external_resource_wgpu_contracts.rs"]
-pub mod external_resource_wgpu_contracts;
 /// Integration tests from `tests/widening_cast_64_parity.rs`.
 #[cfg(feature = "device-tests")]
 #[path = "widening_cast_64_parity.rs"]

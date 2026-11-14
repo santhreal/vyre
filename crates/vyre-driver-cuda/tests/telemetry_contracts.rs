@@ -5,7 +5,7 @@
 use crate::harness;
 use harness::{bytes_u32, u32_bytes};
 use vyre_driver::DispatchConfig;
-use vyre_driver_cuda::{CudaBackend, CudaMegakernelScheduleSample};
+use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 fn add_one_program(count: u32) -> Program {
@@ -114,28 +114,15 @@ fn cuda_direct_dispatch_updates_runtime_telemetry() {
         snapshot.logical_elements_per_thread_slot_bps > 0,
         "Fix: launch telemetry must expose unclamped logical element density per scheduled CUDA thread slot."
     );
-    let scheduler_sample = CudaMegakernelScheduleSample::from_telemetry_snapshot(snapshot, 1_000.0);
-    assert_eq!(
-        scheduler_sample.dispatch_cost_ns, 1_000.0,
-        "Fix: scheduler sample must preserve externally measured dispatch cost."
-    );
-    assert_eq!(
-        scheduler_sample.readback_bytes, snapshot.readback_bytes,
-        "Fix: scheduler sample must carry real compact readback volume from CUDA telemetry."
-    );
-    assert!(
-        scheduler_sample.frontier_density > 0.0 && scheduler_sample.frontier_density <= 1.0,
-        "Fix: scheduler sample must derive bounded frontier-density proxy from real CUDA launch telemetry."
-    );
     assert_eq!(
         snapshot.readback_bytes,
         outputs[0].len() as u64,
-        "Fix: scheduler sample must carry real compact readback volume from CUDA telemetry."
+        "Fix: launch telemetry must carry the real compact readback volume."
     );
-    let frontier_density = f64::from(snapshot.logical_thread_utilization_bps) / 10_000.0;
+    let utilization = f64::from(snapshot.logical_thread_utilization_bps) / 10_000.0;
     assert!(
-        frontier_density > 0.0 && frontier_density <= 1.0,
-        "Fix: scheduler sample must derive bounded frontier-density proxy from real CUDA launch telemetry."
+        utilization > 0.0 && utilization <= 1.0,
+        "Fix: launch telemetry must report a bounded logical thread utilization."
     );
 
     backend.reset_telemetry();

@@ -7,7 +7,7 @@ use std::sync::LazyLock;
 use crate::BackendError;
 
 /// Stable validated AOT target identity.
-pub use vyre_foundation::operation::TargetId as AotTargetId;
+pub(crate) use vyre_foundation::operation::TargetId as AotTargetId;
 
 /// One dependency entry required by a generated launcher crate.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -84,12 +84,6 @@ static LAUNCHER_EMITTERS: LazyLock<BTreeMap<AotTargetId, &'static AotLauncherEmi
         }
         emitters
     });
-
-/// Return every linked launcher emitter.
-#[must_use]
-pub fn registered_aot_launcher_emitters() -> Vec<&'static AotLauncherEmitter> {
-    LAUNCHER_EMITTERS.values().copied().collect()
-}
 
 /// Emit target-owned launcher files through the linked emitter matching `target`.
 ///

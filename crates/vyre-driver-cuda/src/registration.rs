@@ -23,7 +23,7 @@ use crate::{CUDA_BACKEND_ID, CUDA_TARGET_ID};
 /// (Drop-managed via `Arc<CudaBackend>`) can ship as a drop-in
 /// replacement when the backend ownership model accommodates it.
 #[derive(Debug)]
-pub struct CudaDeviceBuffer {
+pub(crate) struct CudaDeviceBuffer {
     backend_id: &'static str,
     handle: backend::CudaResidentBuffer,
 }

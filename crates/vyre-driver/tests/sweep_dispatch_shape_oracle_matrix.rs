@@ -8,11 +8,8 @@
 use vyre_driver::dispatch_configs_share_launch_shape;
 use vyre_driver::resolve_fixpoint_iterations;
 use vyre_driver::DispatchConfig;
-use vyre_driver::{binding_plans_share_layout, BindingPlan, BindingRole, BindingSetFingerprint};
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
 
 const CONFIG_CASES: usize = 256;
-const BINDING_CASES: usize = 256;
 
 #[test]
 fn dispatch_config_launch_shape_oracle_matches_independent_policy() {
@@ -55,48 +52,6 @@ fn dispatch_config_launch_shape_oracle_matches_independent_policy() {
     assert_eq!(assertions, CONFIG_CASES * 3);
 }
 
-#[test]
-fn binding_plan_layout_oracle_matches_independent_fingerprint_contract() {
-    let mut assertions = 0usize;
-    for case in 0..BINDING_CASES {
-        let program_a = hostile_binding_program(case as u32, false);
-        let program_b = hostile_binding_program(case as u32, true);
-        let plan_a = BindingPlan::build(&program_a)
-            .unwrap_or_else(|error| panic!("Fix: binding plan case {case} must build: {error}"));
-        let plan_b = BindingPlan::build(&program_b).unwrap_or_else(|error| {
-            panic!("Fix: binding plan variant case {case} must build: {error}")
-        });
-
-        assert!(
-            oracle_binding_slots_sorted(&plan_a),
-            "Fix: binding plan case {case} must keep bindings sorted by binding index."
-        );
-        assertions += 1;
-
-        assert_eq!(
-            plan_a.input_indices.len(),
-            oracle_input_role_count(&plan_a),
-            "Fix: binding plan case {case} input_indices must match input-role cardinality."
-        );
-        assertions += 1;
-
-        assert_eq!(
-            binding_plans_share_layout(&plan_a, &plan_b),
-            oracle_binding_plans_share_layout(&plan_a, &plan_b),
-            "Fix: binding_plans_share_layout case {case} must follow the independent fingerprint oracle."
-        );
-        assertions += 1;
-
-        assert_eq!(
-            BindingSetFingerprint::from_plan(&plan_a),
-            oracle_binding_set_fingerprint(&plan_a),
-            "Fix: BindingSetFingerprint case {case} must match the independent slot oracle."
-        );
-        assertions += 1;
-    }
-    assert_eq!(assertions, BINDING_CASES * 4);
-}
-
 fn oracle_dispatch_configs_share_launch_shape(
     compiled: &DispatchConfig,
     runtime: &DispatchConfig,
@@ -127,38 +82,6 @@ fn oracle_fixpoint_iterations_share_launch_shape(
     compiled_iterations == runtime_iterations
 }
 
-fn oracle_binding_slots_sorted(plan: &BindingPlan) -> bool {
-    plan.bindings
-        .windows(2)
-        .all(|pair| pair[0].binding <= pair[1].binding)
-}
-
-fn oracle_input_role_count(plan: &BindingPlan) -> usize {
-    plan.bindings
-        .iter()
-        .filter(|binding| {
-            matches!(
-                binding.role,
-                BindingRole::Input | BindingRole::InputOutput | BindingRole::Uniform
-            )
-        })
-        .count()
-}
-
-fn oracle_binding_set_fingerprint(plan: &BindingPlan) -> BindingSetFingerprint {
-    let mut slots: Vec<(u32, BindingRole, usize)> = plan
-        .bindings
-        .iter()
-        .map(|binding| (binding.binding, binding.role, binding.element_size))
-        .collect();
-    slots.sort_by_key(|(binding, _, _)| *binding);
-    BindingSetFingerprint { slots }
-}
-
-fn oracle_binding_plans_share_layout(a: &BindingPlan, b: &BindingPlan) -> bool {
-    oracle_binding_set_fingerprint(a) == oracle_binding_set_fingerprint(b)
-}
-
 fn hostile_dispatch_config(seed: u32) -> DispatchConfig {
     let mut cfg = DispatchConfig::default();
     if seed & 1 == 0 {
@@ -183,28 +106,4 @@ fn hostile_dispatch_config(seed: u32) -> DispatchConfig {
         cfg.cooperative = seed & 128 != 0;
     }
     cfg
-}
-
-fn hostile_binding_program(seed: u32, bump_counts: bool) -> Program {
-    let count_a = 4 + (seed % 16);
-    let count_b = if bump_counts { count_a + 8 } else { count_a };
-    let include_uniform = seed & 1 == 0;
-    let include_io = seed & 2 == 0;
-    let mut buffers = vec![
-        BufferDecl::storage("input_a", 0, BufferAccess::ReadOnly, DataType::U32)
-            .with_count(count_a),
-        BufferDecl::output("output", 1, DataType::U32).with_count(count_b),
-    ];
-    if include_uniform {
-        buffers.push(
-            BufferDecl::storage("params", 2, BufferAccess::Uniform, DataType::U32).with_count(2),
-        );
-    }
-    if include_io {
-        buffers.push(
-            BufferDecl::storage("scratch", 3, BufferAccess::ReadWrite, DataType::U32)
-                .with_count(count_a),
-        );
-    }
-    Program::wrapped(buffers, [64, 1, 1], Vec::new())
 }

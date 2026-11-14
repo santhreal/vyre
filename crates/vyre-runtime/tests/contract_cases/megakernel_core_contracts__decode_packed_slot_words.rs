@@ -12,7 +12,7 @@ use vyre_runtime::resident_work_queue::protocol::{
 };
 use vyre_runtime::resident_work_queue::ResidentWorkQueue;
 use vyre_runtime::resident_work_queue::{
-    build_program, build_program_jit, build_program_sharded, build_program_sharded_slots,
+    build_program, build_program_sharded, build_program_sharded_slots,
 };
 use vyre_runtime::{PipelineError, RingEncodingFault};
 
@@ -125,23 +125,6 @@ fn custom_opcode_handler_wires_into_program() {
     let prog = build_program_sharded(64, std::slice::from_ref(&handler));
     let errs = vyre_foundation::validate::validate(&prog);
     assert!(errs.is_empty(), "custom opcode validation failed: {errs:?}");
-}
-
-#[test]
-fn jit_payload_has_slot_opcode_and_arg_bindings() {
-    use vyre_foundation::ir::Expr;
-
-    let payload = vec![Node::let_bind(
-        "jit_arg_sum",
-        Expr::add(Expr::var("arg0"), Expr::var("arg2")),
-    )];
-    let prog = build_program_jit(64, &payload);
-    let errs = vyre_foundation::validate::validate(&prog);
-
-    assert!(
-        errs.is_empty(),
-        "JIT payloads must see the same slot argument bindings as interpreted opcode handlers: {errs:?}"
-    );
 }
 
 #[test]

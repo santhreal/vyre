@@ -6,7 +6,7 @@ use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use crate::api::suite::SuiteKind;
 use std::collections::HashMap;
 use std::time::Instant;
-use vyre_emit::ptx::{patterns, ComputeCapability};
+use vyre_emit::ptx::ComputeCapability;
 use vyre_foundation::ir::{BinOp, DataType};
 use vyre_lower::descriptor_builder::{effect, op};
 use vyre_lower::{
@@ -23,13 +23,6 @@ const SUITES: &[SuiteKind] = &[SuiteKind::Release, SuiteKind::Deep];
 #[derive(Debug)]
 struct PtxPatternTotals {
     corpus_kernels: u64,
-    predication_candidates: u64,
-    safe_predication_candidates: u64,
-    vec_load_candidates: u64,
-    vec_store_candidates: u64,
-    async_copy_candidates: u64,
-    tensor_core_candidates: u64,
-    ldmatrix_capable_targets: u64,
     scheduled_fillers: u64,
     predicated_stores: u64,
     branch_labels: u64,
@@ -104,7 +97,7 @@ impl BenchCase for CudaPtxPatterns {
 
     fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {
         let words = decode_words(run)?;
-        let [corpus_kernels, predication_candidates, safe_predication_candidates, vec_load_candidates, vec_store_candidates, async_copy_candidates, tensor_core_candidates, ldmatrix_capable_targets, scheduled_fillers, predicated_stores, branch_labels, cp_async_emitted, mma_sync_emitted, vectorized_loads_emitted, vectorized_stores_emitted, vector_kernel_scalar_loads, vector_kernel_scalar_stores, vector_kernel_scalar_index_adds, source_cache_entries, source_cache_hits, source_cache_misses, ptx_bytes_emitted] =
+        let [corpus_kernels, scheduled_fillers, predicated_stores, branch_labels, cp_async_emitted, mma_sync_emitted, vectorized_loads_emitted, vectorized_stores_emitted, vector_kernel_scalar_loads, vector_kernel_scalar_stores, vector_kernel_scalar_index_adds, source_cache_entries, source_cache_hits, source_cache_misses, ptx_bytes_emitted] =
             words.as_slice()
         else {
             return Ok(Correctness::Invalid {
@@ -113,13 +106,6 @@ impl BenchCase for CudaPtxPatterns {
             });
         };
         if *corpus_kernels < 4
-            || *predication_candidates == 0
-            || *safe_predication_candidates == 0
-            || *vec_load_candidates == 0
-            || *vec_store_candidates == 0
-            || *async_copy_candidates == 0
-            || *tensor_core_candidates == 0
-            || *ldmatrix_capable_targets == 0
             || *scheduled_fillers < 2
             || *predicated_stores < 3
             || *branch_labels != 0
@@ -137,7 +123,7 @@ impl BenchCase for CudaPtxPatterns {
         {
             return Ok(Correctness::Invalid {
                 reason: format!(
-                    "CUDA PTX release corpus missing fast-path evidence: kernels={corpus_kernels}, pred={predication_candidates}, safe_pred={safe_predication_candidates}, vload={vec_load_candidates}, vstore={vec_store_candidates}, async_copy={async_copy_candidates}, tensor_core={tensor_core_candidates}, ldmatrix_capable={ldmatrix_capable_targets}, fillers={scheduled_fillers}, pred_stores={predicated_stores}, branch_labels={branch_labels}, cp_async={cp_async_emitted}, mma_sync={mma_sync_emitted}, vectorized_loads={vectorized_loads_emitted}, vectorized_stores={vectorized_stores_emitted}, vector_scalar_loads={vector_kernel_scalar_loads}, vector_scalar_stores={vector_kernel_scalar_stores}, vector_scalar_index_adds={vector_kernel_scalar_index_adds}, source_cache_entries={source_cache_entries}, source_cache_hits={source_cache_hits}, source_cache_misses={source_cache_misses}, bytes={ptx_bytes_emitted}"
+                    "CUDA PTX release corpus missing fast-path evidence: kernels={corpus_kernels}, fillers={scheduled_fillers}, pred_stores={predicated_stores}, branch_labels={branch_labels}, cp_async={cp_async_emitted}, mma_sync={mma_sync_emitted}, vectorized_loads={vectorized_loads_emitted}, vectorized_stores={vectorized_stores_emitted}, vector_scalar_loads={vector_kernel_scalar_loads}, vector_scalar_stores={vector_kernel_scalar_stores}, vector_scalar_index_adds={vector_kernel_scalar_index_adds}, source_cache_entries={source_cache_entries}, source_cache_hits={source_cache_hits}, source_cache_misses={source_cache_misses}, bytes={ptx_bytes_emitted}"
                 ),
             });
         }
@@ -153,13 +139,6 @@ impl BenchCase for CudaPtxPatterns {
 fn ptx_pattern_bench_run(totals: &PtxPatternTotals, elapsed: u64) -> BenchRun {
     let words = [
         totals.corpus_kernels,
-        totals.predication_candidates,
-        totals.safe_predication_candidates,
-        totals.vec_load_candidates,
-        totals.vec_store_candidates,
-        totals.async_copy_candidates,
-        totals.tensor_core_candidates,
-        totals.ldmatrix_capable_targets,
         totals.scheduled_fillers,
         totals.predicated_stores,
         totals.branch_labels,
@@ -182,19 +161,6 @@ fn ptx_pattern_bench_run(totals: &PtxPatternTotals, elapsed: u64) -> BenchRun {
 
     let custom = [
         ("ptx_corpus_kernels", totals.corpus_kernels),
-        ("ptx_predication_candidates", totals.predication_candidates),
-        (
-            "ptx_safe_predication_candidates",
-            totals.safe_predication_candidates,
-        ),
-        ("ptx_vec_load_candidates", totals.vec_load_candidates),
-        ("ptx_vec_store_candidates", totals.vec_store_candidates),
-        ("ptx_async_copy_candidates", totals.async_copy_candidates),
-        ("ptx_tensor_core_candidates", totals.tensor_core_candidates),
-        (
-            "ptx_ldmatrix_capable_targets",
-            totals.ldmatrix_capable_targets,
-        ),
         ("ptx_scheduled_fillers", totals.scheduled_fillers),
         ("ptx_predicated_stores", totals.predicated_stores),
         ("ptx_branch_labels", totals.branch_labels),
@@ -251,13 +217,6 @@ fn ptx_pattern_bench_run(totals: &PtxPatternTotals, elapsed: u64) -> BenchRun {
 fn measure_corpus(corpus: &[KernelDescriptor]) -> Result<PtxPatternTotals, BenchError> {
     let mut totals = PtxPatternTotals {
         corpus_kernels: corpus.len() as u64,
-        predication_candidates: 0,
-        safe_predication_candidates: 0,
-        vec_load_candidates: 0,
-        vec_store_candidates: 0,
-        async_copy_candidates: 0,
-        tensor_core_candidates: 0,
-        ldmatrix_capable_targets: 0,
         scheduled_fillers: 0,
         predicated_stores: 0,
         branch_labels: 0,
@@ -275,33 +234,6 @@ fn measure_corpus(corpus: &[KernelDescriptor]) -> Result<PtxPatternTotals, Bench
     };
     let mut source_cache = HashMap::<String, String>::new();
     for desc in corpus {
-        let audit = patterns::audit(desc, ComputeCapability::SM_90);
-        totals.predication_candidates = totals
-            .predication_candidates
-            .saturating_add(audit.predication.candidates.len() as u64);
-        totals.safe_predication_candidates = totals
-            .safe_predication_candidates
-            .saturating_add(audit.predication.safe_candidate_count() as u64);
-        totals.vec_load_candidates = totals
-            .vec_load_candidates
-            .saturating_add(audit.vec_load.candidates.len() as u64);
-        totals.vec_store_candidates = totals
-            .vec_store_candidates
-            .saturating_add(audit.vec_store.candidates.len() as u64);
-        totals.async_copy_candidates = totals
-            .async_copy_candidates
-            .saturating_add(audit.async_copy.candidates.len() as u64);
-        totals.tensor_core_candidates = totals
-            .tensor_core_candidates
-            .saturating_add(audit.tensor_core.candidates.len() as u64);
-        totals.ldmatrix_capable_targets = totals.ldmatrix_capable_targets.saturating_add(
-            if audit.async_copy.target_supports_ldmatrix {
-                1
-            } else {
-                0
-            },
-        );
-
         let ptx = if let Some(cached) = source_cache.get(&desc.id) {
             totals.source_cache_hits = totals.source_cache_hits.saturating_add(1);
             cached.clone()
@@ -718,8 +650,8 @@ mod tests {
         let words = decode_words(&run).expect("decode_words must succeed");
         assert_eq!(
             words.len(),
-            22,
-            "Fix: the payload width must match the 22 words `verify` destructures"
+            15,
+            "Fix: the payload width must match the 15 words `verify` destructures"
         );
     }
 }

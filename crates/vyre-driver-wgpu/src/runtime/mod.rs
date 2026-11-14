@@ -9,11 +9,6 @@ pub mod adapter_caps_probe;
 pub(crate) mod cache;
 /// GPU device abstraction and initialization.
 pub(crate) mod device;
-/// Indirect dispatch path (C-B4).
-///
-/// Submits `ComputePass::dispatch_workgroups_indirect` on a
-/// GPU-resident `[u32; 3]` workgroup-count buffer.
-pub mod indirect;
 /// Pre-recorded persistent dispatch command buffers.
 pub mod prerecorded;
 /// Async readback ring (C-B5).

@@ -9,7 +9,6 @@
 #[path = "adversarial_emit_program_matrix.rs"]
 mod adversarial_emit_program_matrix;
 
-
 /// Integration tests from `tests/emit_contracts.rs`.
 #[path = "emit_contracts.rs"]
 mod emit_contracts;
@@ -17,10 +16,6 @@ mod emit_contracts;
 /// Integration tests from `tests/generated_emit_descriptor_matrix.rs`.
 #[path = "generated_emit_descriptor_matrix.rs"]
 mod generated_emit_descriptor_matrix;
-
-/// Integration tests from `tests/pattern_analysis_contracts/mod.rs`.
-#[path = "pattern_analysis_contracts/mod.rs"]
-mod pattern_analysis_contracts;
 
 /// Integration tests from `tests/target_capabilities.rs`.
 #[path = "target_capabilities.rs"]

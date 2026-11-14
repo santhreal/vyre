@@ -18,12 +18,6 @@ pub const METAL_BACKEND_ID: &str = "metal";
 pub const METAL_TARGET_ID: vyre_foundation::operation::TargetId =
     vyre_foundation::operation::TargetId::expect_valid(METAL_BACKEND_ID);
 
-/// Metal external resource import/export and timeline synchronization.
-mod external_resource;
-pub use external_resource::{
-    MetalExternalImportPolicy, MetalExternalMemoryDescriptor, MetalExternalMemoryHandle,
-    MetalExternalResourceImporter,
-};
 mod materializer;
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 mod runtime;
@@ -31,12 +25,6 @@ mod target_compiler;
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 pub use runtime::MetalBackend;
-#[cfg(any(target_os = "macos", target_os = "ios"))]
-pub use runtime::{
-    metal_resident_scan_resource_table, MetalResidentScanResourceEntry,
-    MetalResidentScanResourceError, MetalResidentScanResourceLifetime,
-    MetalResidentScanResourceTableEvidence, METAL_RESIDENT_SCAN_RESOURCE_TABLE_SCHEMA_VERSION,
-};
 
 /// Acquire the native Metal backend.
 ///

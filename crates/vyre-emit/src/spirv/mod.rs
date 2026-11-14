@@ -25,7 +25,6 @@
 use thiserror::Error;
 use vyre_foundation::diagnostics::{CauseKind, Diagnostic};
 use vyre_lower::KernelDescriptor;
-pub mod patterns;
 
 /// Target identity every diagnostic this emitter raises carries.
 const TARGET: &str = "spirv";

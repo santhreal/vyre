@@ -2,7 +2,6 @@
 
 use std::collections::BTreeMap;
 
-use vyre_foundation::ir::Program;
 use vyre_foundation::serial::wire::tags::data_type_tag;
 use vyre_spec::DataType;
 
@@ -179,56 +178,11 @@ impl SpecCacheKey {
     }
 }
 
-/// Build the backend-neutral VSA specialization key used by shader caches.
-///
-/// The high half is the low 64 bits of the VSA fingerprint; the low half is
-/// the specialization hash. Keeping this in `vyre-driver` prevents concrete
-/// backends from each reimplementing the same identity folding.
-#[must_use]
-pub fn vsa_specialization_key(program: &Program, spec_hash: u64) -> u128 {
-    let fingerprint = crate::launch::program_vsa_fingerprint_words(program);
-    let fp_lo = fingerprint
-        .iter()
-        .take(2)
-        .enumerate()
-        .fold(0_u64, |acc, (i, &word)| {
-            acc | (u64::from(word) << (32 * (i as u32)))
-        });
-    ((fp_lo as u128) << 64) | u128::from(spec_hash)
-}
-
-/// Deterministic hex key for a backend specialization artifact.
-///
-/// Concrete backends use this for AOT artifacts whose identity is
-/// `(cache-version, specialization hash, backend fingerprint)`. Keeping the
-/// length-delimited hash format here prevents each backend from inventing a
-/// subtly different concatenation scheme.
-#[must_use]
-pub fn versioned_specialization_artifact_key(
-    cache_version: u32,
-    spec_hash: &str,
-    backend_fingerprint: &str,
-) -> String {
-    let mut hasher = blake3::Hasher::new();
-    hasher.update(b"vyre-specialization-artifact-key-v1\0version\0");
-    hasher.update(&cache_version.to_le_bytes());
-    hasher.update(b"\0spec\0");
-    hasher.update(&(spec_hash.len() as u64).to_le_bytes());
-    hasher.update(spec_hash.as_bytes());
-    hasher.update(b"\0backend\0");
-    hasher.update(&(backend_fingerprint.len() as u64).to_le_bytes());
-    hasher.update(backend_fingerprint.as_bytes());
-    let hash = hasher.finalize();
-    let mut key = String::with_capacity(64);
-    crate::pipeline::hashing::push_lower_hex(hash.as_bytes(), &mut key);
-    key
-}
-
 // Inline: covers `SENTINEL_UNTAGGED_DTYPE`, `dtype_tag`, which no integration test can name.
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+    use vyre_foundation::ir::DataType;
 
     #[test]
     fn spec_map_ordering_is_commutative() {
@@ -250,36 +204,6 @@ mod tests {
         assert_ne!(
             SpecCacheKey::new(0xdead, 0xbeef, [64, 1, 1], &a),
             SpecCacheKey::new(0xdead, 0xbeef, [64, 1, 1], &b)
-        );
-    }
-
-    #[test]
-    fn vsa_specialization_key_changes_only_low_half_for_spec_hash() {
-        let program = Program::wrapped(
-            vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
-            [1, 1, 1],
-            vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
-        );
-        let a = vsa_specialization_key(&program, 0x11);
-        let b = vsa_specialization_key(&program, 0x22);
-        assert_eq!(
-            a >> 64,
-            b >> 64,
-            "Fix: VSA specialization keys must keep program identity independent from specialization values."
-        );
-        assert_ne!(
-            a as u64, b as u64,
-            "Fix: VSA specialization keys must include the specialization hash."
-        );
-    }
-
-    #[test]
-    fn versioned_artifact_key_separates_variable_length_fields() {
-        let a = versioned_specialization_artifact_key(1, "ab", "cd");
-        let b = versioned_specialization_artifact_key(1, "abc", "d");
-        assert_ne!(
-            a, b,
-            "Fix: specialization artifact keys must length-prefix variable fields."
         );
     }
 

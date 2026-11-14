@@ -166,31 +166,6 @@ pub fn record_launch_measurement(
     true
 }
 
-/// Report the fastest measured nanoseconds per launch width for one program.
-///
-/// The table is what this process observed, keyed by the program, its declared
-/// width, the launch element count, and the target limits the timings were
-/// taken under. An empty table means nothing was measured, never that a width
-/// is slow.
-#[must_use]
-pub fn launch_width_measurements(
-    program: &Program,
-    limits: LaunchGeometryLimits,
-    element_count: u32,
-) -> BTreeMap<[u32; 3], u64> {
-    let key = LaunchFactKey::new(program, program.workgroup_size(), element_count, limits);
-    let guard = match govern_mutex(
-        &LAUNCH_MEASUREMENTS.entries,
-        LAUNCH_FACTS_OWNER,
-        LAUNCH_FACTS_STATE,
-        RecoveryClass::TransactionallyRecoverable,
-    ) {
-        Ok(guard) => guard,
-        Err(_) => return BTreeMap::new(),
-    };
-    guard.get(&key).cloned().unwrap_or_default()
-}
-
 /// Which program, launch size, and target one measurement table describes.
 #[derive(Clone, Copy, Debug, Eq, PartialEq, Ord, PartialOrd)]
 struct LaunchFactKey {
@@ -300,23 +275,6 @@ fn widen_into_grid_ceiling(
         [widened, 1, 1]
     } else {
         declared
-    }
-}
-
-#[cfg(test)]
-pub(crate) fn forget_launch_measurements(
-    program: &Program,
-    limits: LaunchGeometryLimits,
-    element_count: u32,
-) {
-    let key = LaunchFactKey::new(program, program.workgroup_size(), element_count, limits);
-    if let Ok(mut guard) = govern_mutex(
-        &LAUNCH_MEASUREMENTS.entries,
-        LAUNCH_FACTS_OWNER,
-        LAUNCH_FACTS_STATE,
-        RecoveryClass::TransactionallyRecoverable,
-    ) {
-        guard.remove(&key);
     }
 }
 

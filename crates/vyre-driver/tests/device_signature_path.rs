@@ -1,22 +1,14 @@
-//! Tests for device signature paths.
+//! Tests for the built-in device signature table.
 
-use std::fs;
-use vyre_driver::DeviceSignature;
+use vyre_driver::DeviceSignatureTable;
 
 #[test]
 fn blackwell_120_signature_can_be_loaded() {
-    let path =
-        vyre_test_support::monorepo::vyre_workspace_root().join("devices/blackwell_120.toml");
+    let table = DeviceSignatureTable::builtins().expect("Fix: builtin device signatures load");
 
-    assert!(
-        path.exists(),
-        "blackwell_120.toml is missing from devices directory"
-    );
-
-    let source = fs::read_to_string(&path).expect("could not read blackwell_120.toml");
-
-    let signature =
-        DeviceSignature::from_toml_str(&source).expect("could not parse blackwell_120.toml");
+    let signature = table
+        .get("blackwell_120")
+        .expect("Fix: the builtin table contains blackwell_120");
 
     assert_eq!(signature.id, "blackwell_120");
 }

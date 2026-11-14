@@ -1,28 +1,18 @@
 //! IR program builders  -  construct the megakernel `Program` from vyre IR.
 //!
-//! Two flavours:
-//! - **Interpreted** (`build_program_sharded`)  -  If-tree opcode dispatch.
-//! - **JIT** (`build_program_jit`)  -  payload processor fused directly.
+//! The builders emit an If-tree opcode dispatch over the resident ring
+//! (`build_program_sharded`).
 
 use std::sync::Arc;
 
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 
 use super::atomic_relaxed::atomic_load_relaxed;
-use super::handlers::{claimed_slot_bindings, claimed_slot_body, load_miss_body, OpcodeHandler};
+use super::handlers::{claimed_slot_body, load_miss_body, OpcodeHandler};
 use super::io::io_completion_poll_body;
 use super::protocol::*;
 use super::workspace_adapter::ResidentWorkspaceAdapter;
 mod cache;
-mod jit;
-mod priority;
-pub use jit::{
-    build_program_jit, build_program_jit_slots, persistent_body_jit, try_persistent_body_jit,
-};
-pub use priority::{
-    build_program_priority, build_program_priority_slots, persistent_body_priority,
-    persistent_body_priority_slots,
-};
 
 /// Build the default megakernel IR (256 lanes × 1 workgroup, no custom opcodes).
 #[must_use]
@@ -539,30 +529,12 @@ fn tenant_authorized_claim_body(tenant_id: Expr, claimed_body: Vec<Node>) -> Vec
     )
 }
 
-fn execute_already_claimed_slot_body(tenant_id: Expr, claimed_body: Vec<Node>) -> Vec<Node> {
-    let mut body = vec![Node::let_bind(
-        "status_index",
-        Expr::add(Expr::var("slot_base"), Expr::u32(STATUS_WORD)),
-    )];
-    body.extend(tenant_authorized_body(tenant_id, claimed_body));
-    body
-}
-
 // Inline: covers the crate-private `body_preorder::walk_body_preorder` and
 // `let_names_preorder`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     use super::super::body_preorder::{let_names_preorder, walk_body_preorder};
     use super::*;
-
-    #[test]
-    fn priority_builder_declares_explicit_ring_slots() {
-        let program = build_program_priority_slots(64, 512, &[]);
-        let ring = program
-            .buffer("ring_buffer")
-            .expect("Fix: priority megakernel must declare the ring buffer");
-        assert_eq!(ring.count, 512 * SLOT_WORDS);
-    }
 
     #[test]
     fn direct_megakernel_defers_tenant_loads_until_status_is_published() {
@@ -685,19 +657,6 @@ mod tests {
             let adapter = PairingWorkspaceAdapter;
             vec![
                 ("build_program", Arc::new(build_program())),
-                ("build_program_jit", Arc::new(build_program_jit(64, &[]))),
-                (
-                    "build_program_jit_slots",
-                    Arc::new(build_program_jit_slots(64, 256, &[])),
-                ),
-                (
-                    "build_program_priority",
-                    Arc::new(build_program_priority(64, &[])),
-                ),
-                (
-                    "build_program_priority_slots",
-                    Arc::new(build_program_priority_slots(64, 256, &[])),
-                ),
                 (
                     "build_program_sharded",
                     Arc::new(build_program_sharded(64, &[])),

@@ -171,71 +171,16 @@ impl CudaKernelLaunchDiagnostic {
     }
 }
 
-/// Caller-owned scratch for repeated CUDA launch diagnostics.
-#[derive(Debug, Default)]
-pub struct CudaKernelLaunchDiagnosticScratch {
-    failures: Vec<CudaKernelCapabilityFailure>,
-    message: String,
-}
-
-impl CudaKernelLaunchDiagnosticScratch {
-    /// Diagnose and build the stable single-line diagnostic in reusable storage.
-    pub fn diagnose_stable_message(
-        &mut self,
-        kernel: &'static str,
-        device: CudaKernelDeviceEnvelope,
-        requirement: CudaKernelRequirement,
-    ) -> &str {
-        record_cuda_kernel_launch_failures(device, requirement, &mut self.failures);
-        write_stable_message(kernel, &self.failures, &mut self.message);
-        &self.message
-    }
-
-    /// Build the stable single-line diagnostic for caller-owned failures.
-    pub fn stable_message_for_failures(
-        &mut self,
-        kernel: &'static str,
-        failures: &[CudaKernelCapabilityFailure],
-    ) -> &str {
-        write_stable_message(kernel, failures, &mut self.message);
-        &self.message
-    }
-}
-
-/// Borrowed launch diagnostic backed by caller-owned scratch.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub struct CudaKernelLaunchDiagnosticRef<'a> {
-    /// Kernel label supplied by the caller.
-    pub kernel: &'static str,
-    /// Missing or invalid requirements.
-    pub failures: &'a [CudaKernelCapabilityFailure],
-}
-
-impl CudaKernelLaunchDiagnosticRef<'_> {
-    /// Return true when every requirement is satisfied.
-    #[must_use]
-    pub fn is_launchable(&self) -> bool {
-        self.failures.is_empty()
-    }
-}
-
 /// Diagnose whether a CUDA kernel can launch on the selected device.
 #[must_use]
-pub fn diagnose_cuda_kernel_launch(
+pub(crate) fn diagnose_cuda_kernel_launch(
     kernel: &'static str,
     device: CudaKernelDeviceEnvelope,
     requirement: CudaKernelRequirement,
 ) -> CudaKernelLaunchDiagnostic {
-    let mut scratch = CudaKernelLaunchDiagnosticScratch::default();
-    let kernel = {
-        let diagnostic =
-            diagnose_cuda_kernel_launch_with_scratch(kernel, device, requirement, &mut scratch);
-        diagnostic.kernel
-    };
-    CudaKernelLaunchDiagnostic {
-        kernel,
-        failures: scratch.failures,
-    }
+    let mut failures = Vec::new();
+    record_cuda_kernel_launch_failures(device, requirement, &mut failures);
+    CudaKernelLaunchDiagnostic { kernel, failures }
 }
 
 /// Build a release-path CUDA launch envelope from probed device caps and a
@@ -272,21 +217,6 @@ pub fn diagnose_cuda_kernel_launch_shape(
         cooperative_resident_block_limit,
         diagnostic,
     })
-}
-
-/// Diagnose whether a CUDA kernel can launch using caller-owned scratch.
-pub fn diagnose_cuda_kernel_launch_with_scratch<'a>(
-    kernel: &'static str,
-    device: CudaKernelDeviceEnvelope,
-    requirement: CudaKernelRequirement,
-    scratch: &'a mut CudaKernelLaunchDiagnosticScratch,
-) -> CudaKernelLaunchDiagnosticRef<'a> {
-    record_cuda_kernel_launch_failures(device, requirement, &mut scratch.failures);
-
-    CudaKernelLaunchDiagnosticRef {
-        kernel,
-        failures: &scratch.failures,
-    }
 }
 
 fn record_cuda_kernel_launch_failures(
@@ -525,100 +455,6 @@ mod tests {
         .expect_err("oversized CUDA block shape must fail before diagnostics");
 
         assert!(error.fix.contains("threads per block"));
-    }
-
-    #[test]
-    fn diagnostic_scratch_reuses_failure_and_message_storage() {
-        let mut scratch = CudaKernelLaunchDiagnosticScratch::default();
-        let failures_ptr = {
-            let blocked = diagnose_cuda_kernel_launch_with_scratch(
-                "frontier",
-                CudaKernelDeviceEnvelope {
-                    sm_major: 8,
-                    sm_minor: 6,
-                    max_threads_per_block: 512,
-                    shared_memory_per_block_bytes: 16_384,
-                    supports_cooperative_launch: false,
-                    supports_tensor_cores: false,
-                },
-                CudaKernelRequirement {
-                    min_sm_major: 9,
-                    min_sm_minor: 0,
-                    requested_threads_per_block: 1_024,
-                    requested_shared_memory_bytes: 65_536,
-                    requires_cooperative_launch: true,
-                    requires_tensor_cores: true,
-                },
-                &mut scratch,
-            );
-            assert!(!blocked.is_launchable());
-            assert_eq!(blocked.failures.len(), 5);
-            blocked.failures.as_ptr()
-        };
-
-        let message = scratch.diagnose_stable_message(
-            "frontier",
-            CudaKernelDeviceEnvelope {
-                sm_major: 8,
-                sm_minor: 6,
-                max_threads_per_block: 512,
-                shared_memory_per_block_bytes: 16_384,
-                supports_cooperative_launch: false,
-                supports_tensor_cores: false,
-            },
-            CudaKernelRequirement {
-                min_sm_major: 9,
-                min_sm_minor: 0,
-                requested_threads_per_block: 1_024,
-                requested_shared_memory_bytes: 65_536,
-                requires_cooperative_launch: true,
-                requires_tensor_cores: true,
-            },
-        );
-        assert!(message.contains("status=blocked"));
-        let message_ptr = message.as_ptr();
-
-        let launchable_failures_ptr = {
-            let launchable = diagnose_cuda_kernel_launch_with_scratch(
-                "frontier",
-                device(),
-                CudaKernelRequirement {
-                    min_sm_major: 9,
-                    min_sm_minor: 0,
-                    requested_threads_per_block: 256,
-                    requested_shared_memory_bytes: 32_768,
-                    requires_cooperative_launch: true,
-                    requires_tensor_cores: true,
-                },
-                &mut scratch,
-            );
-            assert!(launchable.is_launchable());
-            launchable.failures.as_ptr()
-        };
-        assert_eq!(launchable_failures_ptr, failures_ptr);
-
-        let message = scratch.diagnose_stable_message(
-            "frontier",
-            device(),
-            CudaKernelRequirement {
-                min_sm_major: 9,
-                min_sm_minor: 0,
-                requested_threads_per_block: 256,
-                requested_shared_memory_bytes: 32_768,
-                requires_cooperative_launch: true,
-                requires_tensor_cores: true,
-            },
-        );
-
-        assert_eq!(
-            message,
-            "cuda-kernel-capability-v1|kernel=frontier|status=ok"
-        );
-        assert_eq!(
-            message.as_ptr(),
-            message_ptr,
-            "Fix: repeated CUDA launch diagnostics must reuse caller-owned message storage instead of allocating one string per failure and joining them."
-        );
     }
 
     fn device() -> CudaKernelDeviceEnvelope {

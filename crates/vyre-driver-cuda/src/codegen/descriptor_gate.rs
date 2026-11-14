@@ -1,32 +1,10 @@
 //! Descriptor-level validation and analysis before concrete CUDA PTX emission.
 
 use vyre_foundation::ir::Program;
-use vyre_lower::pattern_audit::PatternAudit;
 
 pub(crate) fn validate_and_analyze(
     program: &Program,
-    target_sm: u32,
 ) -> Result<vyre_lower::KernelDescriptor, String> {
-    let descriptor = lower_for_cuda_emit(program)?;
-    if crate::instrumentation::cuda_descriptor_audit_enabled() {
-        let mut facts = vyre_lower::analyses::AnalysisFacts::none();
-        if let Some(banks) = std::num::NonZeroU32::new(crate::device::SHARED_MEMORY_BANK_COUNT) {
-            facts = facts.with_shared_memory_banks(banks);
-        }
-        let neutral = vyre_lower::audit(&descriptor, &facts);
-        let concrete = vyre_emit::ptx::patterns::audit(&descriptor, compute_capability(target_sm));
-        tracing::trace!(
-            target: "vyre_driver_cuda::descriptor",
-            kernel = %descriptor.id,
-            neutral = %neutral.format_short(),
-            concrete = %concrete.format_short(),
-            "descriptor analysis completed before CUDA PTX emission",
-        );
-    }
-    Ok(descriptor)
-}
-
-fn lower_for_cuda_emit(program: &Program) -> Result<vyre_lower::KernelDescriptor, String> {
     let trace = crate::instrumentation::cuda_stage_trace_enabled();
     let start = std::time::Instant::now();
     let descriptor = vyre_lower::lower_baseline(program)
@@ -74,8 +52,7 @@ mod tests {
             }],
         );
 
-        let descriptor =
-            validate_and_analyze(&program, 90).expect("Fix: descriptor gate must pass");
+        let descriptor = validate_and_analyze(&program).expect("Fix: descriptor gate must pass");
 
         assert_eq!(descriptor.dispatch.workgroup_size, [128, 1, 1]);
         assert_eq!(descriptor.bindings.slots.len(), 1);
@@ -86,7 +63,7 @@ mod tests {
     fn rejects_descriptor_verification_failures() {
         let program = Program::wrapped(Vec::new(), [1, 0, 1], Vec::new());
 
-        let error = validate_and_analyze(&program, 90).expect_err("zero dispatch must fail");
+        let error = validate_and_analyze(&program).expect_err("zero dispatch must fail");
 
         assert!(error.contains("physical lowering failed"));
         assert!(error.contains("KernelDescriptor"));

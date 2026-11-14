@@ -7,7 +7,7 @@
 
 use vyre_driver::{
     acquire_preferred_dispatch_backend, backend_dispatches, backend_precedence,
-    registered_backends, registered_backends_by_precedence,
+    registered_backends, registered_backends_by_precedence_slice,
 };
 
 #[test]
@@ -36,7 +36,7 @@ fn an_empty_registry_reports_no_backends_through_either_view() {
         "Fix: vyre-driver alone links no concrete driver and must see zero backends."
     );
     assert!(
-        registered_backends_by_precedence()
+        registered_backends_by_precedence_slice()
             .expect("the empty registry must be readable")
             .is_empty(),
         "Fix: the precedence-sorted view must agree with the unsorted one on an empty registry."

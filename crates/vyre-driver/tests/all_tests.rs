@@ -98,14 +98,6 @@ pub mod error_code_catalog;
 #[path = "error_code_frozen.rs"]
 pub mod error_code_frozen;
 
-/// Integration tests from `tests/external_import_order.rs`.
-#[path = "external_import_order.rs"]
-pub mod external_import_order;
-
-/// Integration tests from `tests/external_resource_path_agreement.rs`.
-#[path = "external_resource_path_agreement.rs"]
-pub mod external_resource_path_agreement;
-
 /// Integration tests from `tests/float_lowering_refusal.rs`.
 #[path = "float_lowering_refusal.rs"]
 pub mod float_lowering_refusal;
@@ -147,10 +139,6 @@ pub mod hostile_input_probe_shapes;
 #[path = "input_identity_contracts.rs"]
 pub mod input_identity_contracts;
 
-/// Integration tests from `tests/intrinsic_registration_contract.rs`.
-#[path = "intrinsic_registration_contract.rs"]
-pub mod intrinsic_registration_contract;
-
 /// Integration tests from `tests/launch_grid_axis_folding.rs`.
 #[path = "launch_grid_axis_folding.rs"]
 pub mod launch_grid_axis_folding;
@@ -162,10 +150,6 @@ pub mod logical_markers_are_not_backend_operations;
 /// Integration tests from `tests/lock_poison_policy.rs`.
 #[path = "lock_poison_policy.rs"]
 pub mod lock_poison_policy;
-
-/// Integration tests from `tests/megakernel_execution_contracts.rs`.
-#[path = "megakernel_execution_contracts.rs"]
-pub mod megakernel_execution_contracts;
 
 /// Integration tests from `tests/numeric_contracts.rs`.
 #[path = "numeric_contracts.rs"]
@@ -246,10 +230,6 @@ pub mod unreported_device_facts;
 /// Integration tests from `tests/vyre_backend_forwarding_closure.rs`.
 #[path = "vyre_backend_forwarding_closure.rs"]
 pub mod vyre_backend_forwarding_closure;
-
-/// Integration tests for domain-neutral resource ABI from `tests/resource_abi_contracts.rs`.
-#[path = "resource_abi_contracts.rs"]
-pub mod resource_abi_contracts;
 
 /// Integration tests from `tests/lock_policy_closure.rs`.
 #[path = "lock_policy_closure.rs"]

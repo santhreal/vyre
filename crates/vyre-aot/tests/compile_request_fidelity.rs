@@ -200,7 +200,6 @@ const FABRICATED_COMPILE_INPUTS: &[&str] = &[
     "DeviceFacts::unknown",
     "SearchBudget::new",
     "CompileObjective::",
-    "MeshFacts::",
 ];
 
 /// WHY: the three cases above prove three placeholders are gone. This one

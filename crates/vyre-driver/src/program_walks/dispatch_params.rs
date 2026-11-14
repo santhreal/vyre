@@ -4,12 +4,6 @@ use vyre_foundation::ir::Program;
 
 use crate::binding::{Binding, BindingRole};
 
-/// Derive the dispatch element count from a binding plan.
-#[must_use]
-pub fn dispatch_element_count(bindings: &[Binding]) -> u32 {
-    dispatch_element_count_inner(bindings, false)
-}
-
 /// Derive the dispatch element count from a binding plan and Program body.
 ///
 /// Atomics and subgroup collectives execute over the logical input span even
@@ -99,33 +93,6 @@ fn dispatch_element_count_over(
         return max_output;
     }
     max_non_shared.max(1)
-}
-
-/// Build per-buffer element-count parameter words for a dispatch with fallible
-/// host-staging allocation.
-pub fn try_dispatch_param_words(
-    bindings: &[Binding],
-    element_count: u32,
-) -> Result<Vec<u32>, String> {
-    let mut words = Vec::new();
-    try_dispatch_param_words_into(bindings, element_count, &mut words)?;
-    Ok(words)
-}
-
-/// Build per-buffer element-count parameter words into caller-owned storage.
-///
-/// # Errors
-///
-/// Returns an error when any binding slot overflows `usize`, or when
-/// the host staging allocation fails. The caller-owned `words` buffer is
-/// left in an unspecified but valid state (may be partially written); it
-/// is the caller's responsibility to handle the error before using the buffer.
-pub fn dispatch_param_words_into(
-    bindings: &[Binding],
-    element_count: u32,
-    words: &mut Vec<u32>,
-) -> Result<(), String> {
-    try_dispatch_param_words_into(bindings, element_count, words)
 }
 
 /// Build per-buffer element-count parameter words into caller-owned storage
@@ -254,78 +221,6 @@ mod tests {
         );
     }
 
-    #[test]
-    fn dispatch_params_support_sparse_binding_indices_without_repeated_growth() {
-        let bindings = [binding(4, 9), binding(1, 0)];
-        let words = try_dispatch_param_words(&bindings, 7)
-            .expect("Fix: sparse binding parameter words should stage");
-
-        assert_eq!(words, vec![7, 0, 7, 0, 0, 9]);
-    }
-
-    #[test]
-    fn dispatch_params_are_indexed_by_binding_slot_not_program_buffer_index() {
-        let mut sparse = binding(0, 4);
-        sparse.binding = 9;
-        let mut dynamic = binding(7, 0);
-        dynamic.binding = 2;
-        let words = try_dispatch_param_words(&[sparse, dynamic], 11)
-            .expect("Fix: sparse binding-slot parameter words should stage");
-
-        assert_eq!(words.len(), 11);
-        assert_eq!(words[0], 11);
-        assert_eq!(words[3], 11);
-        assert_eq!(words[10], 4);
-        assert_eq!(
-            words[8], 0,
-            "Fix: dispatch parameter words are indexed by binding slot, not buffer_index."
-        );
-    }
-
-    #[test]
-    fn generated_dispatch_params_cover_sparse_binding_slot_matrix() {
-        let mut checked = 0usize;
-        for seed in 0..4096u32 {
-            let binding_count = (seed as usize % 8) + 1;
-            let mut bindings = Vec::with_capacity(binding_count);
-            for index in 0..binding_count {
-                let mut item = binding(
-                    index,
-                    if index % 3 == 0 {
-                        0
-                    } else {
-                        seed + index as u32
-                    },
-                );
-                item.binding = ((seed.wrapping_mul(17) + (index as u32 * 97)) % 1024) + 1;
-                item.buffer_index = binding_count - 1 - index;
-                bindings.push(item);
-            }
-            let element_count = seed.wrapping_mul(31) | 1;
-            let words = try_dispatch_param_words(&bindings, element_count)
-                .expect("Fix: generated sparse binding-slot param words should stage.");
-            assert_eq!(words[0], element_count, "seed {seed}");
-            for item in &bindings {
-                let slot = usize::try_from(item.binding).expect("Fix: test binding fits usize") + 1;
-                let expected = if item.element_count == 0 {
-                    element_count
-                } else {
-                    item.element_count
-                };
-                assert_eq!(
-                    words[slot], expected,
-                    "Fix: generated dispatch-param seed {seed} binding slot {} must map to words[slot+1], regardless of buffer_index {}.",
-                    item.binding, item.buffer_index
-                );
-                checked += 1;
-            }
-        }
-        assert!(
-            checked >= 18_000,
-            "Fix: generated dispatch-param ABI coverage should exercise thousands of sparse binding layouts, got {checked}."
-        );
-    }
-
     // Reproducing test for: dispatch-param-words-silent-empty-return
     // Before fix: `dispatch_param_words` (infallible) existed and returned Vec::new() on error,
     // silently producing a zero-length param buffer. After fix: function is removed; callers
@@ -333,44 +228,4 @@ mod tests {
     // Reproducing test for: dispatch-param-words-into-silent-clear
     // Before fix: `dispatch_param_words_into` returned () and silently cleared `words` on error.
     // After fix: it returns `Result<(), String>` so callers can observe and propagate the error.
-    #[test]
-    fn dispatch_param_words_into_propagates_error_instead_of_silently_clearing() {
-        // Valid path: must succeed and populate correctly.
-        let bindings = [binding(0, 7), binding(2, 3)];
-        let mut words = Vec::new();
-        dispatch_param_words_into(&bindings, 7, &mut words)
-            .expect("Fix: dispatch_param_words_into must succeed for valid bindings");
-        assert_eq!(
-            words,
-            vec![7, 7, 0, 3],
-            "Fix: dispatch_param_words_into must produce [element_count, b0, b1_zero, b2] for valid bindings"
-        );
-
-        // Error path: a binding slot whose `slot + 1` overflows `usize` must return
-        // Err (and surface a `Fix:` hint), not silently clear the buffer. `binding`
-        // is a `u32`, so `usize::try_from` always succeeds and `slot.checked_add(1)`
-        // only overflows when `usize` is 32-bit (binding == u32::MAX => MAX + 1). On a
-        // 64-bit host u32::MAX + 1 fits `usize`, and the only other error source
-        // (a ~17 GB host-staging allocation) is non-deterministic, so the overflow
-        // assertion is gated to 32-bit where it is exact. On all hosts the success
-        // path above proves the function returns `Ok(...)` with the populated buffer
-        // (not the old silent `()`), and `no_infallible_dispatch_param_words_function_exists_in_public_surface`
-        // proves the silent-clear fallback is absent from the source.
-        #[cfg(target_pointer_width = "32")]
-        {
-            let mut overflow_binding = binding(0, 5);
-            overflow_binding.binding = u32::MAX;
-            let mut words2 = vec![0xdead_beef_u32; 4];
-            let err = dispatch_param_words_into(&[overflow_binding], 5, &mut words2);
-            assert!(
-                err.is_err(),
-                "Fix: dispatch_param_words_into must return Err on ABI slot overflow, not silently clear the buffer"
-            );
-            let msg = err.unwrap_err();
-            assert!(
-                msg.contains("Fix:"),
-                "Fix: dispatch_param_words_into error message must include a Fix: hint, got: {msg}"
-            );
-        }
-    }
 }

@@ -10,8 +10,6 @@ mod device_buffer;
 mod dispatch_timeout;
 pub mod emit;
 pub mod engine;
-/// WGPU external resource import/export and timeline synchronization.
-mod external_resource;
 mod materializer;
 mod numeric;
 mod padded_upload;
@@ -34,10 +32,6 @@ pub use device_buffer::{WgpuDeviceBuffer, WGPU_BACKEND_ID};
 use vyre_foundation::operation::TargetId;
 /// Validated target identity owned by the WGPU driver.
 pub const WGPU_TARGET_ID: TargetId = TargetId::expect_valid(WGPU_BACKEND_ID);
-pub use external_resource::{
-    WgpuExternalImportPolicy, WgpuExternalMemoryDescriptor, WgpuExternalMemoryHandle,
-    WgpuExternalResourceImporter,
-};
 pub use stats::WgpuBackendStats;
 use std::hash::BuildHasherDefault;
 use std::sync::{atomic::AtomicBool, Arc};

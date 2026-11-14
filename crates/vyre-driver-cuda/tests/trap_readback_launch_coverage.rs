@@ -14,11 +14,8 @@
 //! paths and the helper set are derived from the crate source at run time, so
 //! adding a path, or renaming a helper so the scan stops matching, turns this RED.
 //!
-//! Three decisions are representable and each is a different reason a trap cannot
-//! go unreported. `CrateAuthoredPtxDeclaresNoTrap` is the one that could rot
-//! without anybody noticing, because it is a claim about generated text rather
-//! than about control flow, so it is checked here against the text the builders
-//! actually produce.
+//! Two decisions are representable and each is a different reason a trap cannot
+//! go unreported.
 //!
 //! What it does not catch: whether a `LeaseReadsTheRecord` row is true. A path
 //! claiming lease coverage while calling the launch outside `launch_then_release`
@@ -41,9 +38,6 @@ enum TrapAccounting {
     /// Refuses a trap-declaring module before launching, because it cannot
     /// synchronize and so could never read the record back.
     RefusesTrapDeclaringModule,
-    /// Launches PTX this crate writes itself, which declares no trap sidecar and
-    /// therefore has no record to read. Checked below against the emitted text.
-    CrateAuthoredPtxDeclaresNoTrap,
 }
 
 /// Every dispatch path and how it accounts for the trap record, keyed by source
@@ -78,21 +72,6 @@ const RECORDED_DISPATCH_PATHS: &[(&str, &str, TrapAccounting)] = &[
         "fill_upload_resident_many_repeated_sequence_read_ranges_borrowed_into",
         TrapAccounting::LeaseReadsTheRecord,
     ),
-    (
-        "src/egraph_kernel_plan/backend_rewrite.rs",
-        "run_egraph_canonical_rewrite_kernel_inner",
-        TrapAccounting::CrateAuthoredPtxDeclaresNoTrap,
-    ),
-    (
-        "src/egraph_kernel_plan/backend_rewrite.rs",
-        "run_egraph_signature_refresh_kernel_inner",
-        TrapAccounting::CrateAuthoredPtxDeclaresNoTrap,
-    ),
-    (
-        "src/egraph_kernel_plan/backend_structural.rs",
-        "run_egraph_structural_equivalence_kernel_inner",
-        TrapAccounting::CrateAuthoredPtxDeclaresNoTrap,
-    ),
 ];
 
 /// The launch funnel: the FFI boundary and every internal helper that forwards to
@@ -103,10 +82,6 @@ const LAUNCH_HELPERS: &[&str] = &[
     "launch_prevalidated_function",
     "replay_fixpoint_launches",
 ];
-
-/// Any nonzero SM selects a PTX ISA version and leaves the body text unchanged, so
-/// the sidecar check does not depend on which one. This is the host's.
-const PTX_CHECK_TARGET_SM: u32 = 120;
 
 fn crate_root() -> PathBuf {
     vyre_test_support::monorepo::vyre_crate_directory("vyre-driver-cuda")
@@ -290,40 +265,4 @@ fn every_cuda_dispatch_path_records_how_it_reports_a_device_trap() {
         stale.is_empty(),
         "Fix: these recorded trap decisions name dispatch paths that no longer exist: {stale:?}. Delete the stale rows so the ledger keeps describing the code."
     );
-}
-
-/// WHY: `CrateAuthoredPtxDeclaresNoTrap` is the only decision in the ledger that
-/// is a claim about generated text. Control-flow decisions break loudly when they
-/// break; this one breaks by someone adding a trap to a hand-written PTX template,
-/// after which the module declares a sidecar no host reads and a trapping launch
-/// reports success. So the claim is checked against the text the builders produce.
-#[test]
-fn crate_authored_ptx_declares_no_trap_sidecar() {
-    let claimed = RECORDED_DISPATCH_PATHS
-        .iter()
-        .any(|(_, _, accounting)| *accounting == TrapAccounting::CrateAuthoredPtxDeclaresNoTrap);
-    assert!(
-        claimed,
-        "Fix: no dispatch path claims CrateAuthoredPtxDeclaresNoTrap any more, so this check has nothing to prove and must be deleted along with the decision."
-    );
-
-    let structural =
-        vyre_driver_cuda::cuda_egraph_structural_equivalence_kernel_ptx(PTX_CHECK_TARGET_SM)
-            .expect("Fix: the structural-equivalence kernel must emit PTX for a valid SM.");
-    let rewrite = vyre_driver_cuda::cuda_egraph_canonical_rewrite_kernel_ptx(PTX_CHECK_TARGET_SM)
-        .expect("Fix: the canonical-rewrite kernel must emit PTX for a valid SM.");
-    let refresh = vyre_driver_cuda::cuda_egraph_signature_refresh_kernel_ptx(PTX_CHECK_TARGET_SM)
-        .expect("Fix: the signature-refresh kernel must emit PTX for a valid SM.");
-
-    for (name, source) in [
-        ("structural equivalence", structural.source.as_str()),
-        ("canonical rewrite", rewrite.source.as_str()),
-        ("signature refresh", refresh.source.as_str()),
-    ] {
-        assert!(
-            !source.contains(vyre_emit::ptx::TRAP_SIDECAR_SYMBOL),
-            "Fix: the crate-authored {name} kernel now declares `{}`, but the paths that launch it take no ModuleGlobalsLease, so nothing reads the record and a trapping launch would report success. Either route that launch through a lease and change its ledger row to LeaseReadsTheRecord, or drop the trap from the template.",
-            vyre_emit::ptx::TRAP_SIDECAR_SYMBOL
-        );
-    }
 }

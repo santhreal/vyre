@@ -113,7 +113,7 @@ impl SpeculationReport {
 /// Default crossover threshold. Below this commit rate the
 /// speculative path underperforms the non-speculative GPU
 /// prefilter -> confirmer pair on empirical benchmarks.
-pub const DEFAULT_THRESHOLD_PCT: u32 = 15;
+pub(crate) const DEFAULT_THRESHOLD_PCT: u32 = 15;
 
 /// Caller-controlled speculation policy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -232,13 +232,13 @@ impl AdaptiveSpeculator {
 
 /// Two little-endian u32s written at the tail of a speculative
 /// output buffer by the fused kernel: `[committed, rolled_back]`.
-pub const COUNTER_TAIL_BYTES: usize = 8;
+pub(crate) const COUNTER_TAIL_BYTES: usize = 8;
 
 /// Read the two-u32 trailer a speculative kernel wrote at the end
 /// of its output buffer. Returns `None` if the buffer is too short
 /// or its length is not a multiple of 4.
 #[must_use]
-pub fn parse_counter_tail(output_bytes: &[u8]) -> Option<SpeculationReport> {
+pub(crate) fn parse_counter_tail(output_bytes: &[u8]) -> Option<SpeculationReport> {
     if output_bytes.len() < COUNTER_TAIL_BYTES {
         return None;
     }
@@ -256,10 +256,9 @@ pub fn parse_counter_tail(output_bytes: &[u8]) -> Option<SpeculationReport> {
     ))
 }
 
-/// Encode a counter tail  -  used by CPU-reference kernels and
-/// tests. Keeps the host + device endianness consistent.
-#[must_use]
-pub fn encode_counter_tail(report: SpeculationReport) -> [u8; COUNTER_TAIL_BYTES] {
+/// Encode a counter tail for the CPU-side test backends.
+#[cfg(test)]
+fn encode_counter_tail(report: SpeculationReport) -> [u8; COUNTER_TAIL_BYTES] {
     let mut out = [0_u8; COUNTER_TAIL_BYTES];
     out[0..4].copy_from_slice(&report.committed_tiles.to_le_bytes());
     out[4..8].copy_from_slice(&report.rolled_back_tiles.to_le_bytes());

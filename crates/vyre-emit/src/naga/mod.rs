@@ -12,7 +12,6 @@ use vyre_lower::KernelDescriptor;
 mod emitter;
 mod error;
 mod grid_segments;
-pub mod patterns;
 pub mod program;
 pub use error::EmitError;
 pub use grid_segments::grid_segment_entry_points;

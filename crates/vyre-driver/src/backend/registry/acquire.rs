@@ -80,14 +80,6 @@ pub fn registered_backends_by_precedence_slice(
     registered_backends_by_precedence_slice_result()
 }
 
-/// Return every registered backend sorted by precedence (low rank first).
-/// Prefer [`registered_backends_by_precedence_slice`] on hot paths.
-#[must_use]
-pub fn registered_backends_by_precedence() -> Result<Vec<&'static BackendRegistration>, BackendError>
-{
-    Ok(registered_backends_by_precedence_slice()?.to_vec())
-}
-
 fn registration_for_id(id: &str) -> Result<Option<&'static BackendRegistration>, BackendError> {
     registered_backend(id)
 }

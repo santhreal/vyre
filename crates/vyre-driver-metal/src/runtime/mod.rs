@@ -5,7 +5,6 @@ mod dispatch;
 mod metrics;
 mod pipeline;
 mod resident;
-mod scan_resource;
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{
@@ -46,11 +45,6 @@ use self::resident::{
     lock_resident_buffer_table, new_zero_buffer, next_resident_id, ns_uint_to_u32_saturating,
     reserve_fused_resident_view_outputs, resolve_resident_resources_from_table,
     validate_resident_range, zero_shared_buffer_range, MetalResidentBuffer, ResolvedMetalResource,
-};
-pub use self::scan_resource::{
-    metal_resident_scan_resource_table, MetalResidentScanResourceEntry,
-    MetalResidentScanResourceError, MetalResidentScanResourceLifetime,
-    MetalResidentScanResourceTableEvidence, METAL_RESIDENT_SCAN_RESOURCE_TABLE_SCHEMA_VERSION,
 };
 use crate::METAL_BACKEND_ID;
 

@@ -10,7 +10,6 @@ mod descent_contract;
 mod descriptor_builder;
 mod literal_serde;
 mod operand_class;
-mod pattern_audit;
 mod program_stability_corpus;
 mod vec_pack;
 mod verify_descriptor;

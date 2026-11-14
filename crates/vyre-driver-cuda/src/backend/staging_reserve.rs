@@ -4,13 +4,7 @@ use std::hash::Hash;
 
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::{Array, SmallVec};
-use vyre_driver::{
-    reservation_policy::{
-        reserve_typed_hash_map_to_capacity, reserved_typed_vec as driver_reserved_typed_vec,
-        ReservationPolicy,
-    },
-    BackendError,
-};
+use vyre_driver::{reservation_policy::ReservationPolicy, BackendError};
 
 const CUDA_STAGING: ReservationPolicy = ReservationPolicy::new(
     "CUDA backend staging",
@@ -79,88 +73,13 @@ where
     CUDA_STAGING.reserve_hash_map_to_capacity(map, capacity, field)
 }
 
-/// Domain error adapter for CUDA planners that use typed reservation failures.
-pub(crate) trait CudaStorageReserveFailure: Sized {
-    /// Build the planner-specific error for a failed staging reservation.
-    fn storage_reserve_failed(field: &'static str, requested: usize, message: String) -> Self;
-}
-
-#[cfg(test)]
-use vyre_driver::reservation_policy::reserve_typed_vec_to_capacity;
-#[cfg(test)]
-pub(crate) fn reserve_typed_vec<T, E>(
-    vec: &mut Vec<T>,
-    capacity: usize,
-    field: &'static str,
-) -> Result<(), E>
-where
-    E: CudaStorageReserveFailure,
-{
-    reserve_typed_vec_to_capacity(
-        CUDA_STAGING,
-        vec,
-        capacity,
-        field,
-        E::storage_reserve_failed,
-    )
-}
-
-pub(crate) fn reserved_typed_vec<T, E>(capacity: usize, field: &'static str) -> Result<Vec<T>, E>
-where
-    E: CudaStorageReserveFailure,
-{
-    driver_reserved_typed_vec(CUDA_STAGING, capacity, field, E::storage_reserve_failed)
-}
-
-pub(crate) fn reserve_typed_hash_map<K, V, E>(
-    map: &mut FxHashMap<K, V>,
-    capacity: usize,
-    field: &'static str,
-) -> Result<(), E>
-where
-    K: Eq + Hash,
-    E: CudaStorageReserveFailure,
-{
-    reserve_typed_hash_map_to_capacity(
-        CUDA_STAGING,
-        map,
-        capacity,
-        field,
-        E::storage_reserve_failed,
-    )
-}
-
-// Inline: covers `CudaStorageReserveFailure`, `reserve_smallvec`, `reserve_typed_hash_map`,
-// `reserve_typed_vec` and 3 more items this module keeps private, which no integration test can
-// name.
+// Inline: covers `reserve_smallvec` and `resize_vec_slots`, which this module keeps private and
+// no integration test can name.
 #[cfg(test)]
 mod tests {
-    use rustc_hash::FxHashMap;
     use smallvec::SmallVec;
 
-    use super::{
-        reserve_smallvec, reserve_typed_hash_map, reserve_typed_vec, reserve_vec, resize_vec_slots,
-        CudaStorageReserveFailure,
-    };
-
-    #[derive(Debug, Eq, PartialEq)]
-    enum TypedReserveError {
-        Reserve {
-            field: &'static str,
-            requested: usize,
-            message: String,
-        },
-    }
-
-    impl CudaStorageReserveFailure for TypedReserveError {
-        fn storage_reserve_failed(field: &'static str, requested: usize, message: String) -> Self {
-            Self::Reserve {
-                field,
-                requested,
-                message,
-            }
-        }
-    }
+    use super::{reserve_smallvec, reserve_vec, resize_vec_slots};
 
     #[test]
     fn reserve_vec_grows_to_target_capacity_after_clear() {
@@ -188,18 +107,6 @@ mod tests {
             words.capacity() >= 8,
             "Fix: reserve_smallvec must request target_capacity - len, not target_capacity - current_capacity."
         );
-    }
-
-    #[test]
-    fn typed_cuda_reservations_share_vec_and_map_growth() {
-        let mut bytes = Vec::<u8>::new();
-        let mut map = FxHashMap::<u32, u32>::default();
-
-        reserve_typed_vec::<_, TypedReserveError>(&mut bytes, 32, "typed bytes").unwrap();
-        reserve_typed_hash_map::<_, _, TypedReserveError>(&mut map, 32, "typed map").unwrap();
-
-        assert!(bytes.capacity() >= 32);
-        assert!(map.capacity() >= 32);
     }
 
     #[test]
