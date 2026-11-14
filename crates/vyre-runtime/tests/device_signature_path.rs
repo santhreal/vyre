@@ -4,7 +4,7 @@ use vyre_runtime::DeviceSignatureTable;
 
 #[test]
 fn blackwell_120_signature_can_be_loaded() {
-    let table = DeviceSignatureTable::builtins().expect("Fix: builtin device signatures load");
+    let table = DeviceSignatureTable::builtins_ref().expect("Fix: builtin device signatures load");
 
     let signature = table
         .get("blackwell_120")

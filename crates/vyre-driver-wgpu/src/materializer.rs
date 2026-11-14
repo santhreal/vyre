@@ -1,15 +1,12 @@
-use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use vyre_compiler::lower::TRAP_SIDECAR_NAME;
-use vyre_compiler::{
-    Artifact, ArtifactInputSlot, ArtifactValueId, TargetPayload, TargetResourceAccess,
-};
+use vyre_compiler::{Artifact, ArtifactInputSlot, TargetPayload, TargetResourceAccess};
 use vyre_foundation::ir::Program;
 use vyre_runtime::materialize::{
     self, DeviceSpec, ExecutableModule, InstanceCore, InstanceMessages, MaterializedInstance,
-    MaterializerDevice, ResidentInstance,
+    MaterializerDevice, ResidentBindings, ResidentInstance,
 };
 use vyre_runtime::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet,
@@ -257,8 +254,9 @@ impl ResidentInstance for WgpuArtifactInstance {
         module_index: usize,
         module: &Self::Module,
         _plan: &BindingPlan,
-        resources: &BTreeMap<ArtifactValueId, Resource>,
-    ) -> Result<Vec<Resource>, BackendError> {
+        resources: ResidentBindings<'_>,
+        ordered: &mut Vec<Resource>,
+    ) -> Result<(), BackendError> {
         self.core.ordered_resident_resources(
             module_index,
             module.resident_slots.iter().map(String::as_str),
@@ -269,6 +267,7 @@ impl ResidentInstance for WgpuArtifactInstance {
                     value.0
                 ))
             },
+            ordered,
         )
     }
 }
@@ -312,8 +311,8 @@ pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, Ba
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::collections::BTreeSet;
-    use vyre_compiler::Digest;
+    use std::collections::{BTreeMap, BTreeSet};
+    use vyre_compiler::{ArtifactValueId, Digest};
 
     /// WHY: runtime recovery must receive a stable device-loss class, never text to parse.
     #[test]

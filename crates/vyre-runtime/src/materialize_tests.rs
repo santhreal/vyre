@@ -16,9 +16,10 @@ use crate::materialize::materialize_test_fixtures::{
     test_instance_core, test_payload, test_profile,
 };
 use crate::materialize::{
-    admit, partition_bindings, retained_chain_relates, unbound_input, unbound_resident_buffer,
-    ExecutableModule, MaterializerTarget,
+    admit, retained_chain_relates, unbound_input, unbound_resident_buffer, ExecutableModule,
+    MaterializerTarget, ResidentBindings,
 };
+use crate::materialize_instance::host_state;
 use crate::{
     BackendError, BindingPlan, BindingSet, BoundResource, DispatchConfig, Resource,
     TimedDispatchResult,
@@ -143,36 +144,50 @@ fn sparse_and_reordered_module_binding_identities() {
     let res_y = Resource::Resident(owner.handle(20));
     let res_out = Resource::Resident(owner.handle(30));
 
-    let mut resident_map = BTreeMap::new();
-    resident_map.insert(ArtifactValueId(val_x.0), res_x.clone());
-    resident_map.insert(ArtifactValueId(val_y.0), res_y.clone());
-    resident_map.insert(ArtifactValueId(res_id.0), res_out.clone());
+    let mut resident_set = BindingSet::new(core.artifact);
+    resident_set.insert(
+        ArtifactValueId(val_x.0),
+        BoundResource::Resident(res_x.clone()),
+    );
+    resident_set.insert(
+        ArtifactValueId(val_y.0),
+        BoundResource::Resident(res_y.clone()),
+    );
+    resident_set.insert(
+        ArtifactValueId(res_id.0),
+        BoundResource::Resident(res_out.clone()),
+    );
+    let resident = ResidentBindings::new(&resident_set).expect("every binding is resident");
 
-    let ordered = core
-        .ordered_resident_resources_for_module(
-            0,
-            &plan0,
-            &program0,
-            &resident_map,
-            unbound_resident_buffer,
-        )
-        .expect("ordered resident resources must resolve by authenticated identity");
+    let mut ordered = Vec::new();
+    core.ordered_resident_resources_for_module(
+        0,
+        &plan0,
+        &program0,
+        resident,
+        unbound_resident_buffer,
+        &mut ordered,
+    )
+    .expect("ordered resident resources must resolve by authenticated identity");
 
     // Binding plan order: in_b (0), in_a (1), out_0 (2)
-    assert_eq!(ordered[0], res_y);
-    assert_eq!(ordered[1], res_x);
-    assert_eq!(ordered[2], res_out);
+    assert_eq!(ordered, [res_y, res_x, res_out]);
 
     // Unbound resource fails closed
-    let mut missing_map = resident_map.clone();
-    missing_map.remove(&ArtifactValueId(val_x.0));
+    let mut missing_set = BindingSet::new(core.artifact);
+    for (value, resource) in resident.iter() {
+        if *value != ArtifactValueId(val_x.0) {
+            missing_set.insert(*value, BoundResource::Resident(resource.clone()));
+        }
+    }
     let unbound_err = core
         .ordered_resident_resources_for_module(
             0,
             &plan0,
             &program0,
-            &missing_map,
+            ResidentBindings::new(&missing_set).expect("every binding is resident"),
             unbound_resident_buffer,
+            &mut Vec::new(),
         )
         .expect_err("missing resident resource must fail closed");
     assert!(unbound_err.to_string().contains("in_a"));
@@ -1004,7 +1019,7 @@ fn hostile_binding_bytes_cannot_resize_admitted_launch_geometry() {
     let mut bindings = BindingSet::new(artifact_identity);
     bindings.insert(input, BoundResource::Host(hostile_bytes.clone()));
     assert_eq!(bindings.artifact(), artifact_identity);
-    let state = partition_bindings(bindings).host;
+    let state = host_state(bindings);
     let completion = core
         .execute_modules(
             &modules,

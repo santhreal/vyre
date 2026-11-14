@@ -780,7 +780,7 @@ impl CudaDeviceCaps {
             shared_memory_bank_count: SHARED_MEMORY_BANK_COUNT,
             shared_memory_bank_width_bytes: SHARED_MEMORY_BANK_WIDTH_BYTES,
         };
-        vyre_runtime::DeviceSignatureTable::builtins().map_or(profile, |table| {
+        vyre_runtime::DeviceSignatureTable::builtins_ref().map_or(profile, |table| {
             table.apply_generation_to_profile(self.native_sm(), profile)
         })
     }
@@ -801,8 +801,8 @@ mod tests {
     #[test]
     fn cuda_profile_applies_builtin_sm_signature() {
         let profile = synthetic_sm120_envelope_default().to_device_profile();
-        let table =
-            vyre_runtime::DeviceSignatureTable::builtins().expect("Fix: builtin signatures load");
+        let table = vyre_runtime::DeviceSignatureTable::builtins_ref()
+            .expect("Fix: builtin signatures load");
         let signature = table
             .find_architecture_generation(120)
             .expect("Fix: SM_120 must match the builtin Blackwell signature");

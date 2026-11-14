@@ -15,34 +15,71 @@ use crate::materialize::{
     InstanceMessages,
 };
 
-/// Bound resources split by where their bytes live.
-#[derive(Debug, Default)]
-pub struct BoundState {
-    /// Caller-owned bytes, keyed by canonical value.
-    pub host: BTreeMap<ArtifactValueId, Vec<u8>>,
-    /// Device-resident handles, keyed by canonical value.
-    pub resident: BTreeMap<ArtifactValueId, Resource>,
+/// A binding set whose every value is bound to a device-resident resource.
+///
+/// The view borrows the caller's bindings, so routing a resident submission
+/// builds no second map and clones no handle until a launch orders them.
+#[derive(Clone, Copy, Debug)]
+pub struct ResidentBindings<'a> {
+    resources: &'a BTreeMap<ArtifactValueId, BoundResource>,
 }
 
-/// Split a binding set into its host and resident halves, moving every
-/// binding rather than copying its bytes.
-///
-/// Every backend walked the same map and sorted it the same way; what they do
-/// with a resident binding is where they differ.
-#[must_use]
-pub fn partition_bindings(bindings: BindingSet) -> BoundState {
-    let mut bound = BoundState::default();
-    for (value, resource) in bindings.into_resources() {
-        match resource {
-            BoundResource::Host(bytes) => {
-                bound.host.insert(value, bytes);
-            }
-            BoundResource::Resident(resource) => {
-                bound.resident.insert(value, resource);
-            }
+impl<'a> ResidentBindings<'a> {
+    /// Borrow `bindings` as resident handles, or `None` when any value is
+    /// bound to host bytes.
+    #[must_use]
+    pub fn new(bindings: &'a BindingSet) -> Option<Self> {
+        let resources = bindings.resources();
+        resources
+            .values()
+            .all(|resource| matches!(resource, BoundResource::Resident(_)))
+            .then_some(Self { resources })
+    }
+
+    /// The resident handle bound to `value`.
+    #[must_use]
+    pub fn get(self, value: &ArtifactValueId) -> Option<&'a Resource> {
+        match self.resources.get(value)? {
+            BoundResource::Resident(resource) => Some(resource),
+            BoundResource::Host(_) => None,
         }
     }
-    bound
+
+    /// Every bound value and its resident handle, in value order.
+    pub fn iter(self) -> impl Iterator<Item = (&'a ArtifactValueId, &'a Resource)> {
+        self.resources
+            .iter()
+            .filter_map(|(value, resource)| match resource {
+                BoundResource::Resident(resource) => Some((value, resource)),
+                BoundResource::Host(_) => None,
+            })
+    }
+}
+
+/// Move the host bytes out of `bindings`, dropping any resident binding.
+///
+/// Callers route a set to the host path only after checking it binds no
+/// resident value.
+pub(crate) fn host_state(bindings: BindingSet) -> BTreeMap<ArtifactValueId, Vec<u8>> {
+    bindings
+        .into_resources()
+        .into_iter()
+        .filter_map(|(value, resource)| match resource {
+            BoundResource::Host(bytes) => Some((value, bytes)),
+            BoundResource::Resident(_) => None,
+        })
+        .collect()
+}
+
+/// Whether `bindings` binds any host value and any resident value.
+fn binding_kinds(bindings: &BindingSet) -> (bool, bool) {
+    bindings.resources().values().fold(
+        (false, false),
+        |(host, resident), resource| match resource {
+            BoundResource::Host(_) => (true, resident),
+            BoundResource::Resident(_) => (host, true),
+        },
+    )
 }
 
 /// Take the bound host bytes on a backend with no resident submission path.
@@ -59,14 +96,13 @@ pub fn host_only_bindings(
     feature: &str,
     backend: &str,
 ) -> Result<BTreeMap<ArtifactValueId, Vec<u8>>, BackendError> {
-    let bound = partition_bindings(bindings);
-    if bound.resident.is_empty() {
-        return Ok(bound.host);
+    if binding_kinds(&bindings).1 {
+        return Err(BackendError::UnsupportedFeature {
+            name: feature.to_string(),
+            backend: backend.to_string(),
+        });
     }
-    Err(BackendError::UnsupportedFeature {
-        name: feature.to_string(),
-        backend: backend.to_string(),
-    })
+    Ok(host_state(bindings))
 }
 
 impl InstanceCore {
@@ -98,17 +134,15 @@ impl InstanceCore {
         bindings: BindingSet,
         mixed: fn() -> BackendError,
         host: impl FnOnce(BTreeMap<ArtifactValueId, Vec<u8>>) -> Result<Completion, BackendError>,
-        resident: impl FnOnce(&BTreeMap<ArtifactValueId, Resource>) -> Result<Completion, BackendError>,
+        resident: impl FnOnce(ResidentBindings<'_>) -> Result<Completion, BackendError>,
     ) -> Result<Box<dyn Submission>, BackendError> {
         self.accept(&bindings)?;
-        let bound = partition_bindings(bindings);
-        if !bound.host.is_empty() && !bound.resident.is_empty() {
-            return Err(mixed());
-        }
-        let result = if bound.resident.is_empty() {
-            host(bound.host)
-        } else {
-            resident(&bound.resident)
+        let result = match binding_kinds(&bindings) {
+            (true, true) => return Err(mixed()),
+            (_, false) => host(host_state(bindings)),
+            (false, true) => resident(ResidentBindings {
+                resources: bindings.resources(),
+            }),
         };
         Ok(self.ready(result))
     }
@@ -124,32 +158,16 @@ impl InstanceCore {
     ///
     /// Returns the backend's `foreign_artifact` rejection when any set names
     /// another artifact, and `mixed` when any set binds a host value.
-    pub fn resident_batch_resources(
+    pub fn resident_batch_resources<'a>(
         &self,
-        batches: &[BindingSet],
+        batches: &'a [BindingSet],
         mixed: fn() -> BackendError,
-    ) -> Result<Vec<BTreeMap<ArtifactValueId, Resource>>, BackendError> {
+    ) -> Result<Vec<ResidentBindings<'a>>, BackendError> {
         let mut items = Vec::new();
-        items
-            .try_reserve_exact(batches.len())
-            .map_err(|error| BackendError::InvalidProgram {
-                fix: format!(
-                    "Fix: failed to reserve {} resident batch binding set(s): {error}. Submit a smaller resident batch.",
-                    batches.len()
-                ),
-            })?;
+        reserve_batch_items(&mut items, batches.len(), "resident batch binding set")?;
         for bindings in batches {
             self.accept(bindings)?;
-            let mut resident = BTreeMap::new();
-            for (value, resource) in bindings.resources() {
-                match resource {
-                    BoundResource::Host(_) => return Err(mixed()),
-                    BoundResource::Resident(resource) => {
-                        resident.insert(*value, resource.clone());
-                    }
-                }
-            }
-            items.push(resident);
+            items.push(ResidentBindings::new(bindings).ok_or_else(mixed)?);
         }
         Ok(items)
     }
@@ -226,7 +244,7 @@ impl InstanceCore {
     pub fn lookup_resident_resource<'a>(
         &self,
         value: ArtifactValueId,
-        resources: &'a BTreeMap<ArtifactValueId, Resource>,
+        resources: ResidentBindings<'a>,
     ) -> Option<&'a Resource> {
         if let Some(resource) = resources.get(&value) {
             return Some(resource);
@@ -238,7 +256,7 @@ impl InstanceCore {
                 }
             }
         }
-        for (bound_val, resource) in resources {
+        for (bound_val, resource) in resources.iter() {
             if let Some(priors) = self.retained_predecessors.get(bound_val) {
                 if priors.contains(&value) {
                     return Some(resource);
@@ -248,15 +266,14 @@ impl InstanceCore {
         None
     }
 
-    /// Resolve resident handles into the order `names` declares.
+    /// Append resident handles to `ordered` in the order `names` declares.
     ///
     /// A resident launch takes an ordered handle list, and the order is the
     /// backend's: one reads it off the binding plan's non-shared roles, another
-    /// off the persistent resource names its pipeline reports. What neither
-    /// owns is the lookup, which is the same three steps per name and was
-    /// written once per backend: project the buffer name onto its canonical
-    /// artifact value, find the resource bound to that value, and refuse when
-    /// nothing is.
+    /// off the persistent resource names its pipeline reports. The lookup is
+    /// the same per name: project the buffer name onto its canonical artifact
+    /// value, find the resource bound to that value, and fail when nothing is.
+    /// Appending lets a batch lay every item's handles out in one buffer.
     ///
     /// # Errors
     ///
@@ -267,11 +284,10 @@ impl InstanceCore {
         &self,
         module_index: usize,
         names: impl IntoIterator<Item = &'names str>,
-        resources: &BTreeMap<ArtifactValueId, Resource>,
+        resources: ResidentBindings<'_>,
         unbound: impl Fn(ArtifactValueId, &str) -> BackendError,
-    ) -> Result<Vec<Resource>, BackendError> {
-        let names = names.into_iter();
-        let mut ordered = Vec::with_capacity(names.size_hint().0);
+        ordered: &mut Vec<Resource>,
+    ) -> Result<(), BackendError> {
         for name in names {
             let value = self.value_for_resident_name(module_index, name)?;
             let resource = self
@@ -279,10 +295,11 @@ impl InstanceCore {
                 .ok_or_else(|| unbound(value, name))?;
             ordered.push(resource.clone());
         }
-        Ok(ordered)
+        Ok(())
     }
 
-    /// Resolve resident handles for one module by authenticated identity.
+    /// Append resident handles for one module, in binding-plan order, to
+    /// `ordered`.
     ///
     /// # Errors
     ///
@@ -294,24 +311,16 @@ impl InstanceCore {
         module_index: usize,
         plan: &BindingPlan,
         program: &Program,
-        resources: &BTreeMap<ArtifactValueId, Resource>,
+        resources: ResidentBindings<'_>,
         unbound: impl Fn(ArtifactValueId, &str) -> BackendError,
-    ) -> Result<Vec<Resource>, BackendError> {
-        let non_shared = plan
+        ordered: &mut Vec<Resource>,
+    ) -> Result<(), BackendError> {
+        let names = plan
             .bindings
             .iter()
-            .filter(|binding| binding.role != BindingRole::Shared);
-        let mut ordered = Vec::with_capacity(plan.bindings.len());
-        for binding in non_shared {
-            let buffer = &program.buffers()[binding.buffer_index];
-            let name = buffer.name();
-            let value = self.value_for_resident_name(module_index, name)?;
-            let resource = self
-                .lookup_resident_resource(value, resources)
-                .ok_or_else(|| unbound(value, name))?;
-            ordered.push(resource.clone());
-        }
-        Ok(ordered)
+            .filter(|binding| binding.role != BindingRole::Shared)
+            .map(|binding| program.buffers()[binding.buffer_index].name());
+        self.ordered_resident_resources(module_index, names, resources, unbound, ordered)
     }
 
     /// Dispatch every module in order and complete the accumulated state.
@@ -526,7 +535,8 @@ pub trait ResidentInstance: MaterializedInstance {
         &self.core().messages
     }
 
-    /// Resolve the caller's resources into the order the resident launch reads.
+    /// Append the caller's resources to `ordered` in the order the resident
+    /// launch reads.
     ///
     /// The default is the binding plan's non-shared roles, which is the order a
     /// launch that takes its handles from the Program reads. A backend whose
@@ -542,14 +552,16 @@ pub trait ResidentInstance: MaterializedInstance {
         module_index: usize,
         module: &Self::Module,
         plan: &BindingPlan,
-        resources: &BTreeMap<ArtifactValueId, Resource>,
-    ) -> Result<Vec<Resource>, BackendError> {
+        resources: ResidentBindings<'_>,
+        ordered: &mut Vec<Resource>,
+    ) -> Result<(), BackendError> {
         self.core().ordered_resident_resources_for_module(
             module_index,
             plan,
             module.program(),
             resources,
             unbound_resident_buffer,
+            ordered,
         )
     }
 
@@ -592,16 +604,18 @@ pub trait ResidentInstance: MaterializedInstance {
     /// declared value behind.
     fn execute_resident(
         &self,
-        resources: &BTreeMap<ArtifactValueId, Resource>,
+        resources: ResidentBindings<'_>,
     ) -> Result<Completion, BackendError> {
         let core = self.core();
         let label = self.resident_module_label();
         let mut state = BTreeMap::new();
         let mut device_ns = 0_u64;
         let mut has_device_timing = false;
+        let mut ordered = Vec::new();
         for (module_index, module) in self.modules().iter().enumerate() {
             let plan = module.plan();
-            let ordered = self.ordered_resident(module_index, module, plan, resources)?;
+            ordered.clear();
+            self.ordered_resident(module_index, module, plan, resources, &mut ordered)?;
             let dispatched = self.launch_resident(module, &ordered, module.config())?;
             if let Some(ns) = dispatched.device_ns {
                 device_ns = device_ns.saturating_add(ns);
@@ -669,14 +683,14 @@ pub trait ResidentInstance: MaterializedInstance {
     /// rejections when a launch left a declared value behind.
     fn execute_resident_batch(
         &self,
-        items: &[BTreeMap<ArtifactValueId, Resource>],
+        items: &[ResidentBindings<'_>],
     ) -> Result<Vec<Completion>, BackendError> {
         let mut completions = Vec::new();
         reserve_batch_items(&mut completions, items.len(), "resident batch completion")?;
         let modules = self.modules();
         let [module] = modules else {
             for resources in items {
-                completions.push(self.execute_resident(resources)?);
+                completions.push(self.execute_resident(*resources)?);
             }
             return Ok(completions);
         };
@@ -686,14 +700,26 @@ pub trait ResidentInstance: MaterializedInstance {
         let core = self.core();
         let label = self.resident_module_label();
         let plan = module.plan();
+        // Every item orders the same module's declared names, so all items
+        // share one stride and one handle buffer.
         let mut ordered = Vec::new();
-        reserve_batch_items(&mut ordered, items.len(), "resident batch handles")?;
-        for resources in items {
-            ordered.push(self.ordered_resident(0, module, plan, resources)?);
+        self.ordered_resident(0, module, plan, items[0], &mut ordered)?;
+        let stride = ordered.len();
+        reserve_batch_items(
+            &mut ordered,
+            stride.saturating_mul(items.len() - 1),
+            "resident batch handles",
+        )?;
+        for resources in &items[1..] {
+            self.ordered_resident(0, module, plan, *resources, &mut ordered)?;
         }
         let mut views = Vec::new();
-        reserve_batch_items(&mut views, ordered.len(), "resident batch handle views")?;
-        views.extend(ordered.iter().map(Vec::as_slice));
+        reserve_batch_items(&mut views, items.len(), "resident batch handle views")?;
+        if stride == 0 {
+            views.resize(items.len(), &[][..]);
+        } else {
+            views.extend(ordered.chunks_exact(stride));
+        }
         let dispatched = self.launch_resident_batch(module, &views, module.config())?;
         for (outputs, device_ns) in dispatched {
             let mut state = BTreeMap::new();

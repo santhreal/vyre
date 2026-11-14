@@ -14,18 +14,17 @@
 //! device is required.
 
 use std::cell::RefCell;
-use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use vyre_compiler::{Artifact, ArtifactValueId, TargetPayload};
 use vyre_foundation::ir::Program;
 use vyre_runtime::materialize::{
     self, ExecutableModule, InstanceCore, MaterializedInstance, MaterializerTarget,
-    ResidentInstance, NEUTRAL_MESSAGES,
+    ResidentBindings, ResidentInstance, NEUTRAL_MESSAGES,
 };
 use vyre_runtime::{
-    BackendError, DeviceIdentity, DispatchConfig, LaunchDirective, ResidentOwner, Resource,
-    TimedDispatchResult,
+    BackendError, BindingSet, BoundResource, DeviceIdentity, DispatchConfig, LaunchDirective,
+    ResidentOwner, Resource, TimedDispatchResult,
 };
 
 use crate::target_artifacts;
@@ -162,20 +161,27 @@ fn two_stage_instance() -> (Artifact, TargetPayload, RecordingInstance) {
     (artifact, payload, instance)
 }
 
-/// Every canonical resource bound to a distinct resident handle.
-fn resident_resources(artifact: &Artifact) -> BTreeMap<ArtifactValueId, Resource> {
+/// Every canonical resource except `skip` bound to a distinct resident handle.
+fn resident_resources(
+    artifact: &Artifact,
+    instance: &RecordingInstance,
+    skip: Option<ArtifactValueId>,
+) -> BindingSet {
     let owner = ResidentOwner::new().expect("the process must mint a resident owner");
-    artifact
-        .resources()
-        .iter()
-        .enumerate()
-        .map(|(index, resource)| {
-            (
+    let mut bindings = BindingSet::new(instance.core.artifact);
+    for (index, resource) in artifact.resources().iter().enumerate() {
+        if Some(resource.value) != skip {
+            bindings.insert(
                 resource.value,
-                Resource::Resident(owner.handle(index as u64)),
-            )
-        })
-        .collect()
+                BoundResource::Resident(Resource::Resident(owner.handle(index as u64))),
+            );
+        }
+    }
+    bindings
+}
+
+fn resident(bindings: &BindingSet) -> ResidentBindings<'_> {
+    ResidentBindings::new(bindings).expect("every binding is resident")
 }
 
 /// WHY: a two-entry artifact used to be refused outright. Now every entry must
@@ -186,10 +192,10 @@ fn resident_resources(artifact: &Artifact) -> BTreeMap<ArtifactValueId, Resource
 #[test]
 fn every_recorded_entry_launches_once_in_plan_order() {
     let (artifact, _payload, instance) = two_stage_instance();
-    let resources = resident_resources(&artifact);
+    let resources = resident_resources(&artifact, &instance, None);
 
     let completion = instance
-        .execute_resident(&resources)
+        .execute_resident(resident(&resources))
         .expect("a multi-entry resident submission must run every entry");
 
     let launches = instance.launches.borrow();
@@ -233,10 +239,10 @@ fn every_recorded_entry_launches_once_in_plan_order() {
 #[test]
 fn each_entry_reads_the_resources_its_own_abi_declares() {
     let (artifact, _payload, instance) = two_stage_instance();
-    let resources = resident_resources(&artifact);
+    let resources = resident_resources(&artifact, &instance, None);
 
     instance
-        .execute_resident(&resources)
+        .execute_resident(resident(&resources))
         .expect("a multi-entry resident submission must run every entry");
 
     let launches = instance.launches.borrow();
@@ -247,7 +253,7 @@ fn each_entry_reads_the_resources_its_own_abi_declares() {
             .iter()
             .chain(entry.outputs.iter())
             .map(|value| {
-                resources
+                resident(&resources)
                     .get(value)
                     .expect("every declared value is bound")
                     .clone()
@@ -272,7 +278,6 @@ fn each_entry_reads_the_resources_its_own_abi_declares() {
 #[test]
 fn a_missing_resource_for_a_later_entry_is_refused() {
     let (artifact, _payload, instance) = two_stage_instance();
-    let mut resources = resident_resources(&artifact);
     let entries = &artifact.abi().entries;
     let earlier = entries[..entries.len() - 1]
         .iter()
@@ -286,10 +291,10 @@ fn a_missing_resource_for_a_later_entry_is_refused() {
         .iter()
         .find(|value| !earlier.contains(value))
         .expect("the last entry declares a value no earlier entry touches");
-    resources.remove(&last);
+    let resources = resident_resources(&artifact, &instance, Some(last));
 
     let error = instance
-        .execute_resident(&resources)
+        .execute_resident(resident(&resources))
         .expect_err("an unbound resident value must be refused");
 
     match error {

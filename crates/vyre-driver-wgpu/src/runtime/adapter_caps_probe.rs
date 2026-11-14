@@ -94,7 +94,7 @@ pub fn probe_profile(adapter: &wgpu::Adapter) -> DeviceProfile {
         shared_memory_bank_count: 0,
         shared_memory_bank_width_bytes: 0,
     };
-    DeviceSignatureTable::builtins().map_or(profile, |table| {
+    DeviceSignatureTable::builtins_ref().map_or(profile, |table| {
         table.apply_device_name_to_profile(&info.name, profile)
     })
 }
@@ -172,7 +172,7 @@ pub fn from_backend_profile(
         shared_memory_bank_count: 0,
         shared_memory_bank_width_bytes: 0,
     };
-    DeviceSignatureTable::builtins().map_or(profile, |table| {
+    DeviceSignatureTable::builtins_ref().map_or(profile, |table| {
         table.apply_device_name_to_profile(&adapter_info.name, profile)
     })
 }
@@ -276,7 +276,8 @@ mod tests {
         };
 
         let profile = from_backend_profile(&adapter_info, &limits, &enabled);
-        let table = DeviceSignatureTable::builtins().expect("Fix: builtin device signatures load");
+        let table =
+            DeviceSignatureTable::builtins_ref().expect("Fix: builtin device signatures load");
         let signature = table
             .find_device_name("RTX 5090")
             .expect("Fix: RTX 5090 must match the builtin Blackwell signature");

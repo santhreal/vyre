@@ -197,27 +197,12 @@ impl DeviceSignature {
 }
 
 impl DeviceSignatureTable {
-    /// Load the signatures compiled into this crate.
+    /// Borrow the signatures compiled into this crate.
     ///
     /// This reads NO files. It parses the [`DeviceSignature::BUILTIN_BLACKWELL_120`]
     /// string that `include_str!` baked into the binary, sorts by id, and
-    /// wraps. [`Self::load_dir`] is the filesystem path; this is the
-    /// no-filesystem fallback used by backend projections before external
-    /// Tier-B directories are available.
-    ///
-    /// The parse is memoized process-wide, because it is a pure function of
-    /// compile-time constants and backend projections call it on every
-    /// dispatch. Prefer [`Self::builtins_ref`] on a hot path: this clones the
-    /// memoized table so callers that need an owned value keep working.
-    ///
-    /// # Errors
-    ///
-    /// Returns an actionable error when the compiled-in signature is invalid.
-    pub fn builtins() -> Result<Self, String> {
-        Self::builtins_ref().cloned()
-    }
-
-    /// Borrow the process-wide memoized builtin signature table.
+    /// wraps, once per process. [`Self::load_dir`] is the filesystem path; this
+    /// is the no-filesystem table backend projections read on every dispatch.
     ///
     /// # Errors
     ///
@@ -483,7 +468,7 @@ bank_width_bytes = 4
 
     #[test]
     fn builtins_match_generation_and_device_name() {
-        let table = DeviceSignatureTable::builtins().unwrap();
+        let table = DeviceSignatureTable::builtins_ref().unwrap();
         let signature = table.find_architecture_generation(120).unwrap();
 
         assert_eq!(signature.id, "blackwell_120");
@@ -492,7 +477,7 @@ bank_width_bytes = 4
 
     #[test]
     fn builtin_signature_materially_projects_planner_fields() {
-        let table = DeviceSignatureTable::builtins().unwrap();
+        let table = DeviceSignatureTable::builtins_ref().unwrap();
         let signature = table.find_architecture_generation(120).unwrap();
         let profile =
             table.apply_generation_to_profile(120, DeviceProfile::conservative("backend"));
@@ -509,12 +494,11 @@ bank_width_bytes = 4
     /// The builtin table is parsed ONCE per process, no matter how many
     /// callers ask for it.
     ///
-    /// Backend projections call `builtins()` on every dispatch (twice, in the
+    /// Backend projections borrow the table on every dispatch (twice, in the
     /// native backend case: once deriving validation capabilities and once deriving
     /// adapter caps), so a reparse here is a per-dispatch TOML parse on the
     /// hot path. This pins the invariant rather than a duration, because a
-    /// timing assertion would be flaky on a contended box and would not
-    /// actually say what we mean.
+    /// timing assertion would be flaky on a contended box.
     ///
     /// The count is asserted as exactly one rather than "unchanged" so the
     /// test is independent of whichever test in this binary ran first.
@@ -522,21 +506,14 @@ bank_width_bytes = 4
     fn builtin_signature_table_is_parsed_once_per_process() {
         use std::sync::atomic::Ordering;
 
-        let first = DeviceSignatureTable::builtins().expect("Fix: builtin signatures must load");
+        let first =
+            DeviceSignatureTable::builtins_ref().expect("Fix: builtin signatures must load");
         for _ in 0..1_000 {
             let repeated =
-                DeviceSignatureTable::builtins().expect("Fix: builtin signatures must load");
-            assert_eq!(
-                repeated, first,
-                "Fix: the memoized builtin table must return the same signatures on every call."
-            );
-        }
-        for _ in 0..1_000 {
-            let borrowed = DeviceSignatureTable::builtins_ref()
-                .expect("Fix: builtin signatures must load by reference");
-            assert_eq!(
-                *borrowed, first,
-                "Fix: builtins_ref must borrow the same table that builtins clones."
+                DeviceSignatureTable::builtins_ref().expect("Fix: builtin signatures must load");
+            assert!(
+                std::ptr::eq(repeated, first),
+                "Fix: every call must borrow the one memoized builtin table."
             );
         }
 
@@ -544,7 +521,7 @@ bank_width_bytes = 4
             super::BUILTIN_SIGNATURE_TABLE_PARSES.load(Ordering::Relaxed),
             1,
             "Fix: the compiled-in device signature TOML must be parsed exactly once per process. \
-             2001 calls produced a different parse count, so the memo was bypassed or reset."
+             1001 calls produced a different parse count, so the memo was bypassed or reset."
         );
     }
 }

@@ -1,7 +1,9 @@
-use std::collections::{BTreeMap, BTreeSet};
+use std::borrow::Cow;
+use std::collections::BTreeSet;
 use std::path::Path;
 use std::sync::{Arc, RwLock};
 
+use smallvec::SmallVec;
 use thiserror::Error;
 use vyre_compiler::{
     ArtifactEnvelope, ArtifactValueId, CompileError, Digest, ResourceLifetime, TargetCompileError,
@@ -378,54 +380,45 @@ impl ArtifactSession {
         // Phase 1: Pre-validation (Zero driver allocations, Zero uploads)
         // -------------------------------------------------------------------------
 
-        // 1. Gather all required resources across all target entries.
-        let mut required_by_entry: BTreeMap<ArtifactValueId, Vec<&TargetEntryPoint>> =
-            BTreeMap::new();
+        // 1. Every binding an entry requires is either workspace-owned (and then
+        //    must not also be supplied) or supplied by the caller. The first
+        //    entry, in entry order, that requires a missing value is reported.
         for entry in entries {
             for target_binding in &entry.resource_bindings {
-                required_by_entry
-                    .entry(target_binding.resource)
-                    .or_default()
-                    .push(entry);
-            }
-        }
-
-        // 2. Check workspace overlap and missing resources.
-        for (value_id, requesting_entries) in &required_by_entry {
-            if let Some(ws) = workspace {
-                if ws.owns(*value_id) {
-                    if dataset.get(*value_id).is_some() {
+                let value_id = target_binding.resource;
+                let supplied = dataset.get(value_id).is_some();
+                if workspace.is_some_and(|ws| ws.owns(value_id)) {
+                    if supplied {
                         return Err(ResourceIngestionError::WorkspaceOwnedCollision {
-                            value: *value_id,
+                            value: value_id,
                         }
                         .into());
                     }
                     continue;
                 }
-            }
-            if dataset.get(*value_id).is_none() {
-                let entry_name = requesting_entries
-                    .first()
-                    .map(|e| e.name.clone())
-                    .unwrap_or_default();
-                let resource_name = resources
-                    .iter()
-                    .find(|record| record.value == *value_id)
-                    .map_or_else(
-                        || "<no resource record carries this value>".to_string(),
-                        |record| record.name.clone(),
-                    );
-                return Err(ResourceIngestionError::MissingResource {
-                    value: *value_id,
-                    resource_name,
-                    entry_name,
+                if !supplied {
+                    let resource_name = resources
+                        .iter()
+                        .find(|record| record.value == value_id)
+                        .map_or_else(
+                            || "<no resource record carries this value>".to_string(),
+                            |record| record.name.clone(),
+                        );
+                    return Err(ResourceIngestionError::MissingResource {
+                        value: value_id,
+                        resource_name,
+                        entry_name: entry.name.clone(),
+                    }
+                    .into());
                 }
-                .into());
             }
         }
 
-        // 3. Check all supplied resources in dataset against artifact ABI & schema.
-        let mut prepared_payloads: BTreeMap<ArtifactValueId, Option<Vec<u8>>> = BTreeMap::new();
+        // 2. Check all supplied resources in dataset against artifact ABI & schema.
+        //    Payloads are kept in dataset iteration order; caller memory stays
+        //    borrowed until upload.
+        let mut prepared_payloads: SmallVec<[Option<Cow<'_, [u8]>>; 8]> =
+            SmallVec::with_capacity(dataset.len());
 
         for (val_id, typed_res) in dataset.iter() {
             let resource_record = resources
@@ -519,7 +512,7 @@ impl ArtifactSession {
                 }
             }
 
-            prepared_payloads.insert(*val_id, bytes_opt);
+            prepared_payloads.push(bytes_opt);
         }
 
         // -------------------------------------------------------------------------
@@ -547,17 +540,21 @@ impl ArtifactSession {
             committed: false,
         };
 
-        let mut resolved_resources: BTreeMap<ArtifactValueId, Resource> = BTreeMap::new();
+        // Workspace bindings first, so a supplied value for a value the
+        // workspace owns but no entry requires replaces it.
+        let mut typed = BindingSet::new(neutral.digest());
+        if let Some(ws) = workspace {
+            for (value, resource) in ws.bindings() {
+                typed.insert(*value, BoundResource::Resident(resource.clone()));
+            }
+        }
 
-        for (val_id, typed_res) in dataset.iter() {
-            match &typed_res.source {
-                ResourceDataSource::Resident(existing_res) => {
-                    resolved_resources.insert(*val_id, existing_res.clone());
-                }
+        for ((val_id, typed_res), payload) in dataset.iter().zip(&prepared_payloads) {
+            let resource = match &typed_res.source {
+                ResourceDataSource::Resident(existing_res) => existing_res.clone(),
                 _ => {
-                    let bytes = prepared_payloads
-                        .get(val_id)
-                        .and_then(|b| b.as_ref())
+                    let bytes = payload
+                        .as_deref()
                         .ok_or(ResourceIngestionError::PayloadNotPrepared { value: *val_id })?;
 
                     let resource =
@@ -578,25 +575,10 @@ impl ArtifactSession {
                             value: *val_id,
                             error: err.to_string(),
                         })?;
-
-                    resolved_resources.insert(*val_id, resource);
+                    resource
                 }
-            }
-        }
-
-        // -------------------------------------------------------------------------
-        // Phase 3: BindingSet Construction and Publication
-        // -------------------------------------------------------------------------
-        let mut typed = BindingSet::new(neutral.digest());
-
-        if let Some(ws) = workspace {
-            for (value, resource) in ws.bindings() {
-                typed.insert(*value, BoundResource::Resident(resource.clone()));
-            }
-        }
-
-        for (val_id, resource) in resolved_resources {
-            typed.insert(val_id, BoundResource::Resident(resource));
+            };
+            typed.insert(*val_id, BoundResource::Resident(resource));
         }
 
         require_every_entry_binding(entries, &typed)?;

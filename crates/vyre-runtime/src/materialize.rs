@@ -848,29 +848,15 @@ impl InstanceCore {
         Ok(())
     }
 
-    /// Move `values` out of executed state, rejecting any that is absent.
-    ///
-    /// Output and retained values are disjoint resource lifetimes, so each
-    /// buffer moves into exactly one projection and no byte is copied.
-    ///
-    /// # Errors
-    ///
-    /// Returns `missing` for the first value execution did not leave in `state`.
-    pub fn project(
-        &self,
+    /// Return the first value of `values` that execution did not leave in `state`.
+    fn first_missing(
         values: &BTreeSet<ArtifactValueId>,
-        state: &mut BTreeMap<ArtifactValueId, Vec<u8>>,
-        missing: fn(ArtifactValueId) -> BackendError,
-    ) -> Result<BTreeMap<ArtifactValueId, Vec<u8>>, BackendError> {
+        state: &BTreeMap<ArtifactValueId, Vec<u8>>,
+    ) -> Option<ArtifactValueId> {
         values
             .iter()
-            .map(|value| {
-                state
-                    .remove(value)
-                    .map(|bytes| (*value, bytes))
-                    .ok_or_else(|| missing(*value))
-            })
-            .collect()
+            .find(|value| !state.contains_key(value))
+            .copied()
     }
 
     /// Build the completion for one execution's final state.
@@ -904,10 +890,26 @@ impl InstanceCore {
         device_ns: Option<u64>,
         messages: &InstanceMessages,
     ) -> Result<Completion, BackendError> {
+        if let Some(value) = Self::first_missing(&self.outputs, &state) {
+            return Err((messages.missing_output_value)(value));
+        }
+        if let Some(value) = Self::first_missing(&self.retained, &state) {
+            return Err((messages.missing_retained_value)(value));
+        }
+        // Output and retained values are disjoint resource lifetimes, so each
+        // buffer moves into exactly one projection and no byte is copied. The
+        // retained set is moved out; `state` itself becomes the output map, so
+        // the common no-retained completion allocates no map node.
+        let retained = self
+            .retained
+            .iter()
+            .filter_map(|value| state.remove_entry(value))
+            .collect();
+        state.retain(|value, _| self.outputs.contains(value));
         Ok(Completion {
             artifact: self.artifact,
-            outputs: self.project(&self.outputs, &mut state, messages.missing_output_value)?,
-            retained: self.project(&self.retained, &mut state, messages.missing_retained_value)?,
+            outputs: state,
+            retained,
             device_ns,
         })
     }

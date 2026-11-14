@@ -5,6 +5,7 @@
 //! through concrete-driver transfers, verifying identity, dtype, element count,
 //! access, generation, and lifetime before any allocation becomes dispatch-visible.
 
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
@@ -121,11 +122,12 @@ impl ResourceDataSource {
 
     /// Read or generate the payload bytes for transfer to device.
     ///
+    /// Caller memory is borrowed; file reads and generated fills are owned.
     /// For [`ResourceDataSource::Resident`], returns `None` as the resource
     /// is already resident on device.
-    pub fn fetch_bytes(&self) -> Result<Option<Vec<u8>>, ResourceIngestionError> {
+    pub fn fetch_bytes(&self) -> Result<Option<Cow<'_, [u8]>>, ResourceIngestionError> {
         match self {
-            Self::Memory(bytes) => Ok(Some(bytes.clone())),
+            Self::Memory(bytes) => Ok(Some(Cow::Borrowed(bytes))),
             Self::File {
                 path,
                 offset,
@@ -148,7 +150,7 @@ impl ResourceDataSource {
                         path: path.display().to_string(),
                         error: err.to_string(),
                     })?;
-                Ok(Some(buf))
+                Ok(Some(Cow::Owned(buf)))
             }
             Self::ByteRange { bytes, length, .. } => {
                 if bytes.len() != *length as usize {
@@ -157,11 +159,13 @@ impl ResourceDataSource {
                         actual: bytes.len() as u64,
                     });
                 }
-                Ok(Some(bytes.clone()))
+                Ok(Some(Cow::Borrowed(bytes)))
             }
             Self::Generated(gen) => match gen {
-                GeneratedDataSource::Pattern { fill, length } => Ok(Some(vec![*fill; *length])),
-                GeneratedDataSource::Zeroed(length) => Ok(Some(vec![0u8; *length])),
+                GeneratedDataSource::Pattern { fill, length } => {
+                    Ok(Some(Cow::Owned(vec![*fill; *length])))
+                }
+                GeneratedDataSource::Zeroed(length) => Ok(Some(Cow::Owned(vec![0u8; *length]))),
                 GeneratedDataSource::Custom { bytes, length, .. } => {
                     if bytes.len() != *length {
                         return Err(ResourceIngestionError::DataLengthMismatch {
@@ -169,7 +173,7 @@ impl ResourceDataSource {
                             actual: bytes.len() as u64,
                         });
                     }
-                    Ok(Some(bytes.clone()))
+                    Ok(Some(Cow::Borrowed(bytes)))
                 }
             },
             Self::Resident(_) => Ok(None),
