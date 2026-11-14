@@ -24,16 +24,18 @@ jobs:
     runs-on: [self-hosted, gpu, axiomexec]
     timeout-minutes: 90
     env:
-      RUSTUP_TOOLCHAIN: stable
       VYRE_FUSED_CASES: "100"
       VYRE_PRESENCE_CASES: "500"
       VYRE_PRESENCE_GROUND_TRUTH_CASES: "200"
     steps:
       - uses: actions/checkout@v4
 
-      - uses: dtolnay/rust-toolchain@stable
-        with:
-          components: llvm-tools-preview
+      - name: Install Rust toolchain with llvm-tools
+        shell: bash
+        run: |
+          TOOLCHAIN="$(sed -n 's/^channel *= *"\([^"]*\)".*/\1/p' rust-toolchain.toml)"
+          rustup toolchain install "$TOOLCHAIN" --profile minimal --component llvm-tools-preview
+          rustup default "$TOOLCHAIN"
 
       - uses: taiki-e/install-action@cargo-llvm-cov
 
