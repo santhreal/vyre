@@ -1,2 +1,0 @@
-category = "Added"
-text = "`GpuMappedBuffer` implements `Debug`, so a `Result` carrying one can be unwrapped with `expect_err` and printed."

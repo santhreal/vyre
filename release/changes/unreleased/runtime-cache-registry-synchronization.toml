@@ -1,2 +1,0 @@
-category = "Fixed"
-text = "Runtime tenant registries and disk-cache flush queues use standard-library locks, preserve pending state after lock poisoning, and retain writes queued during a flush."

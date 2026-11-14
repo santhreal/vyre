@@ -1,2 +1,0 @@
-category = "Changed"
-text = "Forward-or-changed fixpoint readback moved out of the submission path into a dedicated decoder over the returned graph values."

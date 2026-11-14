@@ -1,8 +1,0 @@
-# CI-safe benchmark budgets consumed by maintained workflow gates.
-
-[crates.vyre-bench.targets.smoke_runtime]
-bench = "crates/vyre-bench/src/main.rs"
-metric = "time_ms"
-budget = 4000
-direction = "max"
-description = "Canonical 30-sample smoke execution ceiling, excluding setup and one-time artifact preparation."

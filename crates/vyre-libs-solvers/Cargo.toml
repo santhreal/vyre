@@ -9,7 +9,6 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "Compiler-internal numerical solvers, autotuning, and spectral schedule analysis"
-readme = "README.md"
 documentation = "https://docs.rs/vyre-libs-solvers"
 exclude = ["**/proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 

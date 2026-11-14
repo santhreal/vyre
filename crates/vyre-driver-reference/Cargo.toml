@@ -10,7 +10,6 @@ repository.workspace = true
 homepage.workspace = true
 documentation = "https://docs.rs/vyre-driver-reference"
 description = "Reference target dialect and semantic parity executor over the pure Rust vyre-reference interpreter. Registers no backend."
-readme = "README.md"
 keywords = ["cpu", "reference", "backend", "vyre"]
 categories = ["algorithms", "api-bindings"]
 

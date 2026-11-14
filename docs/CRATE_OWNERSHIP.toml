@@ -417,36 +417,28 @@ responsibility = "Own pure WGSL target compilation, portable GPU acquisition, ma
 facade_exported = true
 
 [[crate]]
-package = "vyre-emit-metal"
-path = "crates/vyre-emit-metal"
+package = "vyre-emit"
+path = "crates/vyre-emit"
 layer = "emitter"
-seam = "metal-emitter"
-interface = "Native Apple source emission for one selected module."
-responsibility = "Consume verified lowering products and emit native Apple shader source through the shared emitter path."
+seam = "target-emitters"
+interface = "Feature-gated target code generation (Naga WGSL, PTX, SPIR-V, Metal) over verified KernelDescriptor values."
+responsibility = "Emit target shader and kernel modules from KernelDescriptor values under feature-gated dialect backends."
 
 [[crate]]
-package = "vyre-emit-naga"
-path = "crates/vyre-emit-naga"
-layer = "emitter"
-seam = "primary-text-emitter"
-interface = "Primary text emission and the related binary form for one selected module."
-responsibility = "Consume verified lowering products and emit the primary text representation and related binary targets."
+package = "vyre-ir"
+path = "crates/vyre-ir"
+layer = "foundation"
+seam = "ir-contract"
+interface = "Typed IR, memory model, zero-copy wire format, validation, intrinsic primitives, SemanticExecutor, and KernelDescriptor."
+responsibility = "Define the backend-neutral IR, wire encoding, validation rules, execution trait, and lowered kernel descriptor."
 
 [[crate]]
-package = "vyre-emit-ptx"
-path = "crates/vyre-emit-ptx"
-layer = "emitter"
-seam = "primary-binary-emitter"
-interface = "Primary binary text emission for one selected module."
-responsibility = "Consume verified lowering products and emit the primary binary backend text artifact."
-
-[[crate]]
-package = "vyre-emit-spirv"
-path = "crates/vyre-emit-spirv"
-layer = "emitter"
-seam = "spirv-emitter"
-interface = "SPIR-V emission for one selected module."
-responsibility = "Consume verified lowering products and emit SPIR-V artifacts through the shared writer."
+package = "vyre-compiler"
+path = "crates/vyre-compiler"
+layer = "compiler-boundary"
+seam = "megakernel-compiler"
+interface = "Optimizer passes, lowering, megakernel task-graph fusion and scheduling, and AOT packaging."
+responsibility = "Optimize, fuse, schedule, lower, and package vyre programs into static or persistent megakernel plans."
 
 [[crate]]
 package = "vyre-foundation"
@@ -586,28 +578,12 @@ interface = "Workgroup reduction tree, atomic scalar reduction and prefix scan c
 responsibility = "Own workgroup reduction trees, atomic scalar reductions, and prefix scan IR compositions. Does not own domain-specific algorithms, backend lowering, or runtime execution."
 
 [[crate]]
-package = "vyre-libs-rule"
-path = "crates/vyre-libs-rule"
-layer = "libraries"
-seam = "libs-rule"
-interface = "Detection rule condition operator and formula compositions."
-responsibility = "Own detection rule engine condition operators, formulas, and program evaluation builders. Does not own security predicate solvers, backend lowering, or runtime execution."
-
-[[crate]]
 package = "vyre-libs-scheduling"
 path = "crates/vyre-libs-scheduling"
 layer = "libraries"
 seam = "libs-scheduling"
 interface = "Scheduling, fusion and batching compositions."
 responsibility = "Own compiler-internal scheduling, fusion, batching, and dispatch strategy compositions. Does not own physical lowering, device execution, or runtime lifecycle policy."
-
-[[crate]]
-package = "vyre-libs-security"
-path = "crates/vyre-libs-security"
-layer = "libraries"
-seam = "libs-security"
-interface = "Security taint analysis and label resolver compositions."
-responsibility = "Own security taint analysis compositions, predicate evaluators, and label resolver IR builders. Does not own rule engine AST evaluation, backend lowering, or runtime execution."
 
 [[crate]]
 package = "vyre-libs-solvers"
@@ -1106,29 +1082,9 @@ domain = "vyre-libs-parsing"
 requires = ["parsing-kernels"]
 
 [[facade.feature]]
-name = "security"
-domain = "vyre-libs-security"
-requires = ["label", "predicate"]
-
-[[facade.feature]]
-name = "predicate"
-domain = "vyre-libs-security"
-requires = ["graph", "bitset", "label"]
-
-[[facade.feature]]
-name = "label"
-domain = "vyre-libs-security"
-requires = ["bitset"]
-
-[[facade.feature]]
 name = "visual"
 domain = "vyre-libs-visual"
 requires = ["math-kernels"]
-
-[[facade.feature]]
-name = "rule"
-domain = "vyre-libs-rule"
-requires = ["builder"]
 
 [[facade.feature]]
 name = "vfs"

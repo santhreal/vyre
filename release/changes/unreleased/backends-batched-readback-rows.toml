@@ -1,2 +1,0 @@
-category = "Changed"
-text = "A new `xtask` tree contract, `nested_byte_row_types`, parses every crate that implements the backend trait and fails on any three-deep byte-row vector, with scope read from the root manifest and a parsed trait scan at run time."

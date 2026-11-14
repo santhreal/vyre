@@ -1,2 +1,0 @@
-category = "Added"
-text = "Runtime state owners declare explicit failure domains and recovery classes with prepare/commit idempotency journals and atomic poison-terminal transitions."

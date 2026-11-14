@@ -1,5 +1,0 @@
-pub trait LowerableOp: Send + Sync + 'static {
-fn lower_expression(&self, ctx: &mut dyn TargetGenCtx, program: &Program)
--> Result<(), String>;
-fn lower_binary(&self, ctx: &mut (), program: &Program) -> Result<(), String>;
-}

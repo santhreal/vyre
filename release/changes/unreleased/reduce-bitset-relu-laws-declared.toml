@@ -1,2 +1,0 @@
-category = "Changed"
-text = "`vyre-libs::bitset::any`, `vyre-libs::reduce::count_non_zero`, `vyre-libs::reduce::histogram` and `vyre-libs::reduce::workgroup_any_u32` declare the `associative` and `commutative` laws, and `vyre-libs::nn::relu` declares `idempotent`, in place of an uncharacterized absence decision."

@@ -1,2 +1,0 @@
-category = "Fixed"
-text = "The `cross-target` gate and the workflows that run it read their triples from `xtask-registry/cross-target-triples.txt`, so CI installs `x86_64-unknown-freebsd` and the gate no longer fails on a target the workflow omitted."

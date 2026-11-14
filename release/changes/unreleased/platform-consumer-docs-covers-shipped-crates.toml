@@ -1,2 +1,0 @@
-category = "Changed"
-text = "`platform-consumer-docs` scans every Rust comment and Markdown file of each crate in a shipped layer, and `platform-boundary` is deleted."

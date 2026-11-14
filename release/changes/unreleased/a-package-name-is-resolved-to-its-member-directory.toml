@@ -1,2 +1,0 @@
-category = "Fixed"
-text = "The Metal parity gate resolves vyre-conform and the driver crate to their workspace member directories instead of joining the package name onto the checkout root."

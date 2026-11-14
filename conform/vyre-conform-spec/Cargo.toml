@@ -9,7 +9,6 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "Witness sets and composition laws for vyre conformance testing."
-readme = "README.md"
 keywords = ["vyre", "conformance", "spec", "witness"]
 categories = ["development-tools::testing"]
 publish = false

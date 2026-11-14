@@ -9,7 +9,6 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "Linear algebra, matrix operations, scans, broadcasting, algebra, and succinct data structures"
-readme = "README.md"
 documentation = "https://docs.rs/vyre-libs-math"
 exclude = ["**/proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 

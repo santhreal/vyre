@@ -1,2 +1,0 @@
-category = "Removed"
-text = "`xtask gates` fails on any finding; `xtask/gate-baselines.toml`, `gates --write-baseline` and the unused gate cache key and DAG executor are deleted."

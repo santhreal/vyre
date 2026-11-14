@@ -9,7 +9,6 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "Foundation layer: IR, type system, memory model, wire format. Zero application semantics. Part of the vyre GPU compiler."
-readme = "README.md"
 keywords = ["gpu", "ir", "compiler", "wgsl", "vyre"]
 categories = ["algorithms", "compilers", "hardware-support"]
 documentation = "https://docs.rs/vyre-foundation"

@@ -1,2 +1,0 @@
-category = "Changed"
-text = "Workflow wiring is checked once, by the `ci-registry` gate, which now rejects every script glob and fails on a workflow it cannot read; `xtask gates` checks only the registry before it runs."

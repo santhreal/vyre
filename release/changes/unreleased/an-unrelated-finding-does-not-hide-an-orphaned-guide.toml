@@ -1,2 +1,0 @@
-category = "Fixed"
-text = "An unrelated finding no longer hides an orphaned testing guide; only an empty crate record set suppresses the orphan scan."

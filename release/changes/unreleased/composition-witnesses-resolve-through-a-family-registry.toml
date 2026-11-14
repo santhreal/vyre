@@ -1,2 +1,0 @@
-category = "Added"
-text = "`vyre_reference::composition_witness` exposes `COMPOSITION_WITNESS_FAMILIES`, a registry keyed by operation family that names the witness module owning each family or records why no witness exists, with an executable probe per row."

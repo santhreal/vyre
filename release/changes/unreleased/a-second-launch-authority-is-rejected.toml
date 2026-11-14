@@ -1,2 +1,0 @@
-category = "Added"
-text = "A dispatch that states a recorded launch beside `workgroup_override`, `grid_override`, `dispatch_elements` or `dispatch_grid` is rejected instead of resolved to one of the two."

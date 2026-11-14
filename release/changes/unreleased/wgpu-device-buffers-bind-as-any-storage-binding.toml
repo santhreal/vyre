@@ -1,2 +1,0 @@
-category = "Fixed"
-text = "On wgpu, `VyreBackend::dispatch_with_device_buffers` accepts buffers from `allocate_device_buffer` for read-only bindings instead of failing on the missing `INDIRECT` usage, and leaves outputs in the caller's device buffers instead of reading each one back and discarding it."

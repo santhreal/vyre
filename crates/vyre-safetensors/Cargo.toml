@@ -9,7 +9,6 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "Bounded safetensors metadata and shard identity adapter for Vyre"
-readme = "README.md"
 keywords = ["gpu", "safetensors", "checkpoint", "vyre"]
 categories = ["encoding", "parser-implementations"]
 documentation = "https://docs.rs/vyre-safetensors"

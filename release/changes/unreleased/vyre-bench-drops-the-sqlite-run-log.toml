@@ -1,2 +1,0 @@
-category = "Removed"
-text = "`vyre-bench` no longer writes the `.vyre_bench.db` SQLite run log, which nothing read, and no longer depends on `rusqlite` and its bundled SQLite (RUSTSEC-2026-0459)."

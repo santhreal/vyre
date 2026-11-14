@@ -778,30 +778,28 @@ mod tests {
             }
         }
 
-        /// The generated public-API snapshot is the registry of what this
-        /// crate exports. A new production builder appears in it as soon as
-        /// the public-api gate regenerates it, and fails the case below until
-        /// it is called.
-        const PUBLIC_API_SNAPSHOT: &str =
-            include_str!("../../../../../docs/public-api/vyre-runtime.txt");
-
-        /// Re-exported under `#[cfg(test)]`, so it is absent from a snapshot
-        /// taken of the public surface and is named here instead.
-        const TEST_ONLY_BUILDER: &str = "build_program_with_self_loading_miss_handler";
+        /// Source text of the parent `resident_work_queue` module, whose
+        /// `pub use builder::...` statements define every exported builder.
+        const PARENT_MOD_SOURCE: &str = include_str!("../mod.rs");
 
         #[test]
         fn every_exported_program_builder_is_covered() {
-            const PREFIX: &str = "pub fn vyre_runtime::resident_work_queue::";
-            let mut exported: Vec<&str> = PUBLIC_API_SNAPSHOT
-                .lines()
-                .filter_map(|line| line.strip_prefix(PREFIX))
-                .filter_map(|item| item.split('(').next())
-                .filter(|name| name.starts_with("build_program"))
-                .collect();
-            exported.push(TEST_ONLY_BUILDER);
+            let mut exported: Vec<&str> = Vec::new();
+            let mut rest = PARENT_MOD_SOURCE;
+            while let Some(idx) = rest.find("pub use builder::") {
+                let after = &rest[idx + "pub use builder::".len()..];
+                let stmt_end = after.find(';').unwrap_or(after.len());
+                for token in
+                    after[..stmt_end].split(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_'))
+                {
+                    if token.starts_with("build_program") {
+                        exported.push(token);
+                    }
+                }
+                rest = &after[stmt_end..];
+            }
             exported.sort_unstable();
             exported.dedup();
-
             let mut covered: Vec<&str> =
                 built_programs().into_iter().map(|(name, _)| name).collect();
             covered.sort_unstable();

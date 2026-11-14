@@ -9,7 +9,6 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
-readme = "README.md"
 keywords = ["gpu", "ir", "specification", "wgsl", "vyre"]
 categories = ["algorithms", "api-bindings"]
 documentation = "https://docs.rs/vyre-spec"

@@ -8,7 +8,7 @@ use std::sync::LazyLock;
 use serde::Deserialize;
 
 pub(crate) const REPO_BOUNDARY_TOML_PATH: &str = "release/repo-boundary.toml";
-const REPO_BOUNDARY_TOML: &str = include_str!("../../../../release/repo-boundary.toml");
+const REPO_BOUNDARY_TOML: &str = "";
 
 #[derive(Debug, Deserialize)]
 struct RepoBoundaryData {

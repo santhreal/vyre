@@ -1,2 +1,0 @@
-category = "Changed"
-text = "Candidate search eliminates a schedule that reorders a reduction whose combine is not registered associative and commutative for its element type."

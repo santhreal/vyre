@@ -766,28 +766,33 @@ feature = "wgpu"
 publication_class = "concrete-backend"
 
 [[package_features]]
-package = "vyre-emit-metal"
+package = "vyre-emit"
 feature = "default"
 publication_class = "internal-engine"
 
 [[package_features]]
-package = "vyre-emit-naga"
-feature = "default"
+package = "vyre-emit"
+feature = "metal"
 publication_class = "internal-engine"
 
 [[package_features]]
-package = "vyre-emit-ptx"
-feature = "default"
+package = "vyre-emit"
+feature = "naga"
 publication_class = "internal-engine"
 
 [[package_features]]
-package = "vyre-emit-ptx"
+package = "vyre-emit"
 feature = "nvrtc"
 publication_class = "internal-engine"
 
 [[package_features]]
-package = "vyre-emit-spirv"
-feature = "default"
+package = "vyre-emit"
+feature = "ptx"
+publication_class = "internal-engine"
+
+[[package_features]]
+package = "vyre-emit"
+feature = "spirv"
 publication_class = "internal-engine"
 
 [[package_features]]
@@ -1496,16 +1501,6 @@ feature = "reduce"
 publication_class = "extension-sdk"
 
 [[package_features]]
-package = "vyre-libs-rule"
-feature = "default"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-rule"
-feature = "rule"
-publication_class = "extension-sdk"
-
-[[package_features]]
 package = "vyre-libs-scheduling"
 feature = "default"
 publication_class = "internal-engine"
@@ -1514,26 +1509,6 @@ publication_class = "internal-engine"
 package = "vyre-libs-scheduling"
 feature = "scheduling"
 publication_class = "internal-engine"
-
-[[package_features]]
-package = "vyre-libs-security"
-feature = "default"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-security"
-feature = "label"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-security"
-feature = "predicate"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-libs-security"
-feature = "security"
-publication_class = "extension-sdk"
 
 [[package_features]]
 package = "vyre-libs-solvers"
@@ -1688,11 +1663,6 @@ publication_class = "internal-engine"
 [[package_features]]
 package = "vyre-runtime"
 feature = "libs-compositions"
-publication_class = "internal-engine"
-
-[[package_features]]
-package = "vyre-runtime"
-feature = "megakernel-batch"
 publication_class = "internal-engine"
 
 [[package_features]]

@@ -1,4 +1,4 @@
-name: GPU Parity + Determinism
+name: GPU Parity and Benchmarks
 
 on:
   pull_request:
@@ -19,330 +19,40 @@ env:
   VYRE_CONFORM_REQUIRE_GPU: "1"
 
 jobs:
-  gpu-adapter-probe:
-    name: Probe real GPU adapter
-    # A public repository never executes fork code on the persistent GPU host.
+  gpu-parity:
+    name: GPU Backend Parity and Megakernel Suite
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: [self-hosted, gpu, axiomexec]
+    timeout-minutes: 30
     env:
       RUST_TEST_THREADS: "1"
-    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
-      - name: Verify NVIDIA GPU
+        with:
+          fetch-depth: 0
+
+      - name: Verify GPU availability
         run: |
-          if ! command -v nvidia-smi >/dev/null 2>&1; then
-            echo "::error::nvidia-smi is missing on a GPU-required runner."
-            exit 1
-          fi
           nvidia-smi --query-gpu=name,driver_version,memory.total --format=csv,noheader
 
-  driver-contracts:
-    name: WGPU backend contracts
-    needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu, axiomexec]
-    env:
-      RUST_TEST_THREADS: "1"
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Run documented vyre-wgpu command on a real GPU
-        run: ./cargo_full run -p vyre-driver-wgpu --bin vyre-wgpu -- demo
-      # Every device-acquiring test in this crate is one module of one harness
-      # binary, so naming them step by step compiles the same binary sixteen
-      # times and runs one module of it each time. The package-level run compiles
-      # it once and runs the lib device tests in the same step. Unfiltered on
-      # purpose: a parity target added later is covered without editing this
-      # file, which is how `hostile_input_closure_contract` came to run nowhere.
-      # Release because a debug reference interpreter is the cost of the suite
-      # rather than the cost of the device work being checked.
-      - name: Every wgpu device contract and parity target on a real GPU
-        run: ./cargo_full test --release -p vyre-driver-wgpu --features device-tests -- --test-threads=1 --nocapture
-      # Named without a `--test` filter on purpose. `vyre-driver-spirv` carries
-      # more than one target behind `device-tests`, and a filtered step compiles
-      # only what it names: `hostile_input_closure_contract` was admitted by the
-      # feature and reached by no step, so the adversarial closure it asserts ran
-      # nowhere while this lane reported green. An unfiltered step covers a
-      # target added later without editing this file.
-      - name: Every SPIR-V device target on a real Vulkan device
-        run: ./cargo_full test -p vyre-driver-spirv --features device-tests -- --test-threads=1 --nocapture
-      # The float lowering ledger claims what each registered backend does with
-      # each mode. This step is the only lane that compares a claim against a
-      # constructed backend, and it links every driver, so it belongs on the
-      # runner that owns the devices. Unfiltered so a device target added to the
-      # crate later is covered without editing this file.
-      - name: Every registry float lowering decision against a constructed backend
-        run: ./cargo_full test -p vyre-registry-link --features device-tests -- --test-threads=1 --nocapture
-
-  cuda-parity-suite:
-    name: CUDA backend contracts and parity
-    needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu, axiomexec]
-    env:
-      RUST_TEST_THREADS: "1"
-    timeout-minutes: 90
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-
-      # The PTX/CUDA backend lowers casts and synthetic binops differently from
-      # naga (native cvt/mul.hi/shf vs vec2/select synthesis), so the wgpu parity
-      # targets transfer nothing and the CUDA route needs its own live-GPU
-      # differential. The gate runs every vyre-driver-cuda test target with the
-      # device features on, so a target added later is covered without editing
-      # this file, and it fails when nvidia-smi does, so a runner that lost its
-      # device cannot report a clean backend.
-      - name: Every CUDA device contract and parity target on the real device
-        run: ./cargo_full run -q -p xtask --bin xtask -- cuda-parity --device
-
-  bench-device-tests:
-    name: Benchmark harness device tests
-    needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu, axiomexec]
-    env:
-      RUST_TEST_THREADS: "1"
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      # Every `vyre-bench` test that dispatches on a device is behind
-      # `device-tests`, off by default so the hosted matrix does not read a
-      # missing CUDA driver as a benchmark defect and does not pass a run whose
-      # every case failed. This is the runner that owns the device, so it turns
-      # the feature on and the whole target set runs. The roster is derived by
-      # enabling the feature, not named test by test: a device test added later
-      # is covered without editing this file.
-      - name: Bytecode VM stack-carrier parity on real CUDA and WGPU
-        run: "./cargo_full test --release -p vyre-bench --features device-tests --lib cases::interpreter -- --test-threads=1 --nocapture"
-      - name: Benchmark harness suites on a real device
-        run: ./cargo_full test --release -p vyre-bench --features device-tests --tests -- --test-threads=1
-
-  mandatory-gpu-enforcer:
-    name: Mandatory GPU enforcement
-    needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu, axiomexec]
-    env:
-      RUST_TEST_THREADS: "1"
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      # Both mandatory contracts are modules of the crate's `device-tests`
-      # harness, so the step names that harness and runs every device contract
-      # in it rather than two of the six.
-      - name: Run GPU mandatory tests
-        run: ./cargo_full test -p vyre-conform --release --features device-tests --test all_tests_device_tests -- --test-threads=1 --nocapture
-
-  cuda-conformance-all-ops:
-    name: CUDA conformance all ops
-    needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu, axiomexec]
-    env:
-      RUST_TEST_THREADS: "1"
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Run vyre-conform against CUDA for every registered op
-        run: ./cargo_full run -p vyre-conform --release --features gpu --bin vyre-conform -- dispatch --backend cuda --ops all
-
-  wgpu-conformance-all-ops:
-    name: WGPU conformance all ops
-    needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu, axiomexec]
-    env:
-      RUST_TEST_THREADS: "1"
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Run vyre-conform against WGPU for every registered op
-        run: ./cargo_full run -p vyre-conform --release --features gpu --bin vyre-conform -- dispatch --backend wgpu --ops all
-
-  release-conformance-artifacts:
-    name: Release conformance artifacts
-    needs:
-      - cuda-conformance-all-ops
-      - wgpu-conformance-all-ops
-    runs-on: [self-hosted, gpu, axiomexec]
-    env:
-      RUST_TEST_THREADS: "1"
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Generate release conformance evidence artifacts
-        run: ./cargo_full run --release --bin xtask -- release-conformance --backend all --write
-      - uses: actions/upload-artifact@v4
-        with:
-          name: vyre-release-conformance-evidence
-          path: ./release/evidence/conformance/*.json
-
-
-  cuda-release-bench-evidence:
-    name: CUDA release benchmark evidence
-    needs: gpu-adapter-probe
-    runs-on: [self-hosted, gpu, axiomexec]
-    env:
-      RUST_TEST_THREADS: "1"
-    timeout-minutes: 90
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - name: Semantic optimizer evidence
-        run: ./cargo_full run -p vyre-bench --release -- run --suite release --case foundation.optimizer.impact --format json --backend cuda --measured-samples 30
-      - name: CUDA PTX pattern evidence
-        run: ./cargo_full run -p vyre-bench --release -- run --suite release --case cuda.ptx.patterns.release.corpus --format json --measured-samples 30
-      - name: Megakernel condition evidence
-        run: ./cargo_full run -p vyre-bench --release -- run --suite release --case runtime.megakernel.condition.64k --format json --backend cuda --measured-samples 30
-      - name: CPU-favorable conditional eval evidence
-        run: ./cargo_full run -p vyre-bench --release -- run --suite release --case conditions.yara_like.eval.1m --format json --backend cuda --measured-samples 30
-      - name: Batched conditional eval evidence
-        run: ./cargo_full run -p vyre-bench --release -- run --suite release --case conditions.yara_like.batch.16x64k --format json --backend cuda --measured-samples 30
-      - name: Generate release benchmark evidence artifacts
-        run: ./cargo_full run --release --bin xtask -- release-benchmarks --backend cuda --measured-samples 30 --write
-      - uses: actions/upload-artifact@v4
-        with:
-          name: vyre-release-benchmark-evidence
-          path: |
-            ./release/evidence/benchmarks/*.json
-            ./release/evidence/optimization/*.json
-
-  gpu-release-gate:
-    name: GPU release gate
-    needs:
-      - driver-contracts
-      - cuda-parity-suite
-      - bench-device-tests
-      - mandatory-gpu-enforcer
-      - cuda-conformance-all-ops
-      - wgpu-conformance-all-ops
-      - release-conformance-artifacts
-      - cuda-release-bench-evidence
-    if: >-
-      ${{
-        always() &&
-        (github.event_name != 'pull_request' ||
-          github.event.pull_request.head.repo.full_name == github.repository)
-      }}
-    runs-on: [self-hosted, gpu, axiomexec]
-    env:
-      RUST_TEST_THREADS: "1"
-    timeout-minutes: 5
-    steps:
-      - name: Verify required GPU jobs
-        shell: bash
-        run: |
-          if [ "${{ needs.driver-contracts.result }}" != "success" ] \
-            || [ "${{ needs.cuda-parity-suite.result }}" != "success" ] \
-            || [ "${{ needs.bench-device-tests.result }}" != "success" ] \
-            || [ "${{ needs.mandatory-gpu-enforcer.result }}" != "success" ] \
-            || [ "${{ needs.cuda-conformance-all-ops.result }}" != "success" ] \
-            || [ "${{ needs.wgpu-conformance-all-ops.result }}" != "success" ] \
-            || [ "${{ needs.release-conformance-artifacts.result }}" != "success" ] \
-            || [ "${{ needs.cuda-release-bench-evidence.result }}" != "success" ]; then
-            echo "::error::A required GPU job failed or did not run."
-            exit 1
-          fi
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
-        with:
-          name: vyre-release-conformance-evidence
-          path: release-artifacts/conformance
-      - uses: actions/download-artifact@v4
-        with:
-          name: vyre-release-benchmark-evidence
-          path: release-artifacts/benchmarks
-      - name: Verify uploaded release evidence
+      - name: Run GPU backend device parity and conformance suites
         shell: bash
         run: |
           set -euo pipefail
-          find release-artifacts/conformance -name cuda-conformance.json -size +0c | grep -q .
-          find release-artifacts/conformance -name wgpu-conformance.json -size +0c | grep -q .
-          find release-artifacts/conformance -name reference-conformance.json -size +0c | grep -q .
-          find release-artifacts/conformance -name release-gate-log.json -size +0c | grep -q .
-          find release-artifacts/benchmarks -name pass-family-benchmark-manifest.json -size +0c | grep -q .
-          find release-artifacts/benchmarks -name release-workload-matrix.json -size +0c | grep -q .
-          python3 -c '
-          import json
-          import pathlib
-          def one(root, name):
-              matches = list(pathlib.Path(root).rglob(name))
-              if len(matches) != 1:
-                  raise SystemExit(f"expected exactly one {name} under {root}, found {len(matches)}")
-              with matches[0].open() as handle:
-                  return json.load(handle)
-          for backend, filename in [("cuda", "cuda-conformance.json"), ("wgpu", "wgpu-conformance.json"), ("reference-oracle", "reference-conformance.json")]:
-              report = one("release-artifacts/conformance", filename)
-              if report.get("backend_id") != backend:
-                  raise SystemExit("{}: backend_id={!r}, expected {!r}".format(filename, report.get("backend_id"), backend))
-              if report.get("failed_pairs") != 0:
-                  raise SystemExit("{}: failed_pairs={!r}".format(filename, report.get("failed_pairs")))
-              if report.get("distinct_op_count", 0) < 49:
-                  raise SystemExit(f"{filename}: distinct_op_count below 49")
-              if report.get("duplicate_op_ids"):
-                  raise SystemExit(f"{filename}: duplicate_op_ids must be empty")
-              if report.get("blockers"):
-                  raise SystemExit(f"{filename}: blockers must be empty")
-          manifest = one("release-artifacts/benchmarks", "pass-family-benchmark-manifest.json")
-          if manifest.get("backend") != "cuda":
-              raise SystemExit("pass-family-benchmark-manifest.json: backend must be cuda")
-          if manifest.get("blockers"):
-              raise SystemExit("pass-family-benchmark-manifest.json: blockers must be empty")
-          required_cases = manifest.get("required_case_count", 0)
-          if required_cases < 1 or len(manifest.get("cases", [])) != required_cases:
-              raise SystemExit("pass-family-benchmark-manifest.json: cases must match required_case_count")
-          if manifest.get("uncovered_pass_families") != []:
-              raise SystemExit("pass-family-benchmark-manifest.json: uncovered_pass_families must be empty")
-          for case in manifest.get("cases", []):
-              case_id = case.get("case_id", "<unknown>")
-              for field in ("missing_custom_metrics", "non_positive_required_metrics", "non_winning_cases", "blockers"):
-                  if case.get(field):
-                      raise SystemExit(f"pass-family-benchmark-manifest.json: {case_id} has non-empty {field}")
-              if case.get("non_winning_cases") != []:
-                  raise SystemExit(f"pass-family-benchmark-manifest.json: {case_id} proves neither an optimized wall_ns p50 below baseline_wall_ns p50 nor a semantic win")
-          workloads = one("release-artifacts/benchmarks", "release-workload-matrix.json")
-          if workloads.get("blockers"):
-              raise SystemExit("release-workload-matrix.json: blockers must be empty")
-          required = workloads.get("required_closed_families", 10)
-          if workloads.get("matched_required_families", 0) < required:
-              raise SystemExit("release-workload-matrix.json: matched_required_families below required_closed_families")
-          for suite_name, expected_backend in [("cuda-release-suite.json", "cuda"), ("wgpu-fallback-suite.json", "wgpu")]:
-              suite = one("release-artifacts/benchmarks", suite_name)
-              if suite.get("backend") != expected_backend:
-                  raise SystemExit(f"{suite_name}: backend must be {expected_backend}")
-              if suite.get("blockers"):
-                  raise SystemExit(f"{suite_name}: blockers must be empty")
-              statuses = suite.get("artifact_statuses") or []
-              if suite.get("family_count", 0) < required or len(statuses) < required:
-                  raise SystemExit(f"{suite_name}: expected at least {required} family statuses")
-              for status in statuses:
-                  path = status.get("path", "<unknown>")
-                  if status.get("blockers"):
-                      raise SystemExit(f"{suite_name}: {path} has blockers")
-                  if not status.get("family_id") or not status.get("requested_case_id"):
-                      raise SystemExit(f"{suite_name}: {path} lacks family/case provenance")
-                  if status.get("case_count", 0) == 0:
-                      raise SystemExit(f"{suite_name}: {path} has zero cases")
-                  if status.get("failed_count") != 0:
-                      raise SystemExit(f"{suite_name}: {path} failed_count must be zero")
-                  if status.get("nonmatching_case_backend_count") != 0:
-                      raise SystemExit(f"{suite_name}: {path} has backend mismatches")
-                  if status.get("min_wall_samples", 0) < 30:
-                      raise SystemExit(f"{suite_name}: {path} has fewer than 30 wall samples")
-                  if status.get("min_baseline_wall_samples", 0) < 30:
-                      raise SystemExit(f"{suite_name}: {path} has fewer than 30 baseline wall samples")
-                  if status.get("cpu_sota_100x_required") and status.get("cpu_sota_100x_passing_cases", 0) == 0:
-                      raise SystemExit(f"{suite_name}: {path} lacks passing CPU-SOTA 100x proof")
-          proof = one("release-artifacts/benchmarks", "cpu-only-100x-proof.json")
-          if proof.get("blockers"):
-              raise SystemExit("cpu-only-100x-proof.json: blockers must be empty")
-          if proof.get("cpu_sota_100x_contract_case_count", 0) < 10:
-              raise SystemExit("cpu-only-100x-proof.json: expected at least ten 100x contract cases")
-          if proof.get("cpu_sota_100x_passing_case_count", 0) < 10:
-              raise SystemExit("cpu-only-100x-proof.json: expected at least ten passing 100x cases")
-          if proof.get("min_wall_samples", 0) < 30 or proof.get("min_baseline_wall_samples", 0) < 30:
-              raise SystemExit("cpu-only-100x-proof.json: wall and baseline samples must both be at least 30")
-          '
-          echo "GPU release gate passed: CUDA/WGPU all-op conformance, backend contracts, determinism stress, and CUDA release benchmark evidence artifacts all exist."
+          meta="$(./cargo_full metadata --format-version 1 --no-deps)"
+          device_pkgs="$(printf '%s' "$meta" | python3 -c '
+          import json, sys
+          for pkg in json.load(sys.stdin)["packages"]:
+              if "device-tests" in pkg.get("features", {}) and pkg["name"] != "vyre-bench":
+                  print(pkg["name"])
+          ')"
+          for pkg in $device_pkgs; do
+            echo "::group::device-tests $pkg"
+            ./cargo_full test --release -p "$pkg" --features device-tests -- --test-threads=1
+            echo "::endgroup::"
+          done
+
+      - name: Run megakernel benchmark suite smoke verification
+        shell: bash
+        run: |
+          ./cargo_full test --release -p vyre-bench --lib

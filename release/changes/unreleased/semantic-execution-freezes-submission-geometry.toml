@@ -1,2 +1,0 @@
-category = "Changed"
-text = "The semantic execution boundary accepts validated graph inputs and compiler policy only; admitted target entry points fix submission geometry."

@@ -394,7 +394,6 @@ pub mod wire_round_trip;
 pub mod word_corpora;
 #[cfg(feature = "ir-fixtures")]
 pub use pass_programs::overfire_grid;
-pub mod public_api;
 
 use std::collections::BTreeSet;
 use std::fs;

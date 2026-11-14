@@ -1,2 +1,0 @@
-category = "Changed"
-text = "`xtask cli-docs` reports the linker error lines of a failed binary build and whether the running image was moved off its build path."

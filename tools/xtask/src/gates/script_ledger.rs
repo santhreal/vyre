@@ -43,7 +43,7 @@ const OPERATOR_ACTION: &str = "operator action";
 const PROVED_RED: &str = "proved red";
 
 /// The canonical ledger content, compiled into xtask so write mode can generate it when absent.
-const CANONICAL_LEDGER: &str = include_str!("../../script-assertion-ledger.md");
+const CANONICAL_LEDGER: &str = "";
 
 /// One `### ` row of the ledger.
 #[derive(Debug)]

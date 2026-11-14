@@ -1,2 +1,0 @@
-category = "Fixed"
-text = "The `vyre-conform` coordinator reads a worker receipt that shares its line with the test harness prefix, so production-route conformance cases no longer fail with a protocol violation under `RUST_TEST_THREADS=1`."

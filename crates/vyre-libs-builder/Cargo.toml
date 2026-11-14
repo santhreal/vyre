@@ -9,7 +9,6 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "Shared IR composition infrastructure, child region skeletons, operands, and link anchors"
-readme = "README.md"
 documentation = "https://docs.rs/vyre-libs-builder"
 exclude = ["**/proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 

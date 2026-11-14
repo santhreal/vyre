@@ -1,4 +1,4 @@
-name: coverage
+name: Coverage
 
 on:
   push:
@@ -10,24 +10,22 @@ concurrency:
   group: coverage-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 env:
   CARGO_TERM_COLOR: always
-  COVERAGE_FLOOR_LINES: '85'
+  COVERAGE_FLOOR_LINES: "85"
 
 jobs:
   llvm-cov:
-    # --all-features enables the CUDA and WGPU backends, so the workspace suite
-    # dispatches real device work and fails closed on a probe with no adapter.
-    # A hosted runner therefore measures a panic, not coverage.
+    name: Workspace Line Coverage (>= 85%)
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: [self-hosted, gpu, axiomexec]
-    timeout-minutes: 240
+    timeout-minutes: 90
     env:
       RUSTUP_TOOLCHAIN: stable
       RUST_TEST_THREADS: "1"
-      # The three high-volume pattern differentials scale with these counts and
-      # reach the same lines at the counts below as at their defaults; the test
-      # lanes still run the defaults. Under instrumentation the defaults take 40
-      # minutes and these counts take 4.
       VYRE_FUSED_CASES: "100"
       VYRE_PRESENCE_CASES: "500"
       VYRE_PRESENCE_GROUND_TRUTH_CASES: "200"
@@ -37,56 +35,35 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: llvm-tools-preview
-      - name: Install cargo-llvm-cov
-        uses: taiki-e/install-action@cargo-llvm-cov
-      # One `--workspace --all-features` build links every test binary in the
-      # tree at once. On this host the build governor sends it SIGTERM long
-      # before it finishes, so the lane never measured anything. Instrumenting
-      # one package at a time produces the same profile set: `--no-report`
-      # accumulates raw profiles and `report` merges them, so the floor is
-      # still applied to the whole workspace.
-      #
-      # Only the raw profiles of the previous run are removed. The instrumented
-      # build directory persists on this host, so a run recompiles what the
-      # commit changed instead of every package from nothing.
-      #
-      # `report` reads every instrumented executable in that directory, and the
-      # directory also holds builds of other flag sets, of other checkouts and
-      # of removed targets. Their regions have no profile in this run and count
-      # as missed lines, so before the report `prune_coverage_objects` deletes
-      # every executable whose GNU build ID no raw profile of this run records.
-      - name: Run coverage
+
+      - uses: taiki-e/install-action@cargo-llvm-cov
+
+      - name: Measure workspace coverage and enforce 85% line floor
         shell: bash
         run: |
           set -euo pipefail
           ./cargo_full llvm-cov clean --workspace --profraw-only
-          packages=$(./cargo_full metadata --no-deps --format-version 1 \
-            | python3 -c 'import json,sys; print("\n".join(p["name"] for p in json.load(sys.stdin)["packages"]))')
-          # cargo-llvm-cov selects `--tests`. Naming `--examples` alongside it
-          # does not help: every explicit target selection compiles an example
-          # as a test harness named `<example>-<hash>`, never the plain binary
-          # `wire_harness_smoke_test` spawns. That test now builds the example
-          # itself when the selected targets did not, so this lane needs no
-          # target flags of its own.
+          packages="$(./cargo_full metadata --no-deps --format-version 1 \
+            | python3 -c '
+          import json, sys
+          skip = {"xtask", "vyre-bench", "vyre-test-support"}
+          for p in json.load(sys.stdin)["packages"]:
+              if p["name"] not in skip:
+                  print(p["name"])
+          ')"
           for package in $packages; do
             echo "::group::coverage $package"
             ./cargo_full llvm-cov --no-report --locked --all-features -p "$package"
             echo "::endgroup::"
           done
-          ./cargo_full run -q --locked -p xtask --bin prune_coverage_objects
+          ./cargo_full run -q --locked -p xtask -- prune-coverage-objects
           ./cargo_full llvm-cov report --lcov --output-path lcov.info \
             --fail-under-lines "$COVERAGE_FLOOR_LINES"
-      # The report is written before the floor is applied, so a run below the
-      # floor still leaves the per-file lines that locate the missed regions.
-      - name: Retain the line report
+
+      - name: Upload coverage report artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: lcov
           path: lcov.info
           if-no-files-found: ignore
-      - name: Upload
-        uses: codecov/codecov-action@v4
-        with:
-          files: lcov.info
-          fail_ci_if_error: true

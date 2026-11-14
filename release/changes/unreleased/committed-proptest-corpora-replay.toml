@@ -1,2 +1,0 @@
-category = "Fixed"
-text = "Committed proptest regression corpora replay again: the workspace no longer sets `PROPTEST_DISABLE_FAILURE_PERSISTENCE`, sixteen corpora left behind when their tests moved sit beside those tests, two whose tests no longer exist are deleted, published packages exclude the `proptest-regressions/` directory, and a tree contract fails on any corpus no `proptest!` block reads."

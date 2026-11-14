@@ -1,2 +1,0 @@
-category = "Fixed"
-text = "A gate no longer fails when another process deletes a git-ignored file in the checkout while the gate runs."

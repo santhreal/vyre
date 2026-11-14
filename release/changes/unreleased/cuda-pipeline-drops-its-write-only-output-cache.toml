@@ -1,2 +1,0 @@
-category = "Removed"
-text = "The CUDA compiled pipeline no longer copies every materialized output into a pipeline-level cache that no dispatch read, the borrowed graph-lane batch replay with no caller is removed, and `CudaTelemetrySnapshot::cuda_graph_batched_replay_chunks`, `CudaTelemetrySnapshot::cuda_graph_batched_replay_lanes` and the metrics of the same names are removed with it."

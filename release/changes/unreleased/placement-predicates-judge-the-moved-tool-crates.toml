@@ -1,2 +1,0 @@
-category = "Fixed"
-text = "`xtask placement-predicates` reads the gate crates at `tools/xtask`, `tools/xtask-registry` and `tools/structure-gate` in place of their former top-level paths."

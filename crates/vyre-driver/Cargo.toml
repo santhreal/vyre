@@ -9,7 +9,6 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "Driver layer: registry, runtime, pipeline, routing, diagnostics. Substrate-agnostic backend machinery. Part of the vyre GPU compiler."
-readme = "README.md"
 keywords = ["gpu", "compiler", "runtime", "registry", "vyre"]
 categories = ["compilers", "hardware-support", "api-bindings"]
 documentation = "https://docs.rs/vyre-driver"

@@ -1,2 +1,0 @@
-category = "Fixed"
-text = "The CUDA grid-sync split backend forwards timed dispatch to the backend it wraps rather than falling back to the host-timed default."

@@ -1,2 +1,0 @@
-category = "Fixed"
-text = "vyre-libs and vyre-spec declare a test target for every integration test file, so their feature-gated suites compile and run."

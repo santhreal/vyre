@@ -11,19 +11,12 @@ use crate::cases::queue_closure_oracle::{
 use crate::cases::skewed_graph::{
     active_high_degree_sources, build_skewed_csr_arrays, SkewedCsrShape,
 };
-use vyre_libs::predicate::edge_kind;
 
 pub(super) const NODE_COUNT: u32 = 1_048_576;
 #[cfg(test)]
 pub(super) const FRONTIER_WORDS: usize = NODE_COUNT.div_ceil(32) as usize;
-pub(super) const IFDS_REACH_MASK: u32 = edge_kind::ASSIGNMENT
-    | edge_kind::CALL_ARG
-    | edge_kind::RETURN
-    | edge_kind::PHI
-    | edge_kind::ALIAS
-    | edge_kind::MEM_STORE
-    | edge_kind::MEM_LOAD
-    | edge_kind::MUT_REF;
+pub(super) const IFDS_REACH_MASK: u32 =
+    (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3) | (1 << 5) | (1 << 6) | (1 << 7) | (1 << 8);
 
 const HIGH_DEGREE_THRESHOLD: u32 = 24;
 pub(super) const UGLY_HUB_DEGREE: u32 = 2_048;
@@ -361,18 +354,18 @@ fn expand_one_launch_wave(
 
 fn ifds_edge_kind(src: u32, edge: u32) -> u32 {
     const ALLOWED: [u32; 8] = [
-        edge_kind::ASSIGNMENT,
-        edge_kind::CALL_ARG,
-        edge_kind::RETURN,
-        edge_kind::PHI,
-        edge_kind::ALIAS,
-        edge_kind::MEM_STORE,
-        edge_kind::MEM_LOAD,
-        edge_kind::MUT_REF,
+        1 << 0,
+        1 << 1,
+        1 << 2,
+        1 << 3,
+        1 << 5,
+        1 << 6,
+        1 << 7,
+        1 << 8,
     ];
     match mix32(src ^ edge.wrapping_mul(0xA5A5_9651)) & 15 {
-        0 => edge_kind::DOMINANCE,
-        1 => edge_kind::CONTROL,
+        0 => 1 << 4,
+        1 => 1 << 9,
         value => ALLOWED[(value as usize - 2) % ALLOWED.len()],
     }
 }

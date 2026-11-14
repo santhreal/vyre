@@ -1,2 +1,0 @@
-category = "Fixed"
-text = "`xtask cli-docs` moves its own running executable off the build path before rebuilding the workspace binaries, so the gate runs on Windows when that executable was built with other features."

@@ -1,2 +1,0 @@
-category = "Fixed"
-text = "The Metal driver compiles on macOS and iOS: its materializer named a target profile the Metal target compiler never declared, and its runtime module carried four imports nothing reads."

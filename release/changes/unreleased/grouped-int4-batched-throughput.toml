@@ -1,2 +1,0 @@
-category = "Added"
-text = "Grouped affine INT4 linear now provides a typed batched program builder that dequantizes each immutable weight tile once and reuses it across independent resident batch rows. Release evidence measures normalized per-inference latency."

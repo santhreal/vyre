@@ -1,2 +1,0 @@
-category = "Fixed"
-text = "On wgpu, a repeated host-input dispatch reuses its cached bind group instead of creating one per dispatch, and the cache keys a pooled buffer by an allocation serial that is never reassigned, so a dropped buffer's bind group cannot be served for a later allocation at the same address."

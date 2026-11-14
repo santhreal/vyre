@@ -1,2 +1,0 @@
-category = "Fixed"
-text = "The `application-runnable` gate accepts a production backend with no materializer when its factory reports the build target unsupported, so `metal` linked on a non-Apple host no longer reads as a backend that lost its execution facet."

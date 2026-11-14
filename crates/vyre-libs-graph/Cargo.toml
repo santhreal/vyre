@@ -9,7 +9,6 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "Graph algorithms, CSR traversal, AST walks, dominator trees, and topological sort"
-readme = "README.md"
 documentation = "https://docs.rs/vyre-libs-graph"
 exclude = ["**/proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 

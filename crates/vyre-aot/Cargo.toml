@@ -11,7 +11,6 @@ repository.workspace = true
 homepage.workspace = true
 documentation = "https://docs.rs/vyre-aot"
 description = "Ahead-of-time compilation for vyre Programs: emits target-native bytes plus a self-contained launcher bundle suitable for embedded and competition-style code-budget-constrained submissions."
-readme = "README.md"
 keywords = ["vyre", "gpu", "aot", "compiler"]
 categories = ["compilers", "hardware-support"]
 

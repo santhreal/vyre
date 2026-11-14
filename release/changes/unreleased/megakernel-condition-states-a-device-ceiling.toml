@@ -1,2 +1,0 @@
-category = "Changed"
-text = "`runtime.megakernel.condition.64k` asserts a 24000 ns device active-time ceiling in place of a 100x ratio over the pinned CPU baseline, which no release device could reach."

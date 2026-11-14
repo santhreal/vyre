@@ -1,2 +1,0 @@
-category = "Changed"
-text = "Operation registration defines three identity-joined records (SemanticDescriptor, LoweringProvider, ConformanceProvider) and an immutable CatalogBundle with content digest."

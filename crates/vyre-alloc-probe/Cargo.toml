@@ -9,7 +9,6 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "Per-thread heap traffic counters behind a GlobalAlloc wrapper. Measures allocation budgets in a harness binary or a test binary."
-readme = "README.md"
 # Internal measurement harness, never published.
 publish = false
 

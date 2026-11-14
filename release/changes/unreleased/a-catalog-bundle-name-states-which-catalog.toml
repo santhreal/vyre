@@ -1,2 +1,0 @@
-category = "Changed"
-text = "`vyre_foundation::extension::CatalogBundle` is renamed `ExtensionCatalogBundle` and `operation::CatalogBundle` is renamed `OperationCatalogBundle`."

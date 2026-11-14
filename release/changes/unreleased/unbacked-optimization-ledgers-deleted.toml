@@ -1,2 +1,0 @@
-category = "Removed"
-text = "The 186 `docs/optimization` ledgers that described subsystems vyre does not ship, and the 75 tests that only checked those files for strings, are deleted; the ledgers that code reads remain."

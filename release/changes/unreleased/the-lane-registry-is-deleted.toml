@@ -1,2 +1,0 @@
-category = "Removed"
-text = "`docs/optimization/OWNERSHIP.toml` and every `owner_lane` field are deleted: the hygiene matrix and implementation intake group findings by workspace member (schema 7 and 2), the hot-path heatmap ranks by score then file, duplicate-family reports drop `import_owner` (schema 3), and the release-evidence index drops `owner_lane` (index schema 2, run schema 7)."

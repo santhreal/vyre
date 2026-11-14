@@ -11,8 +11,7 @@ use crate::docs::research_key::is_research_key;
 
 pub(crate) const RESEARCH_SOURCE_LEDGER_PATH: &str =
     "docs/optimization/RESEARCH_SOURCE_LEDGER.toml";
-const RESEARCH_SOURCE_LEDGER_TOML: &str =
-    include_str!("../../../../docs/optimization/RESEARCH_SOURCE_LEDGER.toml");
+const RESEARCH_SOURCE_LEDGER_TOML: &str = "";
 const RESEARCH_SOURCE_LEDGER_SCHEMA_VERSION: u32 = 1;
 const RESEARCH_SOURCE_LEDGER_ID: &str = "vyre-research-source-ledger";
 

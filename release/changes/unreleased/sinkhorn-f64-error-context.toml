@@ -1,2 +1,0 @@
-category = "Fixed"
-text = "The f64 Sinkhorn adapters now preserve canonical constructor error context. The convenience entry point reports the failing CPU reference operation, and the caller-storage adapter no longer attributes validation failures to an unrelated crate."

@@ -1,2 +1,0 @@
-category = "Fixed"
-text = "The `device-test-gating` and `device-test-compilation` gates read a workflow step running `xtask cuda-parity --device` as the `vyre-driver-cuda` build with `device-tests,cuda` it runs, so the CUDA device targets no longer report as compiled by no workflow."

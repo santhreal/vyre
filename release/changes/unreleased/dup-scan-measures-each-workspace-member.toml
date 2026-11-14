@@ -1,2 +1,0 @@
-category = "Fixed"
-text = "`xtask dup-scan` measures each workspace member under the last segment of its directory, so crates under `crates/` and `tools/` are pinned separately in place of one row per grouping directory."

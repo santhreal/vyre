@@ -1,2 +1,0 @@
-category = "Fixed"
-text = "`xtask cli-docs` on an MSVC target moves the running executable's unhashed `deps` linker output aside before relinking, so the build no longer fails with `LNK1104`."

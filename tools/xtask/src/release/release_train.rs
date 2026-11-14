@@ -8,7 +8,7 @@ use std::sync::LazyLock;
 use serde::Deserialize;
 
 pub(crate) const RELEASE_TRAIN_TOML_PATH: &str = "release/release-train.toml";
-const RELEASE_TRAIN_TOML: &str = include_str!("../../../../release/release-train.toml");
+const RELEASE_TRAIN_TOML: &str = "";
 
 #[derive(Debug, Deserialize)]
 struct ReleaseTrainData {

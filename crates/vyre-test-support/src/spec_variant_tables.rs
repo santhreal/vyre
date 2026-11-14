@@ -115,33 +115,45 @@ pub fn builtin_ternary_ops() -> Vec<TernaryOp> {
 pub fn buffer_data_types(element_size: usize) -> Vec<DataType> {
     crate::data_type_elements::flat_buffer_element_types(element_size)
 }
-/// Variant names of `vyre_spec::<enum_name>` as the checked-in public-API
-/// snapshot records them, `Opaque` excluded.
-///
-/// The snapshot is regenerated from rustdoc by
-/// `scripts/check_public_api_snapshot.sh` and a byte-stability gate keeps it
-/// equal to the crate's real surface, so adding a variant to a frozen operator
-/// enum has to land here too. That is what makes the tables above fail closed:
-/// a new variant appears in this set, no table lists it, and
-/// `crates/vyre-spec/tests/spec_variant_tables_cover_the_frozen_surface.rs` goes red
-/// until somebody records a decision for it.
+/// Variant names of `vyre_spec::<enum_name>` parsed directly from the crate
+/// source declaration, `Opaque` excluded.
 pub fn public_api_variant_names(enum_name: &str) -> BTreeSet<String> {
-    const PACKAGE: &str = "vyre-spec";
-    let prefix = format!("pub vyre_spec::{enum_name}::");
-    let names: BTreeSet<String> = crate::public_api::snapshot_text(PACKAGE)
-        .lines()
-        .filter_map(|line| line.strip_prefix(&prefix))
-        // A field of a struct-like variant reads `Enum::Variant::field: T`, and
-        // `Opaque` reads `Opaque(extension::ExtensionUnOpId)`. Neither is a
-        // bare variant name.
-        .filter(|rest| !rest.contains(':') && !rest.contains('('))
-        .filter(|rest| *rest != "Opaque")
-        .map(str::to_string)
-        .collect();
+    let root = crate::monorepo::vyre_workspace_root();
+    let decl = format!("pub enum {enum_name} {{");
+    let mut names = BTreeSet::new();
+    for candidate_dir in [
+        root.join("crates/vyre-ir/src"),
+        root.join("crates/vyre-spec/src"),
+    ] {
+        let mut pending = vec![candidate_dir];
+        while let Some(dir) = pending.pop() {
+            let Ok(entries) = std::fs::read_dir(&dir) else {
+                continue;
+            };
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if path.is_dir() {
+                    pending.push(path);
+                } else if path.extension().is_some_and(|ext| ext == "rs") {
+                    if let Ok(source) = crate::read_source_file_bounded(&path) {
+                        if let Some(body) = crate::braced_body(&source, &decl) {
+                            for variant in crate::top_level_variant_names(body) {
+                                if variant != "Opaque" {
+                                    names.insert(variant);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if !names.is_empty() {
+            break;
+        }
+    }
     assert!(
         !names.is_empty(),
-        "Fix: the public-API snapshot at {} lists no `{enum_name}` variants. Refresh it with scripts/check_public_api_snapshot.sh --refresh {PACKAGE}.",
-        crate::public_api::snapshot_path(PACKAGE).display()
+        "Fix: no `pub enum {enum_name}` variants found under crates/vyre-ir/src or crates/vyre-spec/src."
     );
     names
 }

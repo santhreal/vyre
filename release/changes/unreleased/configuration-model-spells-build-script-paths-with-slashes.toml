@@ -1,2 +1,0 @@
-category = "Fixed"
-text = "`xtask configuration-model` writes build-script paths with `/` on every host, so the committed configuration space matches the tree on Windows."

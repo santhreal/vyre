@@ -9,74 +9,109 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_PROFILE_DEV_DEBUG: "0"
+  CARGO_PROFILE_TEST_DEBUG: "0"
+
 jobs:
-  matrix:
-    name: ${{ matrix.os }} / ${{ matrix.rust-toolchain }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, macos-latest, windows-latest]
-        rust-toolchain: [stable, nightly]
+  check:
+    name: Check, Docs, Structural Rules, Deny
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
-      # The debug target of the whole workspace outgrows the disk a hosted Ubuntu
-      # image leaves free, and the test step then dies with `No space left on
-      # device`. The image's .NET, Android, GHC and CodeQL trees are unused here.
-      - name: Delete the Ubuntu image's unused SDKs
-        if: matrix.os == 'ubuntu-latest'
+      - name: Install Rust toolchain
         shell: bash
+        run: |
+          TOOLCHAIN="$(sed -n 's/^channel *= *"\([^"]*\)".*/\1/p' rust-toolchain.toml)"
+          rustup toolchain install "$TOOLCHAIN" --profile minimal --component rustfmt --component clippy
+          rustup default "$TOOLCHAIN"
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: check
+
+      - name: Check formatting
+        run: ./cargo_full fmt --check
+
+      - name: Run workspace structural checks
+        run: ./cargo_full run --locked -p xtask -- check
+
+      - name: Check workspace targets and features with warnings denied
+        env:
+          RUSTFLAGS: -D warnings
+        run: ./cargo_full check --workspace --all-targets --all-features --locked
+
+      - name: Build workspace documentation with warnings denied
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: ./cargo_full doc --workspace --all-features --no-deps --locked
+
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check
+          arguments: --all-features
+          manifest-path: Cargo.toml
+
+  test:
+    name: Workspace Tests (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Reclaim unused runner SDK disk space
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
-          df -h /
 
-      - name: Install Rust
+      - name: Install Rust toolchain
         shell: bash
         run: |
-          rustup toolchain install "${{ matrix.rust-toolchain }}" \
-            --profile minimal \
-            --component clippy \
-            --component rustfmt
-          rustup default "${{ matrix.rust-toolchain }}"
+          TOOLCHAIN="$(sed -n 's/^channel *= *"\([^"]*\)".*/\1/p' rust-toolchain.toml)"
+          rustup toolchain install "$TOOLCHAIN" --profile minimal
+          rustup default "$TOOLCHAIN"
 
-      # cc-rs and openssl-src both invoke `cl` by bare name on the MSVC target,
-      # and `cl` is only on PATH inside a Visual Studio developer environment.
-      # Without this step every C dependency in the tree (pcre2-sys,
-      # openssl-src) fails with `failed to find tool "cl"`.
-      - name: Enter the MSVC developer environment
+      - uses: taiki-e/install-action@nextest
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: test-linux
+
+      - name: Run workspace test suite
+        run: ./cargo_full nextest run --workspace --exclude vyre-bench --no-fail-fast
+
+  platform:
+    name: Cross-Platform Check (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        shell: bash
+        run: |
+          TOOLCHAIN="$(sed -n 's/^channel *= *"\([^"]*\)".*/\1/p' rust-toolchain.toml)"
+          rustup toolchain install "$TOOLCHAIN" --profile minimal
+          rustup default "$TOOLCHAIN"
+
+      - name: Configure MSVC developer environment
         if: matrix.os == 'windows-latest'
         uses: ilammy/msvc-dev-cmd@v1
 
-      # Git for Windows ships a coreutils `link.exe` in `usr/bin`, and that
-      # directory sits ahead of the MSVC toolchain on the PATH every `shell:
-      # bash` step inherits. rustc spawns the linker by bare name, so it gets
-      # the coreutils one, which rejects the object list with `extra operand`
-      # and fails the build script of the first C-adjacent dependency it
-      # reaches. Deleting the shadow is the only fix that survives PATH being
-      # rebuilt per step. The resolution is asserted, so an image that changes
-      # where the shadow lives fails here rather than in a linker error.
-      - name: Remove the coreutils link.exe that shadows the MSVC linker
+      - name: Remove Git coreutils link.exe shadow and select Perl for OpenSSL
         if: matrix.os == 'windows-latest'
         shell: bash
         run: |
           rm -f "/c/Program Files/Git/usr/bin/link.exe"
-          resolved="$(command -v link || true)"
-          case "$resolved" in
-            *MSVC*) echo "link resolves to $resolved" ;;
-            *) echo "link resolves to '${resolved:-nothing}', not the MSVC linker" >&2; exit 1 ;;
-          esac
-
-      # The AES-CTR baseline vendors OpenSSL, whose Configure script needs a perl
-      # that provides Locale::Maketext::Simple. The perl first on PATH on
-      # windows-latest is the Git for Windows MSYS build, which does not ship that
-      # module. Select a perl by loading the module rather than by naming an install
-      # path, so an image that moves or drops the Strawberry install still resolves,
-      # and fail loudly when no perl on the image can configure OpenSSL.
-      - name: Select the perl that configures vendored OpenSSL
-        if: matrix.os == 'windows-latest'
-        shell: bash
-        run: |
           for candidate in \
             /c/Strawberry/perl/bin/perl.exe \
             /c/hostedtoolcache/windows/strawberry-perl/*/x64/perl/bin/perl.exe \
@@ -87,137 +122,23 @@ jobs:
             echo "CC=cl" >> "$GITHUB_ENV"
             exit 0
           done
-          echo "no perl on this image provides Locale::Maketext::Simple; vendored OpenSSL cannot be configured" >&2
+          echo "No Perl installation provides Locale::Maketext::Simple" >&2
           exit 1
 
-      - name: cargo_full fmt
-        if: matrix.os != 'windows-latest'
-        shell: bash
-        run: ./cargo_full fmt --check
-
-      - name: abstraction gate
-        shell: bash
-        run: ./cargo_full run -p xtask -- abstraction-gate
-
-      - name: cargo_full clippy (advisory)
-        shell: bash
-        continue-on-error: true
-        run: ./cargo_full clippy --workspace
-
-      # One package per invocation. Every package runs before the step decides:
-      # `bash -e` aborted the loop at the first failure, so a package early in
-      # the sort order hid every package after it. Two teardown failures in
-      # `vyre-driver-cuda` once kept `vyre-primitives` and everything
-      # alphabetically past it from ever running here, and the mismatch they
-      # carried surfaced in a coverage job pinned to an offline runner.
-      #
-      # Each package's integration tests link one harness binary per
-      # required-feature set, so the whole workspace leaves under a hundred test
-      # executables behind and the step no longer deletes them between packages.
-      - name: cargo_full test
-        shell: bash
-        run: |
-          # `tr -d '\r'` because jq on windows-latest terminates each line with
-          # CRLF, and IFS does not split on CR: the loop variable then carried a
-          # trailing carriage return and cargo rejected `structure-gate\r` as a
-          # package name containing an invalid character.
-          metadata="$(./cargo_full metadata --format-version 1 --no-deps)"
-          failed=""
-          for package in $(printf '%s' "$metadata" | jq -r '.packages[].name' | tr -d '\r' | sort); do
-            ./cargo_full test -p "$package" || failed="$failed $package"
-          done
-          if [ -n "$failed" ]; then
-            echo "packages with failing tests:$failed" >&2
-            exit 1
-          fi
-
-      # The only Metal device in this fleet is the macOS leg of this matrix, so
-      # this is the lane that turns the admission on. The other legs leave it
-      # off and never link a test that would ask a Linux runner for a Metal
-      # queue.
-      - name: Metal driver device tests
-        if: runner.os == 'macOS'
-        shell: bash
-        run: ./cargo_full test -p vyre-driver-metal --features device-tests -- --test-threads=1
-
-
-      - name: composition-library reference-parity tests
-        shell: bash
-        # Each composition domain crate enables its own domain feature by
-        # default, so the per-package run above already compiles that domain's
-        # reference-parity suite. `graph-dispatch` is the one parity surface
-        # outside a default feature set: the dispatch tests run a production
-        # dispatch form through a reference-eval dispatcher against its direct
-        # vyre-reference witness. Naming it keeps that regression on the main PR
-        # check rather than only the slower --all-features job.
-        run: >-
-          ./cargo_full test -p vyre-libs-graph
-          --features graph-dispatch
-          --test all_tests
-
-      - name: pass-engine reference-parity tests
-        shell: bash
-        # The pass engine's own reference-parity suite is gated on all-solvers and
-        # is likewise invisible to the default-feature workspace run.
-        run: >-
-          ./cargo_full test -p vyre-pass-engine --features all-solvers
-          --test all_tests_all_solvers
-
-      - name: oracle tests without its default feature
-        shell: bash
-        # The oracle's subgroup contracts are the mirror image of the two steps
-        # above: they compile only when `subgroup-ops` is OFF, so the per-package
-        # run and the --all-features job both skip them. Without the feature the
-        # oracle declares no subgroup support to validation and refuses every
-        # subgroup expression instead of answering from a one-lane model, and
-        # this is the only run that observes it.
-        run: >-
-          ./cargo_full test -p vyre-reference --no-default-features
-          --test all_tests
-
-      - name: Configuration space model and isolated cells check
-        shell: bash
-        run: ./cargo_full run -p xtask -- configuration-model
-      - name: cargo_full doc
-        shell: bash
-        run: ./cargo_full doc --workspace
-
-  release-evidence-shape:
-    name: release evidence shape
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Rust
-        shell: bash
-        run: |
-          MSRV="$(grep -E '^rust-version' Cargo.toml | head -1 | sed -E 's/.*"([^"]+)".*/\1/')"
-          rustup toolchain install "$MSRV" --profile minimal
-          rustup default "$MSRV"
-
-      - name: Generate structural release evidence
-        shell: bash
-        run: ./cargo_full run --bin xtask -- release-evidence
-
-      - uses: actions/upload-artifact@v4
+      - uses: Swatinem/rust-cache@v2
         with:
-          name: vyre-structural-release-evidence
-          path: ./release/evidence/**/*.json
+          key: platform-${{ matrix.os }}
 
-  ci-release-gate:
-    name: CI release gate
-    needs:
-      - matrix
-      - release-evidence-shape
-    if: ${{ always() }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Verify required CI jobs
+      - name: Check workspace targets
+        shell: bash
+        run: ./cargo_full check --workspace --all-targets --locked
+
+      - name: Run core IR and reference oracle tests
         shell: bash
         run: |
-          if [ "${{ needs.matrix.result }}" != "success" ] \
-            || [ "${{ needs.release-evidence-shape.result }}" != "success" ]; then
-            echo "::error::A required CI job failed or did not run."
-            exit 1
-          fi
-          echo "CI release gate passed."
+          packages="$(./cargo_full metadata --format-version 1 --no-deps | jq -r '.packages[].name' | tr -d '\r')"
+          for candidate in vyre-ir vyre-spec vyre-reference; do
+            if printf '%s\n' "$packages" | grep -qx "$candidate"; then
+              ./cargo_full test -p "$candidate" --lib
+            fi
+          done

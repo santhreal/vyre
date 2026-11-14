@@ -1,2 +1,0 @@
-category = "Fixed"
-text = "Driver decorators now preserve the concrete backend device profile, including device-timestamp capability and timing quality."

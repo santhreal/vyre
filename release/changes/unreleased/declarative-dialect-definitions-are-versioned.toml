@@ -1,2 +1,0 @@
-category = "Added"
-text = "Declarative versioned dialect definitions generate typed builders, schema descriptors, visitor traversals, binary serialization, validation hooks, rewrite matchers, and exhaustive compile-time closure rosters from a single declaration."

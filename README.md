@@ -1,67 +1,38 @@
 # vyre
 
-vyre is a GPU compiler. You build a program out of registered operations as
-IR, it compiles the whole graph into one immutable artifact, emits that
-artifact as a target payload in PTX, WGSL, SPIR-V or MSL, and runs it on the
-device.
+`vyre` is a general, backend-neutral GPU megakernel compiler and runtime. Programs are expressed in one typed intermediate representation, lowered through whole-program fusion and task-graph scheduling into a persistent fused megakernel, emitted as PTX, WGSL, SPIR-V, or MSL, and executed on the GPU without host copies or inter-stage host round trips.
 
-Nothing in vyre computes on the host. The exception is `vyre-reference`, an
-interpreter that exists to be the oracle every backend is proved
-byte-identical against. It is not a backend and not a fallback.
+All production computation executes on the GPU. `vyre-reference` is a CPU interpreter used exclusively as the differential testing oracle against which GPU backends verify output parity.
 
 ## Install
+
+Add `vyre` with the Cargo features matching your target backends:
 
 ```toml
 [dependencies]
 vyre = { version = "0.8.0", features = ["cuda"] }
 ```
 
-The default feature set is empty and links no device. `cuda` and `wgpu` are
-the facade's backend features. See [install](docs/guide/install.md).
+Available backend features on `vyre`: `cuda`, `wgpu`, `metal`, `spirv`. Default features link no GPU driver so callers compile artifacts without device libraries when needed.
 
-## What it looks like
+## Example
 
 ```rust
+use vyre::compiler::{compile, CompileRequest};
+use vyre::admit_artifact;
+
 let request = CompileRequest::new(graph, facts, device, budget, objective).validate()?;
 let artifact = compile(&request)?;
-assert_eq!(artifact.digest(), compile(&request)?.digest());
+let session = admit_artifact(&artifact, backend)?;
 ```
-
-The whole runnable version is
-[compile a graph to an artifact](docs/guide/first-program.md).
-
-## How the tree is laid out
-
-One crate owns one boundary. Each crate carries a `SPEC.md` stating what it
-owns, what it must never contain, what crosses its edges, and the gates that
-enforce that, and a `README.md` describing its modules and how to run its
-tests. `docs/CRATE_OWNERSHIP.toml` is the machine-readable form of the same
-facts, and every dependency edge is declared there before a manifest may carry
-it.
 
 ## Documentation
 
-The book starts at [the summary](docs/SUMMARY.md).
-
-- [Install](docs/guide/install.md)
-- [Compile a graph to an artifact](docs/guide/first-program.md)
-- [Run an artifact on a device](docs/guide/backends.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Crate boundaries](docs/architecture/crates.md)
-- [Placement rule](docs/lego-block-rule.md)
-- [Add an operation](docs/extending/operation.md)
-- [Add a backend](docs/extending/backend.md)
-- [Conformance](docs/conformance/program.md)
-- [Release](docs/release/process.md)
-
-API documentation: <https://docs.rs/vyre>.
-
-## Contributing
-
-[CONTRIBUTING.md](CONTRIBUTING.md) covers the workflow.
-[SECURITY.md](SECURITY.md) covers reporting a vulnerability.
-[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) applies to every interaction here.
+- [Manual (`docs/VYRE.md`)](docs/VYRE.md): goals, non-goals, compiler and runtime architecture, megakernel execution model, workspace structure, extending operations and backends, and workload measurement.
+- [Contributing (`CONTRIBUTING.md`)](CONTRIBUTING.md): build, test, benchmark, and release commands.
+- [Changelog (`CHANGELOG.md`)](CHANGELOG.md): release history.
+- API reference: <https://docs.rs/vyre>
 
 ## License
 
-See [LICENSE-APACHE](LICENSE-APACHE) and [LICENSE-MIT](LICENSE-MIT).
+Dual-licensed under [Apache-2.0](LICENSE-APACHE) or [MIT](LICENSE-MIT).

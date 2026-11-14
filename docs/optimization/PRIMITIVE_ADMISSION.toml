@@ -1,7 +1,0 @@
-schema_version = 1
-minimum_independent_callers = 2
-
-# Under-adopted primitives require an explicit owner decision. The generator
-# rejects missing rows, caller-count drift, synthetic callers, and exceptions
-# without a concrete reason and review boundary.
-

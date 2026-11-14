@@ -1,8 +1,0 @@
-pub enum PassBoundaryClass {
-Unknown,
-AbiPreserving,
-AbiChanging,
-BackendAware,
-RuntimeAware,
-DomainSpecific,
-}

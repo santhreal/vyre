@@ -21,8 +21,7 @@ pub(crate) const FRONTIER_LEADERBOARD_SEMANTIC_VALIDATOR: &str =
     "release_benchmarks::validate_frontier_leaderboard_artifact_bytes";
 pub(crate) const FRONTIER_LEADERBOARD_BASELINES_PATH: &str =
     "docs/optimization/FRONTIER_LEADERBOARD_BASELINES.toml";
-const FRONTIER_LEADERBOARD_BASELINES_TOML: &str =
-    include_str!("../../../../../docs/optimization/FRONTIER_LEADERBOARD_BASELINES.toml");
+const FRONTIER_LEADERBOARD_BASELINES_TOML: &str = "";
 pub(crate) const FRONTIER_LEADERBOARD_REQUIRED_FIELDS: &[&str] = &[
     "schema_version",
     "selected_backend",

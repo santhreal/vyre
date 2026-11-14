@@ -1,2 +1,0 @@
-category = "Fixed"
-text = "The structured diagnostic of a `PipelineError::Protocol` or `PipelineError::DrainIncomplete` now carries the fix its error message states."

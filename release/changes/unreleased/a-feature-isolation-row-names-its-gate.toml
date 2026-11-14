@@ -1,2 +1,0 @@
-category = "Changed"
-text = "The `xtask` feature-isolation row type is renamed `FeatureIsolationRow`."

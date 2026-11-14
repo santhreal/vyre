@@ -165,22 +165,78 @@ fn declares_surface(crate_root: &Path) -> bool {
 /// A driver whose sources declare the surface but whose snapshot publishes it at no path,
 /// or at more than one, is returned as an error rather than dropped, because both are the
 /// shape this test exists to reject.
+fn collect_pub_surface_items(source: &str) -> BTreeSet<String> {
+    let mut items = BTreeSet::new();
+    for line in source.lines() {
+        let trimmed = line.trim_start();
+        for prefix in ["pub struct ", "pub enum "] {
+            if let Some(rest) = trimmed.strip_prefix(prefix) {
+                let ident: String = rest
+                    .chars()
+                    .take_while(|ch| ch.is_ascii_alphanumeric() || *ch == '_')
+                    .collect();
+                if is_surface_name(&ident) {
+                    items.insert(ident);
+                }
+            }
+        }
+    }
+    let mut rest = source;
+    while let Some(idx) = rest.find("pub use ") {
+        let after = &rest[idx + "pub use ".len()..];
+        let end = after.find(';').unwrap_or(after.len());
+        for token in after[..end].split(|ch: char| !(ch.is_ascii_alphanumeric() || ch == '_')) {
+            if token.starts_with(char::is_uppercase) && is_surface_name(token) {
+                items.insert(token.to_string());
+            }
+        }
+        rest = &after[end..];
+    }
+    items
+}
+
+fn source_published_snapshot(crate_root: &Path, crate_ident: &str) -> String {
+    let lib_path = crate_root.join("src/lib.rs");
+    let Ok(lib_source) = fs::read_to_string(&lib_path) else {
+        return String::new();
+    };
+    let mut out = String::new();
+    for item in collect_pub_surface_items(&lib_source) {
+        out.push_str(&format!("pub struct {crate_ident}::{item}\n"));
+    }
+    for line in lib_source.lines() {
+        let trimmed = line.trim();
+        if let Some(rest) = trimmed.strip_prefix("pub mod ") {
+            let mod_name: String = rest
+                .chars()
+                .take_while(|ch| ch.is_ascii_alphanumeric() || *ch == '_')
+                .collect();
+            if mod_name.is_empty() {
+                continue;
+            }
+            for candidate in [
+                crate_root.join("src").join(format!("{mod_name}.rs")),
+                crate_root.join("src").join(&mod_name).join("mod.rs"),
+            ] {
+                if let Ok(mod_source) = fs::read_to_string(candidate) {
+                    for item in collect_pub_surface_items(&mod_source) {
+                        out.push_str(&format!("pub struct {crate_ident}::{mod_name}::{item}\n"));
+                    }
+                }
+            }
+        }
+    }
+    out
+}
+
 fn published_paths(root: &Path) -> Result<BTreeMap<String, String>, Vec<String>> {
     let mut paths = BTreeMap::new();
     let mut wrong = Vec::new();
     for package in concrete_backends(root) {
-        let declared = declares_surface(&vyre_crate_directory(&package));
-        let snapshot_path = root.join("docs/public-api").join(format!("{package}.txt"));
-        let Ok(snapshot) = fs::read_to_string(&snapshot_path) else {
-            if declared {
-                wrong.push(format!(
-                    "`{package}` declares an external-resource surface and has no snapshot at {}, so the path it publishes cannot be read",
-                    snapshot_path.display()
-                ));
-            }
-            continue;
-        };
+        let crate_dir = vyre_crate_directory(&package);
+        let declared = declares_surface(&crate_dir);
         let crate_ident = package.replace('-', "_");
+        let snapshot = source_published_snapshot(&crate_dir, &crate_ident);
         let surface = published_surface(&snapshot, &crate_ident);
         let modules: BTreeSet<&String> = surface.values().flatten().collect();
         if !declared {

@@ -1,2 +1,0 @@
-category = "Changed"
-text = "`vyre_libs::graph::dispatch::toposort::topo_order_csr_via` and its two scratch variants take the dispatcher as `&dyn SemanticExecutor`, as every other graph dispatch wrapper does."

@@ -1,2 +1,0 @@
-category = "Added"
-text = "`DataType::SCALAR_LEAVES` and `DataType::QUANTIZED_STORAGE` publish the variant tables that cast validation, wire round trips, and type sweeps enumerate."

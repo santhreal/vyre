@@ -1,8 +1,0 @@
-{
-  "provenance": {"schema_version":1,"tree":{"state":"attributed","branch":"lane/evidence-owners","commit":"aec9505f33c7678680e452fafceea18a0097a23b","commit_timestamp":"1794555036","parent_commit":"0ddbfa560f65cf8cff2d1e3c440790e8b1a5241a","dirty":false,"source_fingerprint":"git:aec9505f33c7678680e452fafceea18a0097a23b:dirty=false"},"host":{"state":"recorded","hostname":"axiomserver","os":"linux","architecture":"x86_64","cpu_model":"13th Gen Intel(R) Core(TM) i9-13900K","cpu_cores":16},"measurement":{"state":"host_only"}},
-  "schema_version": 3,
-  "generator_command": "xtask lego-duplicate-report --write",
-  "detector_family": "registered-op-lego-audit",
-  "family_count": 0,
-  "families": []
-}

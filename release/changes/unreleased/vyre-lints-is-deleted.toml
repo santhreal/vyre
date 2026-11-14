@@ -1,2 +1,0 @@
-category = "Removed"
-text = "The unpublished `vyre-lints` crate is deleted. The `gpu-loudness`, `host-oracle-elimination`, `hygiene-matrix` and `platform-consumer-docs` gates enforce its fallback, skip-guard and consumer-name rules; its raw-IR rule, which reported 14913 construction sites no gate read, and its same-name module scanner are dropped."

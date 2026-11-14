@@ -1,2 +1,0 @@
-category = "Fixed"
-text = "The operation placement reader reports a source file it could not read or that exceeds the read cap, so the registrations that file holds are no longer silently missing from the schema."

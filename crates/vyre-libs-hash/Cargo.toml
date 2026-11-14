@@ -9,7 +9,6 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "Hash and checksum compositions including FNV-1a, CRC-32, Adler-32, and BLAKE3"
-readme = "README.md"
 documentation = "https://docs.rs/vyre-libs-hash"
 exclude = ["**/proptest-regressions/**", "**/*.proptest-regressions", "**/SKILL.md"]
 

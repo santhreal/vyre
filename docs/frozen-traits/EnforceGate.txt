@@ -1,4 +1,0 @@
-pub trait EnforceGate: sealed::Sealed + Send + Sync {
-fn name(&self) -> &'static str;
-fn evaluate(&self, program: &Program) -> EnforceVerdict;
-}

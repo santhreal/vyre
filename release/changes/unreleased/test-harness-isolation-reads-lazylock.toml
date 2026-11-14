@@ -1,2 +1,0 @@
-category = "Fixed"
-text = "`test-harness-isolation` treats a `LazyLock` static in an integration test as one-time initialization, as it does `OnceLock`, `OnceCell` and `Once`."
