@@ -6,6 +6,7 @@ autoexamples = false
 edition = "2021"
 license = "MIT OR Apache-2.0"
 description = "Target emitters for vyre KernelDescriptor: Naga (WGSL), PTX, SPIR-V and Metal."
+readme = "README.md"
 repository = "https://github.com/santhreal/vyre"
 homepage = "https://santh.dev/vyre/"
 documentation = "https://docs.rs/vyre-emit"

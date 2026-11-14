@@ -5,6 +5,7 @@ autotests = false
 edition.workspace = true
 rust-version.workspace = true
 description = "Verified lowering and megakernel compilation from vyre Program IR to canonical artifacts"
+readme = "README.md"
 license.workspace = true
 authors.workspace = true
 repository.workspace = true
