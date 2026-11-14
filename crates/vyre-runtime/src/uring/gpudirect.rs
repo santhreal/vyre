@@ -112,7 +112,7 @@ fn read_gpudirect_stats() -> std::io::Result<String> {
 }
 
 /// NVMe `0x02` Read opcode (see NVMe Base Spec 1.4, §5.15).
-pub const NVME_CMD_READ: u8 = 0x02;
+const NVME_CMD_READ: u8 = 0x02;
 
 /// Encode a 64-byte NVMe Read command payload suitable for
 /// `AsyncUringStream::submit_nvme_passthrough`. Callers supply

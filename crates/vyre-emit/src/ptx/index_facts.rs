@@ -1,16 +1,10 @@
 //! Body-local index arithmetic facts for PTX emission.
 //!
-//! `verified-intentional`: this index survives alongside
-//! `vyre_lower::analyses::def_use` rather than consuming it. The target
-//! constraint is what PTX asks of an index. `ld.global.v2/v4` is only legal
-//! when the base address is naturally aligned to the vector width, and
-//! `ldmatrix` addresses a fragment row by its offset within a 32-lane group,
-//! so the emitter needs `index mod k` for a symbolic index expression, not a
-//! list of use sites. That is what [`IndexFacts::index_modulo`] and
-//! `normalized_index` compute, and it has no meaning off the PTX register
-//! model. `def_use` answers a different question (which operand position of
-//! which op in which body references an id) over the whole descriptor tree,
-//! and its per-position `UseSite` allocation cannot be narrowed to the single
+//! The target constraint is what PTX asks of an index. `ld.global.v2/v4` is
+//! only legal when the base address is naturally aligned to the vector width,
+//! and `ldmatrix` addresses a fragment row by its offset within a 32-lane
+//! group, so the emitter needs `index mod k` for a symbolic index expression.
+//! [`IndexFacts::index_modulo`] and `normalized_index` compute it over the one
 //! body an emitter has in hand.
 //!
 //! What is NOT re-derived here: which operand positions name an SSA result,

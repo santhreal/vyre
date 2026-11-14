@@ -15,7 +15,7 @@
 //! the per-kind operand layout, so a walk cannot invent its own idea of where
 //! a body index lives.
 
-use crate::analyses::{child_body_operands, producer_map, AccessKind, ProducerMap};
+use crate::analyses::{child_body_operands, producer_map, ProducerMap};
 use crate::{KernelBody, KernelOp, KernelOpKind};
 
 /// Whether a walk enters the arms of a structured branch.
@@ -103,89 +103,6 @@ fn skips_arms(arms: ArmDescent, kind: &KernelOpKind) -> bool {
             kind,
             KernelOpKind::StructuredIfThen | KernelOpKind::StructuredIfThenElse
         )
-}
-
-/// One memory access the walk reached, resolved against its own body.
-///
-/// `'a` is the descriptor's lifetime; `'p` is the walk frame that holds the
-/// body's producer map.
-pub(crate) struct AccessRef<'p, 'a> {
-    /// Body that holds the access op.
-    pub(crate) body: &'a KernelBody,
-    /// Producer map of that body.
-    pub(crate) producers: &'p ProducerMap<'a>,
-    /// Flattened index of the access op.
-    pub(crate) op_index: usize,
-    /// Direction of the access.
-    pub(crate) kind: AccessKind,
-    /// Binding slot the access targets, operand 0.
-    pub(crate) binding_slot: u32,
-    /// Result id of the index expression, operand 1.
-    pub(crate) index_operand_id: u32,
-}
-
-/// Slot and index operand positions, identical on every buffer access kind.
-const SLOT_POS: usize = 0;
-const INDEX_POS: usize = 1;
-
-/// Call `judge` for every op of `root` whose kind is `load` or `store`.
-///
-/// WHY: bank-conflict and coalescing classification differ in which pair of op
-/// kinds they read (shared or global) and in how they classify an index, not in
-/// how they find the accesses. Each selected its pair inside its own visitor,
-/// which left the whole visitor plus the malformed-operand guard restated on
-/// both sides. An op carrying fewer than two operands is malformed and never
-/// reaches `judge`, so a caller reads the slot and the index unconditionally.
-pub(crate) fn walk_accesses<'a, F>(
-    root: &'a KernelBody,
-    load: &KernelOpKind,
-    store: &KernelOpKind,
-    judge: F,
-) where
-    F: FnMut(AccessRef<'_, 'a>),
-{
-    let mut selector = AccessSelector { load, store, judge };
-    walk_structured(root, ArmDescent::Enter, &mut selector);
-}
-
-struct AccessSelector<'k, F> {
-    load: &'k KernelOpKind,
-    store: &'k KernelOpKind,
-    judge: F,
-}
-
-impl<'a, F> StructuredVisitor<'a> for AccessSelector<'_, F>
-where
-    F: FnMut(AccessRef<'_, 'a>),
-{
-    fn visit_op(
-        &mut self,
-        body: &'a KernelBody,
-        producers: &ProducerMap<'a>,
-        op_index: usize,
-        op: &'a KernelOp,
-    ) {
-        let kind = if &op.kind == self.load {
-            AccessKind::Load
-        } else if &op.kind == self.store {
-            AccessKind::Store
-        } else {
-            return;
-        };
-        // Bounds check the operand list so a malformed descriptor does not
-        // panic the analysis.
-        if op.operands.len() <= INDEX_POS {
-            return;
-        }
-        (self.judge)(AccessRef {
-            body,
-            producers,
-            op_index,
-            kind,
-            binding_slot: op.operands[SLOT_POS],
-            index_operand_id: op.operands[INDEX_POS],
-        });
-    }
 }
 
 /// Shape of a structured branch op.

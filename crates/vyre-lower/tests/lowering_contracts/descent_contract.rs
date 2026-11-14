@@ -1,9 +1,10 @@
 //! Nested-body descent contracts for the analysis walk.
 
 use vyre_foundation::ir::DataType;
-use vyre_lower::analyses::analyze_coalesce;
+use vyre_lower::analyses::structured_walk::{walk_structured, ArmDescent, StructuredVisitor};
+use vyre_lower::analyses::ProducerMap;
 use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, load_global};
-use vyre_lower::{KernelBody, KernelOpKind, LiteralValue};
+use vyre_lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
 
 /// Every op kind that carries a nested body, with the operand layout its
 /// variant documents and the child indices that layout names.
@@ -44,6 +45,23 @@ fn child_carrying_kinds() -> Vec<(KernelOpKind, Vec<u32>, usize)> {
     ]
 }
 
+/// Counts the global loads a structured walk reaches.
+struct GlobalLoadCount(usize);
+
+impl<'a> StructuredVisitor<'a> for GlobalLoadCount {
+    fn visit_op(
+        &mut self,
+        _body: &'a KernelBody,
+        _producers: &ProducerMap<'a>,
+        _op_index: usize,
+        op: &'a KernelOp,
+    ) {
+        if matches!(op.kind, KernelOpKind::LoadGlobal) {
+            self.0 += 1;
+        }
+    }
+}
+
 /// A child body holding one global load, which is what the descent has to
 /// reach for the access to be reported.
 fn arm() -> KernelBody {
@@ -68,9 +86,10 @@ fn every_child_carrying_kind_is_descended_into() {
                     .literal(LiteralValue::U32(0)),
             )
             .build();
-        let report = analyze_coalesce(&desc);
+        let mut loads = GlobalLoadCount(0);
+        walk_structured(&desc.body, ArmDescent::Enter, &mut loads);
         assert_eq!(
-            report.sites.len(),
+            loads.0,
             arms,
             "Fix: {kind:?} names {arms} child body(ies) at the operand positions its variant documents, so the descent must reach every one of them; child_body_operands filed it under the wrong offset."
         );

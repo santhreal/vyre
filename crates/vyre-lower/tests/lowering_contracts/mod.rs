@@ -5,7 +5,6 @@
 //! link-cheap and pins them to the surface the emitter crates see.
 
 mod alias_facts;
-mod candidate_plan;
 mod descent_contract;
 mod descriptor_builder;
 mod literal_serde;

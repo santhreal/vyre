@@ -8,7 +8,6 @@ use vyre_runtime::resident_work_queue::planner::*;
 use vyre_runtime::resident_work_queue::policy::{
     try_diffuse_priority_across_siblings, ResidentLaunchPolicy,
 };
-use vyre_runtime::resident_work_queue::task::{TaskPriority, TaskWorkItem};
 
 #[test]
 fn launch_geometry_pads_slots_and_caps_grid_by_workers() {
@@ -28,30 +27,8 @@ fn launch_geometry_preserves_legacy_worker_clamp() {
 }
 
 #[test]
-fn dispatch_grid_keeps_worker_count_as_ceiling() {
-    let config = ResidentQueueConfig {
-        worker_count: 2,
-        ..ResidentQueueConfig::default()
-    };
-    assert_eq!(config.dispatch_grid(4096, 64), [2, 1, 1]);
-}
-
-#[test]
-fn dispatch_grid_preserves_logical_queue_width_policy() {
-    let config = ResidentQueueConfig {
-        worker_count: 64,
-        ..ResidentQueueConfig::default()
-    };
-    assert_eq!(config.dispatch_grid(300, 256), [2, 1, 1]);
-}
-
-#[test]
 fn megakernel_helpers_delegate_to_shared_scheduling_policy() {
     let policy = SchedulingPolicy::standard();
-    assert_eq!(
-        ResidentQueueConfig::default().worker_count,
-        policy.default_worker_count()
-    );
     assert_eq!(
         worker_workgroup_size(1_000, 256),
         policy.worker_workgroup_size(1_000, 256)
@@ -94,42 +71,6 @@ fn resident_grid_realizes_the_stated_worker_count() {
     let over = ResidentGridPlan::recommend(ResidentGridRequest::new(4_096, 4_096), limits)
         .expect("Fix: a stated worker count above the ceiling must clamp to it");
     assert_eq!(over.worker_groups, 64);
-}
-
-#[test]
-fn config_builds_launch_policy_from_continuation_task_queue() {
-    let config = ResidentQueueConfig {
-        worker_count: 64,
-        expected_items_per_worker: 2,
-        ..ResidentQueueConfig::default()
-    };
-    let item = ResidentWorkItem {
-        op_handle: 10,
-        input_handle: 11,
-        output_handle: 12,
-        param: 13,
-    };
-    let ready = TaskWorkItem::from_work_item(1, 0, TaskPriority::Normal, item);
-    let paused = ready
-        .try_paused(20, 30, 40)
-        .expect("Fix: a ready task must accept a pause transition");
-    let requeued = ready
-        .try_requeued(50, 60, TaskPriority::High)
-        .expect("Fix: a ready task must accept a requeue transition");
-
-    let request = config
-        .launch_request_for_tasks(&[ready, paused, requeued], 256, 65_536, 1_024)
-        .expect("Fix: valid continuation tasks must produce a launch request");
-    assert_eq!(request.queue_len, 2);
-    assert_eq!(request.expected_hits_per_item, 2);
-    assert_eq!(request.requeue_count, 2);
-    assert_eq!(request.max_priority_age, 1);
-
-    let rec = config
-        .launch_recommendation_for_tasks(&[ready, paused, requeued], 256, 65_536, 1_024)
-        .expect("Fix: valid continuation tasks must produce a launch recommendation");
-    assert_eq!(rec.geometry.workgroup_size_x, 64);
-    assert!(rec.age_priority_work);
 }
 
 #[test]

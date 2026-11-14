@@ -29,7 +29,7 @@ use harness::no_op_program;
 use vyre_driver::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BinOp, BufferDecl, DataType, Expr, Node, Program};
-use vyre_lower::analyses::{analyze_bank_conflict, BankConflictKind};
+use vyre_lower::analyses::derive_shared_access_profiles;
 use vyre_lower::descriptor_builder::{binop, body, descriptor, lit, op, shared_rw};
 use vyre_lower::{KernelOpKind, LiteralValue};
 
@@ -186,9 +186,8 @@ fn row_tile_program(threads: u32, workgroups: u32, mask_the_index: bool) -> Prog
 /// states it for an equivalent descriptor.
 ///
 /// One scalar store and one scalar load per column, both at stride
-/// `row_length`, so the report carries one site per access and every site
-/// classifies the same way.
-fn classified_row_tile_conflicts(row_length: u32) -> Vec<BankConflictKind> {
+/// `row_length`, so every derived access phase states the same stride.
+fn classified_row_tile_strides(row_length: u32) -> Vec<u32> {
     let banks = NonZeroU32::new(32).expect("Fix: 32 is not zero.");
     let descriptor = descriptor("row_tile")
         .slot(shared_rw(0, DataType::U32, row_length * 32, "tile"))
@@ -202,10 +201,9 @@ fn classified_row_tile_conflicts(row_length: u32) -> Vec<BankConflictKind> {
                 .literal(LiteralValue::U32(row_length)),
         )
         .build();
-    analyze_bank_conflict(&descriptor, banks)
-        .sites
+    derive_shared_access_profiles(&descriptor, banks)
         .iter()
-        .map(|site| site.conflict)
+        .flat_map(|profile| profile.phases.iter().map(|phase| phase.stride_elements))
         .collect()
 }
 
@@ -225,16 +223,11 @@ fn a_strided_tile_kernel_records_its_conflict_count_and_time_before_and_after() 
     const ROW_LENGTH: u32 = 32;
     const RUNS: u32 = 200;
 
-    let conflicts = classified_row_tile_conflicts(ROW_LENGTH);
-    let thirty_two_way = conflicts
-        .iter()
-        .filter(|conflict| matches!(conflict, BankConflictKind::Conflict { way_count: 32 }))
-        .count();
-    assert_eq!(
-        thirty_two_way,
-        conflicts.len(),
-        "Fix: a row length equal to the bank count is a 32-way conflict at \
-         every site; classified {conflicts:?}"
+    let strides = classified_row_tile_strides(ROW_LENGTH);
+    assert!(
+        strides.iter().all(|stride| *stride == ROW_LENGTH) && !strides.is_empty(),
+        "Fix: a row length equal to the bank count puts every shared access \
+         phase at stride 32, a 32-way conflict; derived {strides:?}"
     );
 
     let mitigated = row_tile_program(THREADS, WORKGROUPS, false);
@@ -328,8 +321,7 @@ fn a_strided_tile_kernel_records_its_conflict_count_and_time_before_and_after() 
     println!("threads                      {THREADS:>12}");
     println!("workgroups                   {WORKGROUPS:>12}");
     println!("row_length                   {ROW_LENGTH:>12}  (elements, = bank count)");
-    println!("classified_sites             {:>12}", conflicts.len());
-    println!("classified_32_way_sites      {thirty_two_way:>12}");
+    println!("classified_phases            {:>12}", strides.len());
     println!("unmitigated_device_ns_min    {baseline_ns:>12}  ({RUNS} runs)");
     println!("mitigated_device_ns_min      {mitigated_ns:>12}  ({RUNS} runs)");
     println!("unmitigated_device_ns_p50    {baseline_p50:>12}  ({RUNS} runs)");

@@ -77,9 +77,8 @@ fn batch_publish_fence_slot_index_overflows_cleanly_near_u32_max() {
 fn strict_io_completion_rejects_slot_beyond_u32_max_mapped_index() {
     let mut buf = vyre_runtime::resident_work_queue::io::encode_empty_io_queue(1)
         .expect("valid io_queue must encode");
-    let err =
-        vyre_runtime::resident_work_queue::io::try_complete_io_request(&mut buf, u32::MAX, true)
-            .expect_err("completion at u32::MAX must be rejected on a 1-slot queue");
+    let err = vyre_runtime::resident_work_queue::io::complete_io_request(&mut buf, u32::MAX, true)
+        .expect_err("completion at u32::MAX must be rejected on a 1-slot queue");
     assert_ring_fault(
         &err,
         RingEncodingFault::OutOfBounds,

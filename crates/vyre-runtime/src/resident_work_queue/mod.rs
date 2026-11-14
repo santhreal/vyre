@@ -17,7 +17,6 @@ pub mod planner;
 pub mod policy;
 pub mod protocol;
 mod protocol_api;
-pub mod ring;
 pub mod scheduler;
 pub mod speculation;
 mod staging_reserve;

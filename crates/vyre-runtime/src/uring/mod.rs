@@ -16,16 +16,12 @@
 mod buffer;
 mod driver;
 mod gpudirect;
-mod io_loop;
-mod pump;
 pub(crate) mod raw_platform;
 mod ring;
 mod stream;
 
 pub use buffer::{GpuMappedBuffer, Iovec};
-pub use driver::{CompletedIngest, NativeReadPath, NvmeGpuIngestDriver, NvmeGpuIngestTelemetry};
-pub use gpudirect::{encode_nvme_read_sqe, GpuDirectCapability, NVME_CMD_READ};
-pub use io_loop::{RegisteredIoDestination, ResidentIoLoop};
-pub use pump::UringResidentQueuePump;
+pub use driver::{NativeReadPath, NvmeGpuIngestDriver, NvmeGpuIngestTelemetry};
+pub use gpudirect::{encode_nvme_read_sqe, GpuDirectCapability};
 pub use ring::IoUringState;
 pub use stream::AsyncUringStream;

@@ -17,6 +17,4 @@ pub use decision::{
 pub use launch::ResidentLaunchPolicy;
 pub use priority::{
     try_diffuse_priority_across_siblings, try_diffuse_priority_across_siblings_into,
-    PriorityDrainReason, PriorityDrainRecommendation, PriorityRequeueAccounting,
-    PRIORITY_COUNTER_DRAIN_FIX, PRIORITY_COUNTER_DRAIN_HEADROOM,
 };

@@ -12,28 +12,13 @@ use super::queue_words::{
 };
 use super::{io_status, io_word};
 
-/// Strictly write a completion status for a serviced IO request.
-///
-/// # Errors
-///
-/// Returns [`PipelineError`] when the target slot is outside the queue byte
-/// view, the view is not aligned to complete IO slots, or the view exceeds the
-/// compiled poll window.
-pub fn try_complete_io_request(
-    io_queue_bytes: &mut [u8],
-    slot_idx: u32,
-    success: bool,
-) -> Result<(), PipelineError> {
-    try_complete_io_requests_batch(io_queue_bytes, &[(slot_idx, success)])
-}
-
-/// Strictly complete several claimed IO requests after one validation pass.
+/// Complete several claimed IO requests after one validation pass.
 ///
 /// # Errors
 ///
 /// Returns [`PipelineError`] without mutating the queue when any completion
 /// references an invalid slot or a slot not currently owned as `CLAIMED`.
-pub fn try_complete_io_requests_batch(
+pub fn complete_io_requests_batch(
     io_queue_bytes: &mut [u8],
     completions: &[(u32, bool)],
 ) -> Result<(), PipelineError> {
@@ -121,18 +106,6 @@ fn completion_status_word(slot_idx: u32, view: IoQueueView) -> Result<usize, Pip
     try_queue_word_index(slot_idx, io_word::STATUS)
 }
 
-/// Complete several serviced IO requests.
-///
-/// # Errors
-///
-/// See [`try_complete_io_requests_batch`].
-pub fn complete_io_requests_batch(
-    io_queue_bytes: &mut [u8],
-    completions: &[(u32, bool)],
-) -> Result<(), PipelineError> {
-    try_complete_io_requests_batch(io_queue_bytes, completions)
-}
-
 /// Write a completion status for a serviced IO request.
 ///
 /// # Errors
@@ -145,5 +118,5 @@ pub fn complete_io_request(
     slot_idx: u32,
     success: bool,
 ) -> Result<(), PipelineError> {
-    try_complete_io_request(io_queue_bytes, slot_idx, success)
+    complete_io_requests_batch(io_queue_bytes, &[(slot_idx, success)])
 }

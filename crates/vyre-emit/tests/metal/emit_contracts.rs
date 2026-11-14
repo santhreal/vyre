@@ -59,21 +59,17 @@ fn one_store_kernel_emits_buffer_binding_metadata() {
 }
 
 #[test]
-fn artifact_json_is_deterministic_for_same_descriptor() {
+fn artifact_is_deterministic_for_same_descriptor() {
     let desc = one_store_kernel();
-    let left = emit_artifact_json(&desc).unwrap();
-    let right = emit_artifact_json(&desc).unwrap();
+    let left = emit_artifact(&desc).unwrap();
+    let right = emit_artifact(&desc).unwrap();
     assert_eq!(left, right);
 }
 
 #[test]
 fn missing_entry_point_returns_actionable_error() {
     let module = vyre_emit::naga::emit(&empty_kernel()).unwrap();
-    let options = MetalEmitOptions {
-        entry_point: "not_main".to_string(),
-        ..MetalEmitOptions::default()
-    };
-    let error = emit_from_naga_module(&module, &options).unwrap_err();
+    let error = emit_from_naga_module(&module, "not_main").unwrap_err();
     let text = error.to_string();
     assert!(text.contains("Fix:"));
     assert!(text.contains("not_main"));

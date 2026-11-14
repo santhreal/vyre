@@ -1,5 +1,4 @@
-//! Analysis pass: walk a `KernelDescriptor`, classify each
-//! `LoadShared`/`StoreShared` op for bank conflicts.
+//! Bank-conflict classification of one shared-memory access index.
 //!
 //! ## Algorithm
 //!
@@ -23,60 +22,12 @@
 //!    correctness concern, not a bank conflict).
 //! 6. Anything else                        → Unknown.
 
-use super::report::{BankAccessSite, BankConflictKind, BankConflictReport};
+use super::report::BankConflictKind;
 use crate::analyses::constant_u32_operand;
 use crate::analyses::gcd_u32;
-use crate::analyses::structured_walk::walk_accesses;
 use crate::analyses::ProducerMap;
-use crate::{KernelBody, KernelDescriptor, KernelOpKind, MemoryClass};
-use std::num::NonZeroU32;
+use crate::{KernelBody, KernelOpKind};
 use vyre_foundation::ir::BinOp;
-
-/// Run bank-conflict analysis for a stated shared-memory bank count.
-///
-/// The bank count is a device fact and has no neutral value, so a caller
-/// passes the count the target reported. A caller with no reported count runs
-/// no bank analysis rather than assuming a layout.
-#[must_use]
-pub fn analyze(desc: &KernelDescriptor, banks: NonZeroU32) -> BankConflictReport {
-    let bank_count = banks.get();
-    let mut sites = Vec::new();
-    walk_accesses(
-        &desc.body,
-        &KernelOpKind::LoadShared,
-        &KernelOpKind::StoreShared,
-        |access| {
-            // We only flag accesses whose target binding is in the Shared
-            // memory class  -  guards against a future emitter using
-            // LoadShared on a non-shared binding (which would be invalid
-            // but the analysis stays robust).
-            let is_shared = desc.bindings.slots.iter().any(|b| {
-                b.slot == access.binding_slot && matches!(b.memory_class, MemoryClass::Shared)
-            });
-            if !is_shared {
-                return;
-            }
-            let pattern = classify_index(
-                access.body,
-                access.producers,
-                access.index_operand_id,
-                bank_count,
-            );
-            sites.push(BankAccessSite {
-                op_index: access.op_index,
-                kind: access.kind,
-                binding_slot: access.binding_slot,
-                conflict: pattern.conflict,
-                stride_elements: pattern.stride_elements,
-            });
-        },
-    );
-    BankConflictReport {
-        kernel_id: desc.id.clone(),
-        bank_count,
-        sites,
-    }
-}
 
 /// What classification proved about one shared access's index.
 ///
@@ -269,7 +220,7 @@ fn classify_shl(
     }
 }
 
-// Inline: covers the crate-private `analyze` and `gcd_u32`, which no integration test can reach.
+// Inline: covers the crate-private `classify_index` and `gcd_u32`, which no integration test can reach.
 #[cfg(test)]
 mod tests {
     /// Bank count the fixtures state. The analysis has no default, so every
@@ -284,11 +235,72 @@ mod tests {
     }
 
     use super::*;
+    use crate::analyses::structured_walk::{walk_structured, ArmDescent, StructuredVisitor};
+    use crate::analyses::ConflictSeverity;
     use crate::descriptor_builder::{
         binop, body, descriptor, effect, for_loop, global_ro, if_then, lit, op, shared_rw,
     };
-    use crate::{BindingSlot, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue};
-    use vyre_foundation::ir::{BinOp, DataType};
+    use crate::{BindingSlot, KernelDescriptor, KernelOp, LiteralValue, MemoryClass};
+    use std::num::NonZeroU32;
+    use vyre_foundation::ir::DataType;
+
+    /// One classified shared access: its flattened op index and its pattern.
+    struct Site {
+        op_index: usize,
+        conflict: BankConflictKind,
+        stride_elements: Option<u32>,
+    }
+
+    struct Classified {
+        sites: Vec<Site>,
+    }
+
+    /// Classify every `LoadShared`/`StoreShared` of a shared-class binding in
+    /// `desc`, in walk order.
+    fn analyze(desc: &KernelDescriptor, banks: NonZeroU32) -> Classified {
+        struct Shared<'d> {
+            desc: &'d KernelDescriptor,
+            banks: u32,
+            sites: Vec<Site>,
+        }
+        impl<'a> StructuredVisitor<'a> for Shared<'_> {
+            fn visit_op(
+                &mut self,
+                body: &'a KernelBody,
+                producers: &ProducerMap<'a>,
+                op_index: usize,
+                op: &'a KernelOp,
+            ) {
+                if !matches!(
+                    op.kind,
+                    KernelOpKind::LoadShared | KernelOpKind::StoreShared
+                ) || op.operands.len() < 2
+                {
+                    return;
+                }
+                let shared = self.desc.bindings.slots.iter().any(|b| {
+                    b.slot == op.operands[0] && matches!(b.memory_class, MemoryClass::Shared)
+                });
+                if shared {
+                    let pattern = classify_index(body, producers, op.operands[1], self.banks);
+                    self.sites.push(Site {
+                        op_index,
+                        conflict: pattern.conflict,
+                        stride_elements: pattern.stride_elements,
+                    });
+                }
+            }
+        }
+        let mut shared = Shared {
+            desc,
+            banks: banks.get(),
+            sites: Vec::new(),
+        };
+        walk_structured(&desc.body, ArmDescent::Enter, &mut shared);
+        Classified {
+            sites: shared.sites,
+        }
+    }
 
     fn shared_binding(slot: u32) -> BindingSlot {
         shared_rw(slot, DataType::F32, 1024, &format!("shared{slot}"))
@@ -418,8 +430,7 @@ mod tests {
             BankConflictKind::Conflict { way_count: 32 }
         );
         assert_eq!(r.sites[0].stride_elements, Some(32));
-        assert_eq!(r.problematic_count(), 1);
-        assert_eq!(r.critical_count(), 1);
+        assert_eq!(r.sites[0].conflict.severity(), ConflictSeverity::Critical);
     }
 
     #[test]

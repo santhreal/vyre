@@ -305,12 +305,6 @@ fn conflicting_access_pattern_yields_strategy_other_than_no_rewrite() {
     let descriptor = lower(&program).expect("a strided tile program lowers to a descriptor");
 
     let banks = NonZeroU32::new(32).expect("32 is not zero");
-    let report = vyre_lower::analyses::analyze_bank_conflict(&descriptor, banks);
-    assert!(
-        report.critical_count() > 0,
-        "the strided access pattern is classified as conflicting"
-    );
-
     let profiles = derive_shared_access_profiles(&descriptor, banks);
     let geom = stated_geometry();
     let selection = select_bank_conflict_strategy(&profiles[0].phases, &geom);

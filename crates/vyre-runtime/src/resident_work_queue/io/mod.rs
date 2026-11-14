@@ -25,13 +25,9 @@ mod poll;
 mod queue;
 mod queue_words;
 
-pub use complete::{
-    complete_io_request, complete_io_requests_batch, try_complete_io_request,
-    try_complete_io_requests_batch,
-};
+pub use complete::{complete_io_request, complete_io_requests_batch};
 pub use encode::{
     encode_empty_io_queue, try_encode_empty_io_queue, try_encode_empty_io_queue_into,
-    validate_io_queue_bytes,
 };
 pub use poll::{
     claim_io_requests_into, io_completion_poll_body, try_claim_io_requests_into,

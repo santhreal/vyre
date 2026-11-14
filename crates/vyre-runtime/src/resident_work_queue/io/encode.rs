@@ -2,13 +2,7 @@
 
 use crate::{PipelineError, RingEncodingFault};
 
-use super::queue_words::validate_io_queue_view;
 use super::{IO_SLOT_COUNT, IO_SLOT_WORDS};
-
-/// contains a partial IO slot, or exceeds the compiled poll window.
-pub fn validate_io_queue_bytes(io_queue_bytes: &[u8]) -> Result<(), PipelineError> {
-    validate_io_queue_view(io_queue_bytes.len()).map(|_| ())
-}
 
 /// Strictly encode an empty IO queue buffer.
 ///

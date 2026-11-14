@@ -5,10 +5,6 @@
 //! binary for the whole set. A test that cannot share a process stays its own
 //! target and states why in `tools/xtask/test-harness-isolation.toml`.
 
-/// Integration tests from `tests/affine_access_map_contracts.rs`.
-#[path = "affine_access_map_contracts.rs"]
-pub mod affine_access_map_contracts;
-
 /// Integration tests from `tests/analysis_fixture_corpuses.rs`.
 #[path = "analysis_fixture_corpuses.rs"]
 pub mod analysis_fixture_corpuses;
@@ -24,10 +20,6 @@ pub mod async_transaction_contracts;
 /// Integration tests from `tests/bank_conflict_strategy_contracts.rs`.
 #[path = "bank_conflict_strategy_contracts.rs"]
 pub mod bank_conflict_strategy_contracts;
-
-/// Integration tests from `tests/contraction_candidate_derivation.rs`.
-#[path = "contraction_candidate_derivation.rs"]
-pub mod contraction_candidate_derivation;
 
 /// Integration tests from `tests/device_fact_boundary.rs`.
 #[path = "device_fact_boundary.rs"]
@@ -56,18 +48,6 @@ pub mod matrix_fragment_contracts;
 /// Integration tests from `tests/physical_schedule_handoff.rs`.
 #[path = "physical_schedule_handoff.rs"]
 pub mod physical_schedule_handoff;
-
-/// Integration tests from `tests/resource_bounds_contracts.rs`.
-#[path = "resource_bounds_contracts.rs"]
-pub mod resource_bounds_contracts;
-
-/// Integration tests from `tests/rewrite_layer_contract.rs`.
-#[path = "rewrite_layer_contract.rs"]
-pub mod rewrite_layer_contract;
-
-/// Integration tests from `tests/shared_store_race_legality.rs`.
-#[path = "shared_store_race_legality.rs"]
-pub mod shared_store_race_legality;
 
 /// Integration tests from `tests/storage_layout_contracts.rs`.
 #[path = "storage_layout_contracts.rs"]

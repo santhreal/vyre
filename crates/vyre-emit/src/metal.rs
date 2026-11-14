@@ -31,26 +31,8 @@ pub const METAL_ARTIFACT_SCHEMA: u32 = 3;
 /// Default MSL target version used for source emission.
 pub const DEFAULT_MSL_VERSION: (u8, u8) = (2, 4);
 
-/// Metal emission options.
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct MetalEmitOptions {
-    /// Target MSL version.
-    pub lang_version: (u8, u8),
-    /// Entry point to emit.
-    pub entry_point: String,
-    /// Include deterministic MSL source in the JSON artifact.
-    pub include_source: bool,
-}
-
-impl Default for MetalEmitOptions {
-    fn default() -> Self {
-        Self {
-            lang_version: DEFAULT_MSL_VERSION,
-            entry_point: "main".to_string(),
-            include_source: true,
-        }
-    }
-}
+/// Kernel entry point every emitted module names.
+const ENTRY_POINT: &str = "main";
 
 /// Metal emission failure.
 #[derive(Debug, Error)]
@@ -85,9 +67,6 @@ pub enum EmitError {
     /// Descriptor hashing failed.
     #[error("KernelDescriptor artifact hash failed: {0}. Fix: keep KernelDescriptor serde stable before using it as native_module artifact identity.")]
     DescriptorHash(String),
-    /// Artifact serialization failed.
-    #[error("Metal native_module JSON serialization failed: {0}. Fix: keep artifact metadata serde-compatible and deterministic.")]
-    ArtifactSerialization(String),
     /// Program pre-emission lowering failed.
     #[error("Program physical lowering failed before Metal artifact emission: {0}. Fix: route through vyre-lower::lower_physical and repair the neutral descriptor mapping.")]
     PreEmit(String),
@@ -166,13 +145,6 @@ impl EmitError {
                 "keep KernelDescriptor serde stable before using it as native_module artifact identity",
             )
             .with_cause(CauseKind::Encoding, "descriptor_hash", msg.clone()),
-            Self::ArtifactSerialization(msg) => Diagnostic::emission_error(
-                TARGET,
-                "MTL006_SERIALIZATION_FAILED",
-                format!("Metal native_module JSON serialization failed: {msg}"),
-            )
-            .with_fix("keep artifact metadata serde-compatible and deterministic")
-            .with_cause(CauseKind::Encoding, "artifact_serialization", msg.clone()),
             Self::PreEmit(msg) => Diagnostic::emission_error(
                 TARGET,
                 "MTL007_PRE_EMIT_FAILED",
@@ -189,7 +161,7 @@ impl EmitError {
 }
 
 /// Maximum direct buffer arguments supported per shader stage in Metal (indices 0..=30).
-pub const MAX_DIRECT_BUFFERS_PER_STAGE: usize = 31;
+const MAX_DIRECT_BUFFERS_PER_STAGE: usize = 31;
 
 /// ABI binding metadata stored in a Metal artifact.
 #[derive(Clone, Debug, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -230,7 +202,7 @@ pub struct MetalThreadgroupMemoryMetadata {
 pub struct MetalArtifact {
     /// Artifact schema version.
     pub schema: u32,
-    /// Artifact target name used by `xtask compile --to native_module`.
+    /// Artifact target name, `native_module`.
     pub target: String,
     /// Emitter crate/version identity.
     pub emitter: String,
@@ -256,27 +228,14 @@ pub struct MetalArtifact {
     pub msl: String,
 }
 
-/// Emit MSL source from a descriptor using default Metal options.
+/// Emit MSL source from a descriptor.
 ///
 /// # Errors
 ///
 /// Returns [`EmitError`] when Naga emission, validation, binding-map creation,
 /// or MSL writing fails.
 pub fn emit(desc: &KernelDescriptor) -> Result<String, EmitError> {
-    emit_with_options(desc, &MetalEmitOptions::default())
-}
-
-/// Emit MSL source from a descriptor using explicit options.
-///
-/// # Errors
-///
-/// Returns [`EmitError`] when Naga emission, validation, binding-map creation,
-/// or MSL writing fails.
-pub fn emit_with_options(
-    desc: &KernelDescriptor,
-    options: &MetalEmitOptions,
-) -> Result<String, EmitError> {
-    emit_artifact_with_options(desc, options).map(|artifact| artifact.msl)
+    emit_artifact(desc).map(|artifact| artifact.msl)
 }
 
 /// Emit a structured `native_module` artifact.
@@ -286,32 +245,19 @@ pub fn emit_with_options(
 /// Returns [`EmitError`] when MSL emission or artifact serialization metadata
 /// construction fails.
 pub fn emit_artifact(desc: &KernelDescriptor) -> Result<MetalArtifact, EmitError> {
-    emit_artifact_with_options(desc, &MetalEmitOptions::default())
-}
-
-/// Emit a structured `native_module` artifact with explicit options.
-///
-/// # Errors
-///
-/// Returns [`EmitError`] when MSL emission or artifact serialization metadata
-/// construction fails.
-pub fn emit_artifact_with_options(
-    desc: &KernelDescriptor,
-    options: &MetalEmitOptions,
-) -> Result<MetalArtifact, EmitError> {
     let index_map = metal_binding_indices(desc)?;
     let bindings = metal_bindings(desc, &index_map.by_slot)?;
     let threadgroup_memories = metal_threadgroup_memories(desc)?;
     let module = crate::naga::emit(desc).map_err(EmitError::NagaEmit)?;
     let (msl, entry_point, sizes_buffer_index) =
-        emit_from_naga_module_with_resource_indices(&module, options, &index_map.by_resource)?;
+        emit_from_naga_module_with_resource_indices(&module, ENTRY_POINT, &index_map.by_resource)?;
     let descriptor_blake3 = descriptor_blake3(desc)?;
     let msl_blake3 = hex_encode(blake3::hash(msl.as_bytes()).as_bytes());
     Ok(MetalArtifact {
         schema: METAL_ARTIFACT_SCHEMA,
         target: "native_module".to_string(),
         emitter: format!("vyre-emit/{}", env!("CARGO_PKG_VERSION")),
-        msl_version: format!("{}.{}", options.lang_version.0, options.lang_version.1),
+        msl_version: format!("{}.{}", DEFAULT_MSL_VERSION.0, DEFAULT_MSL_VERSION.1),
         entry_point,
         descriptor_blake3,
         msl_blake3,
@@ -319,38 +265,11 @@ pub fn emit_artifact_with_options(
         bindings,
         sizes_buffer_index,
         threadgroup_memories,
-        msl: if options.include_source {
-            msl
-        } else {
-            String::new()
-        },
+        msl,
     })
 }
 
-/// Emit a deterministic JSON `native_module` artifact.
-///
-/// # Errors
-///
-/// Returns [`EmitError`] when emission or JSON serialization fails.
-pub fn emit_artifact_json(desc: &KernelDescriptor) -> Result<String, EmitError> {
-    artifact_to_json(&emit_artifact(desc)?)
-}
-
-/// Emit deterministic JSON bytes for `xtask compile --to native_module`.
-///
-/// # Errors
-///
-/// Same as [`emit_artifact_json`].
-pub fn emit_artifact_bytes(desc: &KernelDescriptor) -> Result<Vec<u8>, EmitError> {
-    let mut bytes = emit_artifact_json(desc)?.into_bytes();
-    bytes.push(b'\n');
-    Ok(bytes)
-}
-
-/// Emit MSL from an already-constructed Naga module.
-///
-/// This is the narrow seam used by tests and future direct driver code that
-/// wants to inspect or transform Naga before Metal source generation.
+/// Emit MSL for `entry_point` from an already-constructed Naga module.
 ///
 /// # Errors
 ///
@@ -358,25 +277,19 @@ pub fn emit_artifact_bytes(desc: &KernelDescriptor) -> Result<Vec<u8>, EmitError
 /// fails.
 pub fn emit_from_naga_module(
     module: &naga::Module,
-    options: &MetalEmitOptions,
+    entry_point: &str,
 ) -> Result<String, EmitError> {
-    emit_from_naga_module_with_entry_name(module, options).map(|(source, _, _)| source)
-}
-
-fn emit_from_naga_module_with_entry_name(
-    module: &naga::Module,
-    options: &MetalEmitOptions,
-) -> Result<(String, String, Option<u8>), EmitError> {
     let resource_indices = metal_resource_indices_from_module(module)?;
-    emit_from_naga_module_with_resource_indices(module, options, &resource_indices)
+    emit_from_naga_module_with_resource_indices(module, entry_point, &resource_indices)
+        .map(|(source, _, _)| source)
 }
 
 fn emit_from_naga_module_with_resource_indices(
     module: &naga::Module,
-    options: &MetalEmitOptions,
+    entry_point_name: &str,
     resource_indices: &BTreeMap<(u32, u32), u8>,
 ) -> Result<(String, String, Option<u8>), EmitError> {
-    let entry_index = ensure_compute_entry_point(module, &options.entry_point)?;
+    let entry_index = ensure_compute_entry_point(module, entry_point_name)?;
 
     let mut validator = Validator::new(ValidationFlags::all(), Capabilities::all());
     let info = validator
@@ -384,7 +297,7 @@ fn emit_from_naga_module_with_resource_indices(
         .map_err(|error| EmitError::NagaValidation(format!("{error:?}")))?;
 
     let mut msl_options = Options::default();
-    msl_options.lang_version = options.lang_version;
+    msl_options.lang_version = DEFAULT_MSL_VERSION;
     msl_options.fake_missing_bindings = false;
     let resource_map = metal_entry_point_resource_map(module, resource_indices)?;
     msl_options.per_entry_point_map = resource_map.per_entry_point;
@@ -397,12 +310,12 @@ fn emit_from_naga_module_with_resource_indices(
         .entry_point_names
         .get(entry_index)
         .ok_or_else(|| EmitError::EntryPoint {
-            entry_point: options.entry_point.clone(),
+            entry_point: entry_point_name.to_string(),
             reason: "MSL translation omitted the entry point name mapping".to_string(),
         })?
         .as_ref()
         .map_err(|error| EmitError::EntryPoint {
-            entry_point: options.entry_point.clone(),
+            entry_point: entry_point_name.to_string(),
             reason: format!("MSL writer rejected the entry point name: {error:?}"),
         })?
         .clone();
@@ -684,11 +597,6 @@ fn descriptor_blake3(desc: &KernelDescriptor) -> Result<String, EmitError> {
     let bytes = bincode::serde::encode_to_vec(desc, bincode::config::standard())
         .map_err(|error| EmitError::DescriptorHash(error.to_string()))?;
     Ok(hex_encode(blake3::hash(&bytes).as_bytes()))
-}
-
-fn artifact_to_json(artifact: &MetalArtifact) -> Result<String, EmitError> {
-    serde_json::to_string_pretty(artifact)
-        .map_err(|error| EmitError::ArtifactSerialization(error.to_string()))
 }
 
 fn hex_encode(bytes: &[u8]) -> String {

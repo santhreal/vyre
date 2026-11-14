@@ -10,16 +10,11 @@
 mod canonicalize;
 mod const_buffer_promote;
 mod dead_op;
-mod registry;
 mod vector_memory;
 
 pub use canonicalize::canonicalize_for_emit;
 pub use const_buffer_promote::rewrite_const_buffer_promote;
 pub use dead_op::rewrite_dead_ops;
-pub use registry::{
-    all_registered_contracts, classify_rule, lowering_owned_rules, LoweringRewriteRule,
-    RewriteApplicabilityContract, RewriteOwnership, ALL_REWRITE_RULES,
-};
 pub use vector_memory::{rewrite_vector_memory, rewrite_vector_memory_with_alias_facts};
 
 use crate::analyses::AnalysisFacts;

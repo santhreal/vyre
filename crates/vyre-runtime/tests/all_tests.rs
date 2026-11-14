@@ -154,10 +154,6 @@ pub mod scheduler_model_proptest;
 #[path = "socket_ingest.rs"]
 pub mod socket_ingest;
 
-/// Integration tests from `tests/sweep_ring_buffer_oracle_matrix.rs`.
-#[path = "sweep_ring_buffer_oracle_matrix.rs"]
-pub mod sweep_ring_buffer_oracle_matrix;
-
 /// Integration tests from `tests/session_state_machine_contracts.rs`.
 #[path = "session_state_machine_contracts.rs"]
 pub mod session_state_machine_contracts;

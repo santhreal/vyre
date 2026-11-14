@@ -5,32 +5,14 @@
 //! semantics or descriptor structure. Concrete emission strategy lives in the
 //! owning emitter or driver.
 
-pub(crate) mod affine_access_map;
-pub(crate) mod resource_bounds;
-
 pub(crate) mod access_kind;
 pub mod alias_facts;
 pub(crate) mod bank_conflict;
-/// Shared candidate-plan data structures.
-pub mod candidate_plan;
-pub(crate) mod coalesce;
-pub(crate) mod common_subexpr;
 pub(crate) mod const_buffer_promote;
-pub mod contraction_candidates;
-pub(crate) mod dead_op;
-pub(crate) mod def_use;
 pub(crate) mod facts;
-pub(crate) mod layout_aos_to_soa;
 pub(crate) mod load_counts;
-pub(crate) mod op_histogram;
-pub(crate) mod reaching_def_facts;
-pub(crate) mod shared_mem_promote;
-pub(crate) mod shared_store_race;
 pub mod structured_walk;
-pub(crate) mod texture_promote;
-pub(crate) mod value_range;
 pub mod vec_pack;
-pub(crate) mod workgroup_uniform;
 
 use crate::{KernelBody, KernelOp, KernelOpKind};
 use rustc_hash::FxHashMap;
@@ -127,49 +109,13 @@ pub fn child_body_operands<'a>(
     operands.iter().skip(start).copied()
 }
 
-// Re-exports for the common case: a one-call combined audit.
+// Analyses read by emitters and drivers.
 pub use access_kind::AccessKind;
-pub use affine_access_map::{
-    AffineAccessMap, AffineMapError, ConsumerAbiRequirement, DimExtent, SliceSpec, StrideExpr,
-};
-pub use bank_conflict::{analyze as analyze_bank_conflict, BankConflictReport};
 pub use bank_conflict::{
     derive_shared_access_profiles, evaluate_mitigation_candidate, select_bank_conflict_strategy,
-    AccessPhase, AccessPhaseProfile, BankConflictMitigation, MitigationEvaluation,
-    PhaseConflictReport, SharedBindingAccessProfile, SharedPermutationBlock, TargetBankGeometry,
-    CANDIDATE_MITIGATIONS,
+    AccessPhase, AccessPhaseProfile, BankConflictMitigation, ConflictSeverity,
+    MitigationEvaluation, PhaseConflictReport, SharedBindingAccessProfile, SharedPermutationBlock,
+    TargetBankGeometry, CANDIDATE_MITIGATIONS,
 };
-pub use bank_conflict::{BankAccessSite, BankConflictKind, ConflictSeverity};
-pub use coalesce::{analyze as analyze_coalesce, CoalescenceReport};
-pub use coalesce::{AccessPattern, AccessSite};
-pub use coalesce::{CoalescenceRewrite, CoalescenceWarning};
-pub use common_subexpr::{analyze as analyze_common_subexpr, CommonSubexprReport};
-pub use common_subexpr::{analyze_body, analyze_body_shallow, EquivalenceGroup};
-pub use const_buffer_promote::ConstBufferCandidate;
-pub use const_buffer_promote::{analyze as analyze_const_buffer_promote, ConstBufferPlan};
-pub use dead_op::{analyze as analyze_dead_op, DeadOpReport};
-pub use def_use::{
-    analyze as analyze_def_use, dead_by_no_use, DefUseReport, PerBodyChains, UseSite,
-};
+pub use const_buffer_promote::analyze as analyze_const_buffer_promote;
 pub use facts::AnalysisFacts;
-pub use layout_aos_to_soa::LayoutCandidate;
-pub use layout_aos_to_soa::{analyze as analyze_layout_aos_to_soa, LayoutTransformPlan};
-pub use op_histogram::{analyze as analyze_op_histogram, OpHistogram};
-pub use reaching_def_facts::import_descriptor_reaching_defs;
-pub use reaching_def_facts::{resolve_copy_alias, ReachingDefFactSet};
-pub use resource_bounds::{
-    verify_candidate_legality, CandidateLegalityReport, LegalityCheck, ResourceBounds,
-    RetainedFallbacks, TailHandling, TargetResourceLimits,
-};
-pub use shared_mem_promote::PromotionCandidate;
-pub use shared_mem_promote::{analyze as analyze_shared_mem_promote, PromotionPlan};
-pub use shared_store_race::{
-    analyze as analyze_shared_store_race, SharedStoreLegality, SharedStoreRaceReport,
-    SharedStoreRaceSite,
-};
-pub use texture_promote::TextureCandidate;
-pub use texture_promote::{analyze as analyze_texture_promote, TexturePromotionPlan};
-pub use value_range::{analyze as analyze_value_range, IntRange, ValueRangeReport};
-pub use workgroup_uniform::{analyze as analyze_workgroup_uniform, WorkgroupUniformReport};
-pub use workgroup_uniform::{BranchEmitHint, BranchHint};
-pub use workgroup_uniform::{BranchSite, BranchUniformity};

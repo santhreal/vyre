@@ -1,7 +1,7 @@
-//! Snapshot test for the substrate-neutral analyses + three emit
-//! paths. Builds a small corpus of representative `KernelDescriptor`s,
-//! runs each through every analysis and emitter, asserts the totals
-//! match a pinned snapshot.
+//! Snapshot test for the vec-pack analysis and the three emit paths.
+//! Builds a small corpus of representative `KernelDescriptor`s, runs each
+//! through the analysis and every emitter, and asserts the totals match a
+//! pinned snapshot.
 //!
 //! When the snapshot legitimately changes (new analysis, descriptor
 //! redesign, etc.), update the asserted constants in this file.
@@ -9,22 +9,6 @@
 
 use vyre_foundation::ir::{BinOp, DataType};
 use vyre_lower::analyses::vec_pack;
-use vyre_lower::analyses::{
-    analyze_bank_conflict, analyze_coalesce, analyze_layout_aos_to_soa, analyze_shared_mem_promote,
-    analyze_texture_promote, analyze_workgroup_uniform,
-};
-
-/// Bank count the snapshot corpus states; the analysis holds no default.
-const BANKS: std::num::NonZeroU32 = match std::num::NonZeroU32::new(32) {
-    Some(banks) => banks,
-    None => unreachable!(),
-};
-
-/// Per-workgroup shared capacity the snapshot corpus states.
-const SHARED_BYTES: std::num::NonZeroU32 = match std::num::NonZeroU32::new(48 * 1024) {
-    Some(bytes) => bytes,
-    None => unreachable!(),
-};
 
 use vyre_lower::{
     BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
@@ -330,46 +314,6 @@ fn corpus() -> Vec<KernelDescriptor> {
 }
 
 #[test]
-fn snapshot_coalesce_problematic_counts() {
-    let kernels = corpus();
-    let counts: Vec<usize> = kernels
-        .iter()
-        .map(|k| analyze_coalesce(k).problematic_count())
-        .collect();
-    assert_eq!(counts, vec![0, 1, 0, 1, 0, 0, 0, 0, 0]);
-}
-
-#[test]
-fn snapshot_shared_mem_promotion_candidate_counts() {
-    let kernels = corpus();
-    let counts: Vec<usize> = kernels
-        .iter()
-        .map(|k| analyze_shared_mem_promote(k, SHARED_BYTES).candidates.len())
-        .collect();
-    assert_eq!(counts, vec![0, 0, 1, 0, 2, 0, 2, 0, 0]);
-}
-
-#[test]
-fn snapshot_bank_conflict_problematic_counts() {
-    let kernels = corpus();
-    let counts: Vec<usize> = kernels
-        .iter()
-        .map(|k| analyze_bank_conflict(k, BANKS).problematic_count())
-        .collect();
-    assert_eq!(counts, vec![0, 0, 0, 0, 0, 2, 0, 0, 0]);
-}
-
-#[test]
-fn snapshot_bank_conflict_critical_counts() {
-    let kernels = corpus();
-    let counts: Vec<usize> = kernels
-        .iter()
-        .map(|k| analyze_bank_conflict(k, BANKS).critical_count())
-        .collect();
-    assert_eq!(counts, vec![0, 0, 0, 0, 0, 1, 0, 0, 0]);
-}
-
-#[test]
 fn snapshot_vec_pack_candidate_counts() {
     let kernels = corpus();
     let counts: Vec<usize> = kernels
@@ -387,36 +331,6 @@ fn snapshot_vec_pack_eliminated_op_counts() {
         .map(|k| vec_pack::analyze(k).total_ops_eliminated)
         .collect();
     assert_eq!(counts, vec![0, 0, 0, 0, 0, 0, 3, 0, 0]);
-}
-
-#[test]
-fn snapshot_workgroup_uniform_branch_counts() {
-    let kernels = corpus();
-    let branch_counts: Vec<usize> = kernels
-        .iter()
-        .map(|k| analyze_workgroup_uniform(k).branches.len())
-        .collect();
-    assert_eq!(branch_counts, vec![0, 0, 0, 0, 0, 0, 0, 0, 0]);
-}
-
-#[test]
-fn snapshot_texture_promotion_candidate_counts() {
-    let kernels = corpus();
-    let counts: Vec<usize> = kernels
-        .iter()
-        .map(|k| analyze_texture_promote(k).candidates.len())
-        .collect();
-    assert_eq!(counts, vec![0, 0, 1, 0, 2, 0, 2, 0, 0]);
-}
-
-#[test]
-fn snapshot_layout_transform_candidate_counts() {
-    let kernels = corpus();
-    let counts: Vec<usize> = kernels
-        .iter()
-        .map(|k| analyze_layout_aos_to_soa(k).candidates.len())
-        .collect();
-    assert_eq!(counts, vec![0, 0, 0, 0, 1, 0, 0, 0, 0]);
 }
 
 #[test]

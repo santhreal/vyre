@@ -96,7 +96,6 @@ fn assert_structured_metal_error(case: &EmitAdversarialCase, error: EmitError) {
         EmitError::NagaValidation(message)
         | EmitError::MslWriter(message)
         | EmitError::DescriptorHash(message)
-        | EmitError::ArtifactSerialization(message)
         | EmitError::PreEmit(message) => {
             assert!(
                 !message.is_empty(),
