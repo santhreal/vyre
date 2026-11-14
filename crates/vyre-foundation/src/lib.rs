@@ -150,9 +150,6 @@ pub mod algebraic_reordering;
 /// Region composition: region wrappers, program tagging, self-exclusive expansion.
 pub mod composition;
 
-/// Read-only adjacency view over a `Program` for analyses.
-pub mod graph_view;
-
 /// Callable operation signature types and identifier interning.
 pub mod dialect_lookup;
 

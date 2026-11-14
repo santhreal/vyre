@@ -62,7 +62,7 @@ pub(crate) fn validate_expr(
                     ValidationPhase::Expression,
                     ValidationLocation::Program,
                     format!("buflen of unknown buffer `{buffer}`"),
-                    "declare it in Program::buffers.".to_string(),
+                    "declare it in Program::buffers.",
                 ));
             }
         }
@@ -78,7 +78,7 @@ pub(crate) fn validate_expr(
                     ValidationPhase::Expression,
                     ValidationLocation::Program,
                     format!("invocation/workgroup ID axis {axis} out of range"),
-                    "use 0 (x), 1 (y), or 2 (z).".to_string(),
+                    "use 0 (x), 1 (y), or 2 (z).",
                 ));
             }
         }
@@ -132,7 +132,7 @@ pub(crate) fn validate_expr(
                                 },
                             }, format!(
                                 "Fma requires three f32 operands. Fma operand `{slot}` has type `{ty}`, must be `f32`"
-                            ), "cast the operand to F32 before Fma, or use the integer mul/add form explicitly.".to_string()));
+                            ), "cast the operand to F32 before Fma, or use the integer mul/add form explicitly."));
                     }
                 }
             }
@@ -157,7 +157,7 @@ pub(crate) fn validate_expr(
                         ValidationPhase::Expression,
                         ValidationLocation::Program,
                         format!("Select branches have mismatched types: true=`{t}`, false=`{f}`"),
-                        "cast both branches to the same type before Select.".to_string(),
+                        "cast both branches to the same type before Select.",
                     ));
                 }
             }
@@ -176,8 +176,8 @@ pub(crate) fn validate_expr(
                         "V023",
                         ValidationPhase::Expression,
                         ValidationLocation::Program,
-                        "cast to Bytes is unsupported in target-text lowering".to_string(),
-                        "use buffer load/store directly for byte data.".to_string(),
+                        "cast to Bytes is unsupported in target-text lowering",
+                        "use buffer load/store directly for byte data.",
                     ));
                 } else if !cast_is_valid(&src, target) {
                     let legal_targets = cast_target_set(&src);
@@ -243,7 +243,7 @@ pub(crate) fn validate_expr(
                 {
                     report.errors.push(err("V047", ValidationPhase::Expression, ValidationLocation::Program, format!(
                         "subgroup `{op:?}` is a bitwise reduction and rejects f32 operands (its value has type `f32`)"
-                    ), "use an integer operand (u32/i32) for And/Or/Xor, or use Add/Mul/Min/Max for a float reduction.".to_string()));
+                    ), "use an integer operand (u32/i32) for And/Or/Xor, or use Add/Mul/Min/Max for a float reduction."));
                 }
             }
         }
@@ -262,7 +262,7 @@ fn validate_subgroup_expr_support(
     options: ValidationOptions<'_>,
 ) {
     if !options.requires_subgroup_ops() {
-        errors.push(err("V041", ValidationPhase::Expression, ValidationLocation::Program, "subgroup expressions require backend subgroup-ops support".to_string(), "Validate with ValidationOptions::with_backend(backend) where backend.supports_subgroup_ops() == true.".to_string()));
+        errors.push(err("V041", ValidationPhase::Expression, ValidationLocation::Program, "subgroup expressions require backend subgroup-ops support", "Validate with ValidationOptions::with_backend(backend) where backend.supports_subgroup_ops() == true."));
     }
 }
 
@@ -322,7 +322,7 @@ pub(crate) fn validate_output_markers(buffers: &[BufferDecl], errors: &mut Vec<V
             ValidationPhase::Expression,
             ValidationLocation::Program,
             format!("program declares {outputs} output buffers"),
-            "mark at most one result buffer with BufferDecl::output(...).".to_string(),
+            "mark at most one result buffer with BufferDecl::output(...).",
         ));
     }
 }

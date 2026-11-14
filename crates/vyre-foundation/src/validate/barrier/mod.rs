@@ -47,8 +47,8 @@ pub(crate) fn check_barrier(
             "V010",
             ValidationPhase::Memory,
             ValidationLocation::Program,
-            "barrier may be reached by only part of a workgroup".to_string(),
-            "move the barrier to uniform control flow.".to_string(),
+            "barrier may be reached by only part of a workgroup",
+            "move the barrier to uniform control flow.",
         ));
     }
     if !ordering.is_valid_for_barrier() {
@@ -59,8 +59,7 @@ pub(crate) fn check_barrier(
             format!(
                 "barrier uses memory ordering `{ordering:?}`, but barriers must synchronize memory"
             ),
-            "use Acquire, Release, AcqRel, or SeqCst; use no barrier at all for Relaxed."
-                .to_string(),
+            "use Acquire, Release, AcqRel, or SeqCst; use no barrier at all for Relaxed.",
         ));
     }
 }
@@ -218,13 +217,11 @@ pub(crate) fn check_loop_back_edge(
          exit; the sibling then leaves the kernel while the rest keep iterating, freezing the \
          data it owns partway through. Nothing hangs, because a barrier does not count \
          invocations that already returned, so this costs answers and not liveness, and one \
-         workgroup is enough to hit it"
-            .to_string(),
+         workgroup is enough to hit it",
         "either put an unconditional barrier after the \
          early exit as the last loop-body node, or make every return guard workgroup-uniform; \
          a guard that loads writable memory needs an acquiring barrier immediately before it, \
-         one uniform index, and no intervening write."
-            .to_string(),
+         one uniform index, and no intervening write.",
     ));
 }
 

@@ -29,11 +29,3 @@ pub use vyre_compiler::{
 
 /// Crate version surfaced into emitted artifacts and manifests.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
-
-/// Snapshot the driver-tier observability surface from inside vyre-aot.
-/// Exposes substrate counters + decision histograms so callers
-/// emitting AOT bundles can include them in their build provenance.
-#[must_use]
-pub fn observability_snapshot() -> vyre_runtime::observability::DriverObservability {
-    vyre_runtime::observability::DriverObservability::snapshot()
-}

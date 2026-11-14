@@ -155,6 +155,19 @@ mod tests {
     }
 
     #[test]
+    fn invalid_shape_returns_empty_and_scores_zero() {
+        assert!(fusable_pairs(&[0, 1, 0], 2, 2).is_empty());
+        assert!(fusable_pairs(&[0, 1, 0, 0, 0], 2, 2).is_empty());
+        assert_eq!(fusion_score(&[0, 1, 0], 2, 2), 0);
+    }
+
+    #[test]
+    fn single_node_with_self_loop_is_not_fusable() {
+        assert_eq!(fusable_pairs(&[1], 1, 1), vec![0]);
+        assert_eq!(fusion_score(&[1], 1, 1), 0);
+    }
+
+    #[test]
     fn fusable_pairs_into_reuses_output_and_clears_invalid_shape() {
         let adj = vec![0u32; 9];
         let mut out = Vec::with_capacity(16);

@@ -41,8 +41,7 @@ pub(crate) fn validate_call(
             ValidationPhase::Expression,
             ValidationLocation::Program,
             format!("call references operation `{op_id}` without a callable signature"),
-            "attach a Signature to its canonical OperationRegistration or inline the composition."
-                .to_string(),
+            "attach a Signature to its canonical OperationRegistration or inline the composition.",
         ));
         return;
     };
@@ -138,7 +137,7 @@ fn validate_buffer_argument(
     format!(
             "call `{op_id}` signature input `{param_name}` uses unknown buffer element spelling `{element}`"
         ),
-    "use a foundation-known scalar/vector type spelling inside `buffer<...>`.".to_string()
+    "use a foundation-known scalar/vector type spelling inside `buffer<...>`."
 ));
         return;
     };
@@ -151,7 +150,7 @@ fn validate_buffer_argument(
                 "call `{op_id}` argument {index} (`{param_name}`) is declared `buffer<{element}>` but a value was passed"
             ),
             "pass `Expr::BufferRef { buffer }` naming the buffer this op should read."
-                .to_string(),
+                ,
         ));
         return;
     };
@@ -161,7 +160,7 @@ fn validate_buffer_argument(
             ValidationPhase::Expression,
             ValidationLocation::Program,
             format!("call to `{op_id}` passes a reference to unknown buffer `{buffer}`"),
-            "declare it in Program::buffers.".to_string(),
+            "declare it in Program::buffers.",
         ));
         return;
     };
@@ -174,7 +173,7 @@ fn validate_buffer_argument(
     format!(
             "call `{op_id}` argument {index} (`{param_name}`) references buffer `{buffer}` with element type `{actual}` but the signature declares `buffer<{expected}>`"
         ),
-    "pass a buffer whose element type matches, or change the op signature.".to_string()
+    "pass a buffer whose element type matches, or change the op signature."
 ));
     }
 }

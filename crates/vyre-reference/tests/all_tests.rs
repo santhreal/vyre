@@ -81,10 +81,6 @@ pub mod composition_witness_parsing_contracts;
 #[path = "composition_witness_reasoning_contracts.rs"]
 pub mod composition_witness_reasoning_contracts;
 
-/// Integration tests from `tests/composition_witness_scheduling_contracts.rs`.
-#[path = "composition_witness_scheduling_contracts.rs"]
-pub mod composition_witness_scheduling_contracts;
-
 /// Integration tests from `tests/core_contracts/mod.rs`.
 #[path = "core_contracts/mod.rs"]
 pub mod core_contracts;

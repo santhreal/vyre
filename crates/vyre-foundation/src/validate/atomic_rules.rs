@@ -61,7 +61,7 @@ pub(crate) fn validate_atomic(
     format!(
             "atomic `{op:?}` on buffer `{buffer}` uses invalid memory ordering `{ordering:?}`"
         ),
-    "use Relaxed, Acquire, Release, AcqRel, or SeqCst for atomic read-modify-write operations.".to_string()
+    "use Relaxed, Acquire, Release, AcqRel, or SeqCst for atomic read-modify-write operations."
 ));
     }
     // VAL-001: the atomic index must be u32. target-text `atomicLoad`/`atomicStore`
@@ -74,7 +74,7 @@ pub(crate) fn validate_atomic(
                 ValidationPhase::Memory,
                 ValidationLocation::Program,
                 format!("atomic index on buffer `{buffer}` has type `{index_ty}`, must be `u32`"),
-                "cast the index to U32 before the atomic operation.".to_string(),
+                "cast the index to U32 before the atomic operation.",
             ));
         }
     }
@@ -95,7 +95,7 @@ pub(crate) fn validate_atomic(
     format!(
                     "atomic `{op:?}` on workgroup buffer `{buffer}` is rejected by the current memory model"
                 ),
-    "use a storage ReadWrite buffer for atomics.".to_string()
+    "use a storage ReadWrite buffer for atomics."
 ));
             }
             BufferAccess::ReadOnly => {
@@ -126,7 +126,7 @@ pub(crate) fn validate_atomic(
                     format!(
                     "atomic `{op:?}` targets unsupported buffer access `{other:?}` on `{buffer}`"
                 ),
-                    "use BufferAccess::ReadWrite storage buffers for atomics.".to_string(),
+                    "use BufferAccess::ReadWrite storage buffers for atomics.",
                 ));
             }
         }
@@ -138,7 +138,7 @@ pub(crate) fn validate_atomic(
                 format!(
                     "operation on buffer `{buffer}` with element type `bytes` is not supported"
                 ),
-                "use a typed buffer.".to_string(),
+                "use a typed buffer.",
             ));
         }
         if buf.element != DataType::U32 {
@@ -160,7 +160,7 @@ pub(crate) fn validate_atomic(
                     ValidationPhase::Memory,
                     ValidationLocation::Program,
                     format!("atomic value type `{val_ty}` does not match required `u32`"),
-                    "ensure the atomic operand is U32.".to_string(),
+                    "ensure the atomic operand is U32.",
                 ));
             }
         }
@@ -177,7 +177,7 @@ pub(crate) fn validate_atomic(
     format!(
                             "compare-exchange expected type `{expected_ty}` does not match required `u32`"
                         ),
-    "ensure Expr::Atomic.expected is U32.".to_string()
+    "ensure Expr::Atomic.expected is U32."
 ));
                     }
                 }
@@ -186,15 +186,15 @@ pub(crate) fn validate_atomic(
                 "V059",
                 ValidationPhase::Memory,
                 ValidationLocation::Program,
-                "compare-exchange atomic is missing expected value".to_string(),
-                "set Expr::Atomic.expected for AtomicOp::CompareExchange.".to_string(),
+                "compare-exchange atomic is missing expected value",
+                "set Expr::Atomic.expected for AtomicOp::CompareExchange.",
             )),
             (_, Some(_)) => errors.push(err(
                 "V060",
                 ValidationPhase::Memory,
                 ValidationLocation::Program,
-                "non-compare-exchange atomic includes an expected value".to_string(),
-                "use Expr::Atomic.expected only with AtomicOp::CompareExchange.".to_string(),
+                "non-compare-exchange atomic includes an expected value",
+                "use Expr::Atomic.expected only with AtomicOp::CompareExchange.",
             )),
             (_, None) => {}
         }
@@ -204,7 +204,7 @@ pub(crate) fn validate_atomic(
             ValidationPhase::Memory,
             ValidationLocation::Program,
             format!("atomic on unknown buffer `{buffer}`"),
-            "declare it in Program::buffers.".to_string(),
+            "declare it in Program::buffers.",
         ));
     }
 }

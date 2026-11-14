@@ -42,8 +42,8 @@ pub(crate) fn check_unreachable_after_return(nodes: &[Node], errors: &mut Vec<Va
                 "V112",
                 ValidationPhase::Node,
                 ValidationLocation::Program,
-                "unreachable statements after `return`".to_string(),
-                "remove statements after `return` or reorder them.".to_string(),
+                "unreachable statements after `return`",
+                "remove statements after `return` or reorder them.",
             ));
         }
     }
@@ -65,7 +65,7 @@ pub(crate) fn check_assign(
                 ValidationPhase::Node,
                 ValidationLocation::Program,
                 format!("assignment to loop variable `{name}`"),
-                "loop variables are immutable.".to_string(),
+                "loop variables are immutable.",
             ));
         }
         if binding.ty_known {
@@ -153,7 +153,7 @@ pub(crate) fn check_store(
                 format!(
                     "Node::Store buffer `{buffer_name}` index has type `{index_ty}` but must be `u32`"
                 ),
-                "cast the index to U32 before storing.".to_string(),
+                "cast the index to U32 before storing.",
             ));
         }
     }
@@ -174,7 +174,7 @@ pub(crate) fn check_if_condition(
                 ValidationPhase::Node,
                 ValidationLocation::Program,
                 format!("Node::If condition has type `{cond_ty}` but must be `u32` or `bool`"),
-                "cast or rewrite the condition expression to produce `u32` or `bool`.".to_string(),
+                "cast or rewrite the condition expression to produce `u32` or `bool`.",
             ));
         }
     }
@@ -197,7 +197,7 @@ pub(crate) fn check_loop_bounds(
                 format!(
                     "Node::Loop from-bound has type `{from_ty}`; legal loop bound type is `u32`"
                 ),
-                "cast the `from` bound to `u32`.".to_string(),
+                "cast the `from` bound to `u32`.",
             ));
         }
     }
@@ -208,7 +208,7 @@ pub(crate) fn check_loop_bounds(
                 ValidationPhase::Node,
                 ValidationLocation::Program,
                 format!("Node::Loop to-bound has type `{to_ty}`; legal loop bound type is `u32`"),
-                "cast the `to` bound to `u32`.".to_string(),
+                "cast the `to` bound to `u32`.",
             ));
         }
     }
@@ -244,7 +244,7 @@ pub(crate) fn check_indirect_dispatch(
             ValidationPhase::Node,
             ValidationLocation::Program,
             format!("indirect dispatch offset {count_offset} is not 4-byte aligned"),
-            "use an offset aligned to a u32 dispatch count tuple.".to_string(),
+            "use an offset aligned to a u32 dispatch count tuple.",
         ));
     }
     if !buffers.contains_key(count_buffer.as_str()) {
@@ -253,7 +253,7 @@ pub(crate) fn check_indirect_dispatch(
             ValidationPhase::Node,
             ValidationLocation::Program,
             format!("indirect dispatch references unknown buffer `{count_buffer}`"),
-            "declare the count buffer before validation.".to_string(),
+            "declare the count buffer before validation.",
         ));
     }
 }
@@ -265,8 +265,8 @@ pub(crate) fn check_async_tag(tag: &Ident, errors: &mut Vec<ValidationError>) {
             "V128",
             ValidationPhase::Node,
             ValidationLocation::Program,
-            "async stream tag is empty".to_string(),
-            "use a stable non-empty tag to pair AsyncLoad and AsyncWait nodes.".to_string(),
+            "async stream tag is empty",
+            "use a stable non-empty tag to pair AsyncLoad and AsyncWait nodes.",
         ));
     }
 }
@@ -305,8 +305,8 @@ pub(crate) fn check_async_uniformity(
             "V139",
             ValidationPhase::Node,
             ValidationLocation::Program,
-            "async transfer offset expression is not workgroup-uniform".to_string(),
-            "compute the transfer offset from workgroup-uniform expressions: literals, buffer lengths, workgroup ID, or a load from a read-only or uniform buffer at a uniform index, written in the operand rather than hoisted into a binding. Avoid thread-divergent expressions like invocation ID.".to_string(),
+            "async transfer offset expression is not workgroup-uniform",
+            "compute the transfer offset from workgroup-uniform expressions: literals, buffer lengths, workgroup ID, or a load from a read-only or uniform buffer at a uniform index, written in the operand rather than hoisted into a binding. Avoid thread-divergent expressions like invocation ID.",
         ));
     }
     if !super::uniformity::is_uniform_with_load_policy(size, scope, load_policy) {
@@ -314,8 +314,8 @@ pub(crate) fn check_async_uniformity(
             "V139",
             ValidationPhase::Node,
             ValidationLocation::Program,
-            "async transfer size expression is not workgroup-uniform".to_string(),
-            "compute the transfer size from workgroup-uniform expressions: literals, buffer lengths, workgroup ID, or a load from a read-only or uniform buffer at a uniform index, written in the operand rather than hoisted into a binding. Avoid thread-divergent expressions like invocation ID.".to_string(),
+            "async transfer size expression is not workgroup-uniform",
+            "compute the transfer size from workgroup-uniform expressions: literals, buffer lengths, workgroup ID, or a load from a read-only or uniform buffer at a uniform index, written in the operand rather than hoisted into a binding. Avoid thread-divergent expressions like invocation ID.",
         ));
     }
 }
@@ -376,9 +376,9 @@ pub(crate) fn check_collective(
             "V046",
             ValidationPhase::Node,
             ValidationLocation::Program,
-            "distributed collective nodes require backend collective support".to_string(),
+            "distributed collective nodes require backend collective support",
             "validate with BackendCapabilities { supports_distributed_collectives: true, .. } or lower collectives before this backend."
-                .to_string(),
+                ,
         ));
     }
 
@@ -422,7 +422,7 @@ fn check_collective_buffer(
             ValidationPhase::Node,
             ValidationLocation::Program,
             format!("collective references unknown buffer `{name}`"),
-            "declare the collective buffer before validation.".to_string(),
+            "declare the collective buffer before validation.",
         ));
         return;
     };
@@ -432,7 +432,7 @@ fn check_collective_buffer(
             ValidationPhase::Node,
             ValidationLocation::Program,
             format!("collective buffer `{name}` is workgroup-local"),
-            "use device/global storage visible to the distributed backend.".to_string(),
+            "use device/global storage visible to the distributed backend.",
         ));
     }
 }
@@ -659,7 +659,7 @@ pub(crate) fn check_tile_load(
                 ValidationPhase::Node,
                 ValidationLocation::Program,
                 format!("tile load from write-only buffer `{buffer_name}`"),
-                "buffer must be ReadOnly or ReadWrite for tile loading.".to_string(),
+                "buffer must be ReadOnly or ReadWrite for tile loading.",
             ));
         }
     } else {
@@ -668,7 +668,7 @@ pub(crate) fn check_tile_load(
             ValidationPhase::Node,
             ValidationLocation::Program,
             format!("tile load from unknown buffer `{buffer_name}`"),
-            "declare the buffer before loading tiles from it.".to_string(),
+            "declare the buffer before loading tiles from it.",
         ));
     }
     if origin.len() != tile_type.extents.len() {
@@ -681,7 +681,7 @@ pub(crate) fn check_tile_load(
                 origin.len(),
                 tile_type.extents.len()
             ),
-            "provide one origin index per tile dimension.".to_string(),
+            "provide one origin index per tile dimension.",
         ));
     }
     check_tile_residency(tile_name, tile_type, options, errors);
@@ -707,7 +707,7 @@ pub(crate) fn check_tile_residency(
                             "total Workgroup residency of {bytes} bytes exceeds target profile limit {} in operation `{tile_name}`",
                             caps.max_shared_memory_bytes
                         ),
-                        "reduce tile dimensions or shard workgroup memory.".to_string(),
+                        "reduce tile dimensions or shard workgroup memory.",
                     ));
                 }
             }
@@ -723,7 +723,7 @@ pub(crate) fn check_tile_residency(
                                 "live Register residency of {words} registers exceeds target profile limit {} in operation `{tile_name}`",
                                 caps.regs_per_thread_max
                             ),
-                            "reduce tile register footprint or spill to shared memory.".to_string(),
+                            "reduce tile register footprint or spill to shared memory.",
                         ));
                     }
                 }
@@ -742,7 +742,7 @@ pub(crate) fn check_tile_residency(
                                 "tile `{tile_name}` Subgroup residency with {total_elements} elements is incompatible with target subgroup size {}",
                                 caps.subgroup_size
                             ),
-                            "align tile dimensions to target subgroup size.".to_string(),
+                            "align tile dimensions to target subgroup size.",
                         ));
                     }
                 }
@@ -767,7 +767,7 @@ pub(crate) fn check_tile_store(
                 ValidationPhase::Node,
                 ValidationLocation::Program,
                 format!("tile store to read-only buffer `{buffer_name}`"),
-                "buffer must be WriteOnly or ReadWrite for tile storing.".to_string(),
+                "buffer must be WriteOnly or ReadWrite for tile storing.",
             ));
         }
     } else {
@@ -776,7 +776,7 @@ pub(crate) fn check_tile_store(
             ValidationPhase::Node,
             ValidationLocation::Program,
             format!("tile store to unknown buffer `{buffer_name}`"),
-            "declare the buffer before storing tiles to it.".to_string(),
+            "declare the buffer before storing tiles to it.",
         ));
     }
 }
@@ -798,7 +798,7 @@ pub(crate) fn check_tile_matmul(
                 format!(
                     "target profile does not support matrix tensor core instructions for operation `{acc} = {a} x {b}`"
                 ),
-                "lower matrix multiplication to scalar loops or run on a target with tensor core support.".to_string(),
+                "lower matrix multiplication to scalar loops or run on a target with tensor core support.",
             ));
         }
     }

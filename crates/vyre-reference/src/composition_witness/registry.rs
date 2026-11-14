@@ -251,19 +251,12 @@ pub const COMPOSITION_WITNESS_FAMILIES: &[CompositionWitnessFamily] = &[
 /// Modules of `composition_witness` that no operation category names.
 ///
 /// A witness module reached by no family is dead unless someone records why.
-/// These two back operations the registry files under another category:
-/// do-calculus surgeries back graph analyses, and frontier planning backs the
-/// reduction and graph ops that consume the plan.
-pub const MODULES_WITHOUT_A_CATALOG_FAMILY: &[(&str, &str)] = &[
-    (
-        "causal",
-        "do-calculus surgery witnesses back operations the registry files under graph",
-    ),
-    (
-        "scheduling",
-        "frontier planning witnesses back the reduce and graph operations that consume the plan",
-    ),
-];
+/// This module backs operations the registry files under another category:
+/// do-calculus surgeries back graph analyses.
+pub const MODULES_WITHOUT_A_CATALOG_FAMILY: &[(&str, &str)] = &[(
+    "causal",
+    "do-calculus surgery witnesses back operations the registry files under graph",
+)];
 
 /// The family row for `family`, if the registry has one.
 #[must_use]

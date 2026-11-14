@@ -12,7 +12,7 @@ pub(crate) fn check_local(
     if !options.allow_shadowing && scope.contains_key(name) {
         errors.push(err("V008", ValidationPhase::Node, ValidationLocation::Program, format!(
             "duplicate local binding `{name}` shadows an outer scope"
-        ), "choose a unique local name, or opt into nested shadowing with ValidationOptions::with_shadowing(true).".to_string()));
+        ), "choose a unique local name, or opt into nested shadowing with ValidationOptions::with_shadowing(true)."));
     }
 }
 

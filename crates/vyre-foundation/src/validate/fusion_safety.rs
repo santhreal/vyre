@@ -135,7 +135,7 @@ fn report_alias_hazards(
     for buffer in hazards {
         errors.push(err("V116", ValidationPhase::Composition, ValidationLocation::Program, format!(
             "fusion hazard on buffer `{buffer}`: one node reads it non-atomically while another issues an atomic access without an explicit barrier"
-        ), "insert `Node::barrier()` between the read path and the atomic path, or rename the buffers before fusion.".to_string()));
+        ), "insert `Node::barrier()` between the read path and the atomic path, or rename the buffers before fusion."));
     }
 }
 

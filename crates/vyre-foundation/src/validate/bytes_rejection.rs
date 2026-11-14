@@ -58,7 +58,7 @@ pub(crate) fn check_store(
     format!(
                 "store to non-writable buffer `{buffer}`"
             ),
-    "declare it with BufferAccess::ReadWrite, BufferAccess::WriteOnly, or BufferAccess::Workgroup.".to_string()
+    "declare it with BufferAccess::ReadWrite, BufferAccess::WriteOnly, or BufferAccess::Workgroup."
 ));
         }
         // L.1.18: V013 was historically enforced only on `Expr::Atomic`,
@@ -73,7 +73,7 @@ pub(crate) fn check_store(
     format!(
                 "store to buffer `{buffer}` with element type `bytes` is not supported"
             ),
-    "use a typed buffer (U32/I32/F32/…) for stores, or declare the buffer with `.with_bytes_extraction(true)` when this is a bytes-producing op such as decode.base64.".to_string()
+    "use a typed buffer (U32/I32/F32/…) for stores, or declare the buffer with `.with_bytes_extraction(true)` when this is a bytes-producing op such as decode.base64."
 ));
         }
     } else {
@@ -82,7 +82,7 @@ pub(crate) fn check_store(
             ValidationPhase::Memory,
             ValidationLocation::Program,
             format!("store to unknown buffer `{buffer}`"),
-            "declare it in Program::buffers.".to_string(),
+            "declare it in Program::buffers.",
         ));
     }
 }
@@ -124,8 +124,7 @@ pub(crate) fn check_async_destination(
         ValidationLocation::Program,
         format!("async transfer writes into non-writable buffer `{destination}`"),
         "declare it with BufferAccess::ReadWrite, BufferAccess::WriteOnly, or \
-         BufferAccess::Workgroup, or name a storage tier the dispatch does not bind."
-            .to_string(),
+         BufferAccess::Workgroup, or name a storage tier the dispatch does not bind.",
     ));
 }
 
@@ -158,7 +157,7 @@ pub(crate) fn check_load(
                 ValidationPhase::Memory,
                 ValidationLocation::Program,
                 format!("load from unknown buffer `{buffer}`"),
-                "declare it in Program::buffers.".to_string(),
+                "declare it in Program::buffers.",
             ));
         }
         // L.1.18: V013 coverage extends to `Expr::Load`  -  loading from
@@ -174,7 +173,7 @@ pub(crate) fn check_load(
     format!(
                 "load from buffer `{buffer}` with element type `bytes` is not supported"
             ),
-    "declare the buffer with a typed element (U32/I32/F32/…) or with `.with_bytes_extraction(true)` when the consuming op is a dedicated bytes-extraction op.".to_string()
+    "declare the buffer with a typed element (U32/I32/F32/…) or with `.with_bytes_extraction(true)` when the consuming op is a dedicated bytes-extraction op."
 ));
         }
         Some(_) => {}

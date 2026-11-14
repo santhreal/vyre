@@ -61,22 +61,23 @@ pub fn emit_runtime_cache_blob(
         Ok(())
     };
 
-    write_one_shot().map_err(|source| match fs::remove_file(&tmp_path) {
-        Ok(()) => RuntimeCacheError::Io {
-            path: final_path.clone(),
-            source,
-        },
-        Err(error) if error.kind() == std::io::ErrorKind::NotFound => RuntimeCacheError::Io {
-            path: final_path.clone(),
-            source,
-        },
-        Err(error) => RuntimeCacheError::Io {
-            path: tmp_path.clone(),
-            source: error,
-        },
-    })?;
-
-    Ok(final_path)
+    match write_one_shot() {
+        Ok(()) => Ok(final_path),
+        Err(source) => Err(match fs::remove_file(&tmp_path) {
+            Ok(()) => RuntimeCacheError::Io {
+                path: final_path,
+                source,
+            },
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => RuntimeCacheError::Io {
+                path: final_path,
+                source,
+            },
+            Err(error) => RuntimeCacheError::Io {
+                path: tmp_path,
+                source: error,
+            },
+        }),
+    }
 }
 
 /// 64-char lowercase hex of a 32-byte fingerprint, matching the runtime

@@ -78,8 +78,7 @@ pub(crate) fn check_limits(
             ValidationPhase::Limits,
             ValidationLocation::Program,
             format!("program node count exceeds limit {}", limits.max_node_count),
-            "split the program into smaller kernels or run an optimization pass before lowering."
-                .to_string(),
+            "split the program into smaller kernels or run an optimization pass before lowering.",
         ));
     }
     if depth > DEFAULT_MAX_NESTING_DEPTH && !limits.nesting_reported {
@@ -89,8 +88,7 @@ pub(crate) fn check_limits(
             ValidationPhase::Limits,
             ValidationLocation::Program,
             format!("program nesting depth {depth} exceeds max {DEFAULT_MAX_NESTING_DEPTH}"),
-            "flatten nested If/Loop/Block structures or split the program before lowering."
-                .to_string(),
+            "flatten nested If/Loop/Block structures or split the program before lowering.",
         ));
     }
 }
@@ -105,7 +103,7 @@ pub(crate) fn check_expr_depth(depth: usize, errors: &mut Vec<ValidationError>) 
             ValidationPhase::Limits,
             ValidationLocation::Program,
             format!("expression nesting depth {depth} exceeds max {DEFAULT_MAX_EXPR_DEPTH}"),
-            "split the expression into intermediate let-bindings before lowering.".to_string(),
+            "split the expression into intermediate let-bindings before lowering.",
         ));
         return false;
     }

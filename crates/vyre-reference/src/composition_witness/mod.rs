@@ -40,7 +40,6 @@ mod pattern;
 mod reasoning;
 mod reduction;
 mod registry;
-mod scheduling;
 mod text;
 
 pub use registry::{
@@ -286,13 +285,6 @@ pub use math::{
     unpack_i4x8_witness_into, vietoris_rips_edge_filter_witness, vietoris_rips_edges_witness,
     AmgSolveScratchWitness, AmgVcycleScratchWitness, NewtonSchulzScratchWitness,
 };
-// Re-export sequential frontier scheduling witnesses
-pub use scheduling::{
-    plan_frontier_typed_ir_witness, FrontierDependencyWitness, FrontierDomainWitness,
-    FrontierNodeWitness, FrontierTypedPlanWitness, FrontierTypedPlanWitnessError,
-    FrontierWaveWitness,
-};
-
 // Re-export scan, reduction, and array movement witnesses
 pub use reduction::{
     exclusive_prefix_sum_witness, gather_witness, gather_witness_into, histogram_witness,

@@ -26,10 +26,8 @@ use std::path::{Path, PathBuf};
 
 fn sha256_hex(bytes: &[u8]) -> String {
     use sha2::{Digest, Sha256};
-    let mut hasher = Sha256::new();
-    hasher.update(bytes);
-    let result = hasher.finalize();
-    result.iter().map(|b| format!("{:02x}", b)).collect()
+    let digest: [u8; 32] = Sha256::digest(bytes).into();
+    crate::cache::fingerprint_hex(&digest)
 }
 use thiserror::Error;
 
@@ -168,13 +166,13 @@ fn write_package_files(
 ) -> Result<Vec<PathBuf>, BundleError> {
     let envelope_bytes = envelope.to_bytes()?;
     let envelope_compressed = lzma_compress(&envelope_bytes)?;
-    let envelope_filename = "artifact.vmk.lzma".to_string();
-    let envelope_path = out_dir.join(&envelope_filename);
+    const ENVELOPE_FILENAME: &str = "artifact.vmk.lzma";
+    let envelope_path = out_dir.join(ENVELOPE_FILENAME);
     fs::write(&envelope_path, &envelope_compressed)?;
 
     let weights_compressed = brotli_compress(weights)?;
-    let weights_filename = "weights.brotli".to_string();
-    let weights_path = out_dir.join(&weights_filename);
+    const WEIGHTS_FILENAME: &str = "weights.brotli";
+    let weights_path = out_dir.join(WEIGHTS_FILENAME);
     fs::write(&weights_path, &weights_compressed)?;
 
     let target_payload = target_payload(envelope, &target)?;
@@ -184,12 +182,12 @@ fn write_package_files(
         artifact_name: artifact_name.to_string(),
         target,
         target_payload_format: target_payload.format().identity().to_string(),
-        envelope_file: envelope_filename,
+        envelope_file: ENVELOPE_FILENAME.to_string(),
         envelope_compression: "lzma".to_string(),
         envelope_sha256_hex: sha256_hex(&envelope_bytes),
         neutral_artifact_digest_hex: digest_hex(envelope.neutral().digest()),
         target_payload_digest_hex: digest_hex(target_payload.digest()),
-        weights_file: weights_filename,
+        weights_file: WEIGHTS_FILENAME.to_string(),
         weights_compression: "brotli-11".to_string(),
         weights_sha256_hex: sha256_hex(weights),
         notes: notes.to_string(),
@@ -521,18 +519,18 @@ fn target_payload<'envelope>(
 }
 
 fn digest_hex(digest: vyre_compiler::Digest) -> String {
-    digest
-        .as_bytes()
-        .iter()
-        .map(|byte| format!("{byte:02x}"))
-        .collect()
+    crate::cache::fingerprint_hex(digest.as_bytes())
 }
 
 fn read_bytes_bounded(path: &Path, max_bytes: u64, label: &str) -> Result<Vec<u8>, BundleError> {
-    let mut bytes = Vec::new();
-    fs::File::open(path)?
-        .take(max_bytes + 1)
-        .read_to_end(&mut bytes)?;
+    let file = fs::File::open(path)?;
+    let cap = file
+        .metadata()
+        .ok()
+        .and_then(|meta| usize::try_from(meta.len().min(max_bytes.saturating_add(1))).ok())
+        .unwrap_or(0);
+    let mut bytes = Vec::with_capacity(cap);
+    file.take(max_bytes + 1).read_to_end(&mut bytes)?;
     if bytes.len() as u64 > max_bytes {
         return Err(BundleError::InvalidArtifact(format!(
             "{label} `{}` exceeds the {max_bytes}-byte limit",

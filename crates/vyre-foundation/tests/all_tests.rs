@@ -225,9 +225,6 @@ pub mod geometry_foundation_contracts;
 /// Integration tests from `tests/graph_delta_contract.rs`.
 #[path = "graph_delta_contract.rs"]
 pub mod graph_delta_contract;
-/// Integration tests from `tests/graph_invariants.rs`.
-#[path = "graph_invariants.rs"]
-pub mod graph_invariants;
 
 /// Integration tests from `tests/host_identity_invariance.rs`.
 #[path = "host_identity_invariance.rs"]

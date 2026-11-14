@@ -73,7 +73,7 @@ pub(crate) fn check_sibling_duplicate(
     format!(
         "duplicate sibling let binding `{name}` in the same region"
     ),
-    "rename one binding or move one declaration into an inner Block/Region/Loop if a new scope is intended.".to_string()
+    "rename one binding or move one declaration into an inner Block/Region/Loop if a new scope is intended."
 ));
     true
 }

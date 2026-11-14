@@ -667,4 +667,3 @@ pub fn passes_commute_on_witness(
     let ba = compose_passes_witness(view_in, mapping_b, n_mid_b, mapping_a_after_b, n_out);
     ab == ba
 }
-

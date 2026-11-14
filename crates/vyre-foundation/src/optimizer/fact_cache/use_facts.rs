@@ -14,6 +14,7 @@ struct UseFactBuilder {
     var_buffer_deps: FxHashMap<Ident, FxHashSet<Ident>>,
     buffer_write_deps: FxHashMap<Ident, FxHashSet<Ident>>,
     indirect_dispatch_buffers: FxHashSet<Ident>,
+    scratch_deps: FxHashSet<Ident>,
     has_opaque: bool,
 }
 
@@ -30,6 +31,74 @@ impl UseFactBuilder {
             has_opaque: self.has_opaque,
         }
     }
+
+    #[inline]
+    fn take_scratch(&mut self) -> FxHashSet<Ident> {
+        let mut deps = std::mem::take(&mut self.scratch_deps);
+        deps.clear();
+        deps
+    }
+
+    #[inline]
+    fn restore_scratch(&mut self, mut deps: FxHashSet<Ident>) {
+        deps.clear();
+        if deps.capacity() > self.scratch_deps.capacity() {
+            self.scratch_deps = deps;
+        }
+    }
+}
+
+#[inline]
+fn bump_count(map: &mut FxHashMap<Ident, usize>, key: &Ident) {
+    if let Some(slot) = map.get_mut(key) {
+        *slot += 1;
+    } else {
+        map.insert(key.clone(), 1);
+    }
+}
+
+#[inline]
+fn bump_axis(map: &mut FxHashMap<Ident, [usize; 3]>, key: &Ident, axis: u8) {
+    let idx = usize::from(axis).min(2);
+    if let Some(axes) = map.get_mut(key) {
+        axes[idx] += 1;
+    } else {
+        let mut axes = [0; 3];
+        axes[idx] = 1;
+        map.insert(key.clone(), axes);
+    }
+}
+
+#[inline]
+fn insert_ident(set: &mut FxHashSet<Ident>, key: &Ident) {
+    if !set.contains(key) {
+        set.insert(key.clone());
+    }
+}
+
+#[inline]
+fn extend_idents<'a>(dst: &mut FxHashSet<Ident>, src: impl IntoIterator<Item = &'a Ident>) {
+    for item in src {
+        insert_ident(dst, item);
+    }
+}
+
+fn merge_into_map_set(
+    map: &mut FxHashMap<Ident, FxHashSet<Ident>>,
+    key: &Ident,
+    deps: &mut FxHashSet<Ident>,
+) {
+    if deps.is_empty() {
+        return;
+    }
+    if let Some(existing) = map.get_mut(key) {
+        existing.extend(deps.drain());
+    } else {
+        let mut fresh = FxHashSet::default();
+        fresh.reserve(deps.len());
+        fresh.extend(deps.drain());
+        map.insert(key.clone(), fresh);
+    }
 }
 
 pub(super) fn derive_use_facts(program: &crate::ir::Program) -> UseFacts {
@@ -42,62 +111,70 @@ fn derive_nodes_uses(nodes: &[Node], facts: &mut UseFactBuilder, control_deps: &
     for node in nodes {
         match node {
             Node::Let { name, value } | Node::Assign { name, value } => {
-                let mut deps = record_expr_uses_and_buffer_deps(value, facts);
-                deps.extend(control_deps.iter().cloned());
-                facts
-                    .var_buffer_deps
-                    .entry(name.clone())
-                    .or_default()
-                    .extend(deps);
+                let mut deps = facts.take_scratch();
+                record_expr_uses_and_buffer_deps_into(&mut deps, value, facts);
+                extend_idents(&mut deps, control_deps);
+                if deps.is_empty() {
+                    if !facts.var_buffer_deps.contains_key(name) {
+                        facts
+                            .var_buffer_deps
+                            .insert(name.clone(), FxHashSet::default());
+                    }
+                } else {
+                    merge_into_map_set(&mut facts.var_buffer_deps, name, &mut deps);
+                }
+                facts.restore_scratch(deps);
             }
             Node::Store {
                 buffer,
                 index,
                 value,
             } => {
-                *facts.buffer_writes.entry(buffer.clone()).or_insert(0) += 1;
-                let mut deps = FxHashSet::default();
+                bump_count(&mut facts.buffer_writes, buffer);
+                let mut deps = facts.take_scratch();
                 record_expr_uses_and_buffer_deps_into(&mut deps, index, facts);
                 count_index_axes(index, buffer, facts);
                 record_expr_uses_and_buffer_deps_into(&mut deps, value, facts);
-                deps.extend(control_deps.iter().cloned());
-                add_buffer_write_deps(facts, buffer, deps);
+                extend_idents(&mut deps, control_deps);
+                merge_into_map_set(&mut facts.buffer_write_deps, buffer, &mut deps);
+                facts.restore_scratch(deps);
             }
             Node::If {
                 cond,
                 then,
                 otherwise,
             } => {
-                let cond_deps = record_expr_uses_and_buffer_deps(cond, facts);
-                // Fast-path: most predicate expressions are buffer-free
-                // comparisons / arithmetic on Vars without recorded buffer
-                // deps, so cond_deps is empty. Skip the union allocation
-                // and reuse the parent control_deps directly.
+                let mut cond_deps = facts.take_scratch();
+                record_expr_uses_and_buffer_deps_into(&mut cond_deps, cond, facts);
                 if cond_deps.is_empty() {
+                    facts.restore_scratch(cond_deps);
                     derive_nodes_uses(then, facts, control_deps);
                     derive_nodes_uses(otherwise, facts, control_deps);
                 } else {
                     let branch_control = union_deps(control_deps, &cond_deps);
+                    facts.restore_scratch(cond_deps);
                     derive_nodes_uses(then, facts, &branch_control);
                     derive_nodes_uses(otherwise, facts, &branch_control);
                 }
             }
             Node::Loop { from, to, body, .. } => {
-                let mut loop_deps = FxHashSet::default();
+                let mut loop_deps = facts.take_scratch();
                 record_expr_uses_and_buffer_deps_into(&mut loop_deps, from, facts);
                 record_expr_uses_and_buffer_deps_into(&mut loop_deps, to, facts);
                 if loop_deps.is_empty() {
+                    facts.restore_scratch(loop_deps);
                     derive_nodes_uses(body, facts, control_deps);
                 } else {
                     let loop_control = union_deps(control_deps, &loop_deps);
+                    facts.restore_scratch(loop_deps);
                     derive_nodes_uses(body, facts, &loop_control);
                 }
             }
             Node::Block(nodes) => {
                 derive_nodes_uses(nodes, facts, control_deps);
             }
-            Node::Region { body, .. } => {
-                derive_nodes_uses(body, facts, control_deps);
+            Node::Region { body: nodes, .. } => {
+                derive_nodes_uses(nodes, facts, control_deps);
             }
             Node::AsyncLoad {
                 source,
@@ -113,37 +190,42 @@ fn derive_nodes_uses(nodes: &[Node], facts: &mut UseFactBuilder, control_deps: &
                 size,
                 ..
             } => {
-                *facts.buffer_reads.entry(source.clone()).or_insert(0) += 1;
-                *facts.buffer_writes.entry(destination.clone()).or_insert(0) += 1;
-                let mut deps = FxHashSet::default();
+                bump_count(&mut facts.buffer_reads, source);
+                bump_count(&mut facts.buffer_writes, destination);
+                let mut deps = facts.take_scratch();
                 record_expr_uses_and_buffer_deps_into(&mut deps, offset, facts);
                 record_expr_uses_and_buffer_deps_into(&mut deps, size, facts);
-                deps.extend(control_deps.iter().cloned());
-                deps.insert(source.clone());
-                add_buffer_write_deps(facts, destination, deps);
+                extend_idents(&mut deps, control_deps);
+                insert_ident(&mut deps, source);
+                merge_into_map_set(&mut facts.buffer_write_deps, destination, &mut deps);
+                facts.restore_scratch(deps);
             }
             Node::Trap { address, .. } => {
-                record_expr_uses_and_buffer_deps(address, facts);
+                let mut deps = facts.take_scratch();
+                record_expr_uses_and_buffer_deps_into(&mut deps, address, facts);
+                facts.restore_scratch(deps);
             }
             Node::IndirectDispatch { count_buffer, .. } => {
-                facts.indirect_dispatch_buffers.insert(count_buffer.clone());
-                *facts.buffer_reads.entry(count_buffer.clone()).or_insert(0) += 1;
+                insert_ident(&mut facts.indirect_dispatch_buffers, count_buffer);
+                bump_count(&mut facts.buffer_reads, count_buffer);
             }
             Node::AllReduce { buffer, .. } | Node::Broadcast { buffer, .. } => {
-                *facts.buffer_reads.entry(buffer.clone()).or_insert(0) += 1;
-                *facts.buffer_writes.entry(buffer.clone()).or_insert(0) += 1;
-                let mut deps = FxHashSet::default();
-                deps.extend(control_deps.iter().cloned());
-                deps.insert(buffer.clone());
-                add_buffer_write_deps(facts, buffer, deps);
+                bump_count(&mut facts.buffer_reads, buffer);
+                bump_count(&mut facts.buffer_writes, buffer);
+                let mut deps = facts.take_scratch();
+                extend_idents(&mut deps, control_deps);
+                insert_ident(&mut deps, buffer);
+                merge_into_map_set(&mut facts.buffer_write_deps, buffer, &mut deps);
+                facts.restore_scratch(deps);
             }
             Node::AllGather { input, output, .. } | Node::ReduceScatter { input, output, .. } => {
-                *facts.buffer_reads.entry(input.clone()).or_insert(0) += 1;
-                *facts.buffer_writes.entry(output.clone()).or_insert(0) += 1;
-                let mut deps = FxHashSet::default();
-                deps.extend(control_deps.iter().cloned());
-                deps.insert(input.clone());
-                add_buffer_write_deps(facts, output, deps);
+                bump_count(&mut facts.buffer_reads, input);
+                bump_count(&mut facts.buffer_writes, output);
+                let mut deps = facts.take_scratch();
+                extend_idents(&mut deps, control_deps);
+                insert_ident(&mut deps, input);
+                merge_into_map_set(&mut facts.buffer_write_deps, output, &mut deps);
+                facts.restore_scratch(deps);
             }
             Node::Opaque(_) => {
                 facts.has_opaque = true;
@@ -154,85 +236,81 @@ fn derive_nodes_uses(nodes: &[Node], facts: &mut UseFactBuilder, control_deps: &
                 origin,
                 ..
             } => {
-                *facts.buffer_reads.entry(buffer.clone()).or_insert(0) += 1;
-                let mut deps = FxHashSet::default();
-                deps.insert(buffer.clone());
+                bump_count(&mut facts.buffer_reads, buffer);
+                let mut deps = facts.take_scratch();
+                insert_ident(&mut deps, buffer);
                 for off in origin {
-                    let expr_deps = record_expr_uses_and_buffer_deps(off, facts);
-                    deps.extend(expr_deps);
+                    record_expr_uses_and_buffer_deps_into(&mut deps, off, facts);
                 }
-                deps.extend(control_deps.iter().cloned());
-                facts
-                    .var_buffer_deps
-                    .entry(tile.clone())
-                    .or_default()
-                    .extend(deps);
+                extend_idents(&mut deps, control_deps);
+                merge_into_map_set(&mut facts.var_buffer_deps, tile, &mut deps);
+                facts.restore_scratch(deps);
             }
             Node::TileStore {
                 buffer,
                 origin,
                 tile,
             } => {
-                *facts.buffer_writes.entry(buffer.clone()).or_insert(0) += 1;
-                *facts.var_counts.entry(tile.clone()).or_insert(0) += 1;
-                let mut deps = FxHashSet::default();
-                deps.insert(tile.clone());
+                bump_count(&mut facts.buffer_writes, buffer);
+                bump_count(&mut facts.var_counts, tile);
+                let mut deps = facts.take_scratch();
+                insert_ident(&mut deps, tile);
                 for off in origin {
                     record_expr_uses_and_buffer_deps_into(&mut deps, off, facts);
                 }
-                deps.extend(control_deps.iter().cloned());
+                extend_idents(&mut deps, control_deps);
                 if let Some(tile_deps) = facts.var_buffer_deps.get(tile) {
-                    deps.extend(tile_deps.iter().cloned());
+                    extend_idents(&mut deps, tile_deps);
                 }
-                add_buffer_write_deps(facts, buffer, deps);
+                merge_into_map_set(&mut facts.buffer_write_deps, buffer, &mut deps);
+                facts.restore_scratch(deps);
             }
             Node::TileElementwise { out, inputs, body } => {
                 for inp in inputs {
-                    *facts.var_counts.entry(inp.clone()).or_insert(0) += 1;
+                    bump_count(&mut facts.var_counts, inp);
                 }
                 derive_nodes_uses(body, facts, control_deps);
-                let mut deps = FxHashSet::default();
+                let mut deps = facts.take_scratch();
                 for inp in inputs {
-                    deps.insert(inp.clone());
+                    insert_ident(&mut deps, inp);
                     if let Some(inp_deps) = facts.var_buffer_deps.get(inp) {
-                        deps.extend(inp_deps.iter().cloned());
+                        extend_idents(&mut deps, inp_deps);
                     }
                 }
-                deps.extend(control_deps.iter().cloned());
-                facts
-                    .var_buffer_deps
-                    .entry(out.clone())
-                    .or_default()
-                    .extend(deps);
+                extend_idents(&mut deps, control_deps);
+                if deps.is_empty() {
+                    if !facts.var_buffer_deps.contains_key(out) {
+                        facts
+                            .var_buffer_deps
+                            .insert(out.clone(), FxHashSet::default());
+                    }
+                } else {
+                    merge_into_map_set(&mut facts.var_buffer_deps, out, &mut deps);
+                }
+                facts.restore_scratch(deps);
             }
             Node::TileMatmul { acc, a, b } => {
-                *facts.var_counts.entry(acc.clone()).or_insert(0) += 1;
-                *facts.var_counts.entry(a.clone()).or_insert(0) += 1;
-                *facts.var_counts.entry(b.clone()).or_insert(0) += 1;
-                let mut deps = FxHashSet::default();
-                deps.insert(acc.clone());
-                deps.insert(a.clone());
-                deps.insert(b.clone());
-                deps.extend(control_deps.iter().cloned());
-                facts
-                    .var_buffer_deps
-                    .entry(acc.clone())
-                    .or_default()
-                    .extend(deps);
+                bump_count(&mut facts.var_counts, acc);
+                bump_count(&mut facts.var_counts, a);
+                bump_count(&mut facts.var_counts, b);
+                let mut deps = facts.take_scratch();
+                insert_ident(&mut deps, acc);
+                insert_ident(&mut deps, a);
+                insert_ident(&mut deps, b);
+                extend_idents(&mut deps, control_deps);
+                merge_into_map_set(&mut facts.var_buffer_deps, acc, &mut deps);
+                facts.restore_scratch(deps);
             }
             Node::TileReduce { out, tile, .. } => {
-                *facts.var_counts.entry(tile.clone()).or_insert(0) += 1;
-                let mut deps = FxHashSet::default();
-                deps.insert(tile.clone());
-                deps.extend(control_deps.iter().cloned());
-                facts
-                    .var_buffer_deps
-                    .entry(out.clone())
-                    .or_default()
-                    .extend(deps);
+                bump_count(&mut facts.var_counts, tile);
+                let mut deps = facts.take_scratch();
+                insert_ident(&mut deps, tile);
+                extend_idents(&mut deps, control_deps);
+                merge_into_map_set(&mut facts.var_buffer_deps, out, &mut deps);
+                facts.restore_scratch(deps);
             }
-            Node::TileDecl { .. } => {}
-            Node::Return
+            Node::TileDecl { .. }
+            | Node::Return
             | Node::Barrier { .. }
             | Node::LogicalBarrier { .. }
             | Node::AsyncWait { .. }
@@ -241,17 +319,6 @@ fn derive_nodes_uses(nodes: &[Node], facts: &mut UseFactBuilder, control_deps: &
     }
 }
 
-fn record_expr_uses_and_buffer_deps(expr: &Expr, facts: &mut UseFactBuilder) -> FxHashSet<Ident> {
-    let mut deps = FxHashSet::default();
-    record_expr_uses_and_buffer_deps_into(&mut deps, expr, facts);
-    deps
-}
-
-/// In-place variant of [`record_expr_uses_and_buffer_deps`]. Use when
-/// merging dep sets across two sibling expressions (Store index+value,
-/// AsyncLoad/Store offset+size, Loop from+to)  -  avoids the second
-/// allocation that the return-value form would otherwise produce on
-/// `deps.extend(record_expr_uses_and_buffer_deps(...))`.
 fn record_expr_uses_and_buffer_deps_into(
     deps: &mut FxHashSet<Ident>,
     expr: &Expr,
@@ -262,31 +329,28 @@ fn record_expr_uses_and_buffer_deps_into(
     while let Some(expr) = stack.pop() {
         match expr {
             Expr::Var(name) => {
-                *facts.var_counts.entry(name.clone()).or_insert(0) += 1;
+                bump_count(&mut facts.var_counts, name);
                 if let Some(var_deps) = facts.var_buffer_deps.get(name) {
-                    deps.extend(var_deps.iter().cloned());
+                    extend_idents(deps, var_deps);
                 }
             }
             Expr::Load { buffer, index } => {
-                *facts.buffer_reads.entry(buffer.clone()).or_insert(0) += 1;
+                bump_count(&mut facts.buffer_reads, buffer);
                 count_index_axes(index, buffer, facts);
-                deps.insert(buffer.clone());
+                insert_ident(deps, buffer);
             }
             Expr::BufLen { buffer } => {
-                *facts.buffer_reads.entry(buffer.clone()).or_insert(0) += 1;
-                deps.insert(buffer.clone());
+                bump_count(&mut facts.buffer_reads, buffer);
+                insert_ident(deps, buffer);
             }
-            // Naming a buffer as a call argument makes the caller depend on
-            // it, but reads nothing by itself: the callee's own loads are
-            // what get counted once the call is inlined.
             Expr::BufferRef { buffer } => {
-                deps.insert(buffer.clone());
+                insert_ident(deps, buffer);
             }
             Expr::Atomic { buffer, index, .. } => {
-                *facts.buffer_reads.entry(buffer.clone()).or_insert(0) += 1;
-                *facts.buffer_writes.entry(buffer.clone()).or_insert(0) += 1;
+                bump_count(&mut facts.buffer_reads, buffer);
+                bump_count(&mut facts.buffer_writes, buffer);
                 count_index_axes(index, buffer, facts);
-                deps.insert(buffer.clone());
+                insert_ident(deps, buffer);
             }
             Expr::Opaque(_) => {
                 facts.has_opaque = true;
@@ -311,17 +375,6 @@ fn union_deps(a: &FxHashSet<Ident>, b: &FxHashSet<Ident>) -> FxHashSet<Ident> {
     out
 }
 
-fn add_buffer_write_deps(facts: &mut UseFactBuilder, buffer: &Ident, deps: FxHashSet<Ident>) {
-    if deps.is_empty() {
-        return;
-    }
-    facts
-        .buffer_write_deps
-        .entry(buffer.clone())
-        .or_default()
-        .extend(deps);
-}
-
 fn count_index_axes(index: &Expr, buffer: &Ident, facts: &mut UseFactBuilder) {
     let mut stack: SmallVec<[&Expr; 16]> = SmallVec::new();
     stack.push(index);
@@ -331,14 +384,7 @@ fn count_index_axes(index: &Expr, buffer: &Ident, facts: &mut UseFactBuilder) {
         | Expr::LogicalIndex { axis }
         | Expr::LogicalWithinTileId { axis } = expr
         {
-            if let Some(slot) = facts
-                .buffer_index_axes
-                .entry(buffer.clone())
-                .or_insert([0; 3])
-                .get_mut(usize::from(*axis).min(2))
-            {
-                *slot += 1;
-            }
+            bump_axis(&mut facts.buffer_index_axes, buffer, *axis);
         }
         crate::optimizer::rewrite::push_expr_children(expr, &mut stack);
     }

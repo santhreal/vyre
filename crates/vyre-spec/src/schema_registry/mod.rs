@@ -696,7 +696,7 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         domain_separator: "VYRE_SAFETENSOR_INDEX_V1",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_SAFETENSOR_FIXTURES,
-        owning_package: "vyre-safetensors",
+        owning_package: "vyre-libs",
     },
     SchemaDefinition {
         id: SchemaId::AotManifest,

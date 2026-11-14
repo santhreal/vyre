@@ -30,13 +30,12 @@ use vyre_reference::composition_witness::{
     differentiable_autotune_pick_config_witness_into, do_intervention_delete_incoming_witness_into,
     dominator_frontier_witness, dominator_frontier_witness_into, dominator_idoms_witness,
     dominator_sets_idoms_witness, dominator_tree_witness, dp_clip_per_sample_witness,
-    dp_clip_per_sample_witness_into,
-    exploded_ifds_csr_witness, fisher_rao_distance_witness, fnv1a32_witness, fnv1a64_witness,
-    fractional_derivative_witness, frontier_absorb_witness, frontier_domain_popcount_witness,
-    frontier_popcount_witness, frontier_step_sharded_witness, frontier_to_queue_witness,
-    frontier_to_queue_witness_into, functor_apply_witness, functor_apply_witness_into,
-    fusion_affinity_witness, fusion_affinity_witness_into, gaussian_rdp_step_witness,
-    grunwald_letnikov_kernel_witness, homotopy_euler_predictor_witness,
+    dp_clip_per_sample_witness_into, exploded_ifds_csr_witness, fisher_rao_distance_witness,
+    fnv1a32_witness, fnv1a64_witness, fractional_derivative_witness, frontier_absorb_witness,
+    frontier_domain_popcount_witness, frontier_popcount_witness, frontier_step_sharded_witness,
+    frontier_to_queue_witness, frontier_to_queue_witness_into, functor_apply_witness,
+    functor_apply_witness_into, fusion_affinity_witness, fusion_affinity_witness_into,
+    gaussian_rdp_step_witness, grunwald_letnikov_kernel_witness, homotopy_euler_predictor_witness,
     hypervector_majority_bundle_witness, hypervector_xor_bind_witness,
     i4x8_batched_matmul_f32_scaled_witness, i4x8_batched_matmul_top1_f32_scaled_witness,
     i4x8_batched_matvec_f32_scaled_witness, i4x8_dot_f32_scaled_witness, i4x8_dot_i32_witness,
@@ -918,7 +917,6 @@ fn union_find_and_functor_and_sheaf_contracts() {
     assert!(backdoor_descendants_check_witness(&[1, 0], &[1, 0]));
     assert!(!backdoor_descendants_check_witness(&[1, 0], &[0, 1]));
 }
-
 
 #[test]
 fn ddnnf_evaluate_contract() {

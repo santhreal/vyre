@@ -63,7 +63,7 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
                     "malformed validation frame stream: let binding `{name}` appeared outside any scope"
                 ),
                 "rebuild the program through the structured IR builder before validation."
-                    .to_string(),
+                    ,
             ));
             return ControlFlow::Continue(());
         };
@@ -242,9 +242,8 @@ impl NodeVisitor for PreorderValidator<'_, '_> {
                     "V129",
                     ValidationPhase::Memory,
                     ValidationLocation::Program,
-                    "malformed barrier visitor dispatch".to_string(),
-                    "rebuild the program through the structured IR builder before validation."
-                        .to_string(),
+                    "malformed barrier visitor dispatch",
+                    "rebuild the program through the structured IR builder before validation.",
                 ));
                 return ControlFlow::Continue(());
             }

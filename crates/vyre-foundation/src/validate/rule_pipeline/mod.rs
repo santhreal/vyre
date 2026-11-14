@@ -513,7 +513,7 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
                 }
                 Frame::PopScope => {
                     let Some(frame) = self.scope_stack.pop() else {
-                        self.errors.push(err("V111", ValidationPhase::Node, ValidationLocation::Program, "malformed validation frame stream: PopScope without matching PushScope".to_string(), "rebuild the program through the structured IR builder before validation.".to_string()));
+                        self.errors.push(err("V111", ValidationPhase::Node, ValidationLocation::Program, "malformed validation frame stream: PopScope without matching PushScope", "rebuild the program through the structured IR builder before validation."));
                         continue;
                     };
                     node_rules::restore_scope(&mut self.scope, frame.scope_log);
@@ -523,7 +523,7 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
                     let Some(frame) = self.scope_stack.last_mut() else {
                         self.errors.push(err("V114", ValidationPhase::Node, ValidationLocation::Program, format!(
                             "malformed validation frame stream: loop variable `{var}` inserted outside any scope"
-                        ), "rebuild the program through the structured IR builder before validation.".to_string()));
+                        ), "rebuild the program through the structured IR builder before validation."));
                         continue;
                     };
                     node_rules::insert_binding(
@@ -564,7 +564,7 @@ impl<'p, 'o> PreorderValidator<'p, 'o> {
         for generator in duplicates {
             self.errors.push(err("V115", ValidationPhase::Composition, ValidationLocation::Program, format!(
                 "region `{generator}` is marked non-composable with itself but appears multiple times in one fused program"
-            ), "split the parser into separate dispatches, or give each instance distinct scratch storage before fusion.".to_string()));
+            ), "split the parser into separate dispatches, or give each instance distinct scratch storage before fusion."));
         }
     }
 
