@@ -8,9 +8,8 @@
 //! the readback ranges, and the metric points differ, so those are what a case
 //! supplies.
 
-
-use vyre_runtime::{ResidentDispatchStep, ResidentReadRange};
 use vyre_foundation::ir::Program;
+use vyre_runtime::{ResidentDispatchStep, ResidentReadRange};
 
 use crate::api::case::{BenchContext, BenchError, BenchRun};
 use crate::api::metric::{BenchMetrics, MetricPoint};

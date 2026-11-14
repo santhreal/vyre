@@ -10,8 +10,8 @@ use crate::math::conv1d::{conv1d_node, conv1d_program, gaussian_weights, pack_pa
 use crate::plumbing::host::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_foundation::ir::Node;
 use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
+use vyre_foundation::ir::Node;
 #[cfg(test)]
 use vyre_reference::composition_witness::conv1d_witness as reference_conv1d;
 

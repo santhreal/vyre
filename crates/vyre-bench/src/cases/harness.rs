@@ -158,7 +158,8 @@ pub(crate) struct WorkloadDescription {
     pub(crate) min_input_bytes: Option<u64>,
     pub(crate) feature_set: &'static [&'static str],
     pub(crate) contract: Option<ContractDescription>,
-    pub(crate) verify_reference: Option<fn(&BenchContext, &PreparedCase) -> Result<bool, BenchError>>,
+    pub(crate) verify_reference:
+        Option<fn(&BenchContext, &PreparedCase) -> Result<bool, BenchError>>,
 }
 
 /// The suites an honest-layer case runs in.

@@ -21,11 +21,11 @@
 //! not that the approximate instruction lands inside the window it was granted;
 //! `prove` compares the output and the per-op ULP audit measures the distance.
 
-use vyre_runtime::BackendRegistration;
 use vyre_foundation::fp_parity::{f32_ulp_tolerance, BACKEND_TRANSCENDENTAL_ULP_BUDGET};
 use vyre_foundation::ir::Program;
 use vyre_registry_link::backend::live_backend_registry;
 use vyre_registry_link::operation::live_operation_registry;
+use vyre_runtime::BackendRegistration;
 use vyre_test_support::conform::production::ProductionSession;
 use vyre_test_support::conform::witness_plan::{plan_witness_inputs_into, WitnessInputPlan};
 

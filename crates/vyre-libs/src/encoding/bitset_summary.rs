@@ -8,8 +8,8 @@
 use crate::plumbing::host::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
+use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Maximum word count where the sum of bit counts is guaranteed not to wrap a u32 reduction accumulator.
 const MAX_TOTAL_SET_BITS_WORDS: usize = (u32::MAX / 32) as usize;

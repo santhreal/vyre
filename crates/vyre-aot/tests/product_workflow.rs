@@ -14,13 +14,13 @@ use vyre_aot::{
     compile, install_package, load_installed_package, package_artifact, TargetId,
     ValidatedCompileRequest,
 };
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program, ProgramGraph};
-use vyre_foundation::validate::BackendCapabilities;
-use vyre_libs::nn::safetensors::{ExpectedShardDigest, SafetensorError, ShardedSafetensorIndex};
 use vyre_compiler::{
     ArtifactEnvelope, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts,
     ObjectiveMetric, SearchBudget,
 };
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program, ProgramGraph};
+use vyre_foundation::validate::BackendCapabilities;
+use vyre_libs::nn::safetensors::{ExpectedShardDigest, SafetensorError, ShardedSafetensorIndex};
 use xtask::debug::ArtifactReport;
 
 /// Elements in the `params` resource the checkpoint supplies.

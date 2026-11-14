@@ -180,7 +180,11 @@ impl BenchCase for ScanAcIrregularLiterals {
             prepared.baseline_wall_ns,
             prepared.stats,
             custom,
-            prepared.baseline_outputs.iter().map(Vec::len).sum::<usize>() as u64,
+            prepared
+                .baseline_outputs
+                .iter()
+                .map(Vec::len)
+                .sum::<usize>() as u64,
             include_baseline_outputs.then(|| prepared.baseline_outputs.clone()),
         ))
     }

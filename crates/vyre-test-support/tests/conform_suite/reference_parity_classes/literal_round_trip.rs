@@ -17,13 +17,13 @@
 
 use std::collections::BTreeMap;
 
-use vyre_foundation::ir::{Program, ProgramGraph};
-use vyre_foundation::logical::LogicalProgramGraph;
 use vyre_compiler::lower::LiteralValue;
 use vyre_compiler::{
     ArtifactNodeId, FusionGroupId, TargetModuleBundle, TargetModuleImage,
     TARGET_MODULE_BUNDLE_SCHEMA_VERSION,
 };
+use vyre_foundation::ir::{Program, ProgramGraph};
+use vyre_foundation::logical::LogicalProgramGraph;
 use vyre_registry_link::operation::live_operation_registry;
 
 fn image_for(operation_id: &str, program: &Program) -> Result<TargetModuleImage, String> {

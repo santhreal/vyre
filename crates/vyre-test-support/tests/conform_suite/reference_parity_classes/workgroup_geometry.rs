@@ -19,10 +19,10 @@
 //! failing an axis check. It also says nothing about whether the extent is a
 //! good one for throughput.
 
-use vyre_runtime::BackendRegistration;
 use vyre_foundation::ir::Program;
 use vyre_registry_link::backend::live_backend_registry;
 use vyre_registry_link::operation::live_operation_registry;
+use vyre_runtime::BackendRegistration;
 
 /// One registered target's authenticated workgroup limits.
 struct TargetLimits {

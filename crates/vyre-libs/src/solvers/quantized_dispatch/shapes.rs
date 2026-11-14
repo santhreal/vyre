@@ -10,10 +10,10 @@ use crate::plumbing::host::dispatch_buffers::{
     decode_f32_output_exact, ensure_input_slots, write_f32_slice_le_bytes, write_u32_slice_le_bytes,
 };
 use crate::plumbing::host::program_cache::ProgramCache;
-use vyre_foundation::ir::Program;
 use vyre_compiler::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
+use vyre_foundation::ir::Program;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) struct PackedI4BatchedMatmulShape {
     pub(super) output_words: usize,

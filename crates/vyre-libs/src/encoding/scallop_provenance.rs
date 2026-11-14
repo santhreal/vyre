@@ -57,8 +57,8 @@ use crate::math::scallop_join;
 use crate::plumbing::host::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_foundation::ir::Program;
 use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
+use vyre_foundation::ir::Program;
 
 /// Default safety cap on Datalog fixpoint iterations. Monotone Datalog
 /// converges in ≤ n² iterations on n-cell systems; this cap is a

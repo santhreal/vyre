@@ -129,11 +129,9 @@ where
     T: Into<std::ffi::OsString> + Clone,
 {
     let mut argv: Vec<std::ffi::OsString> = args.into_iter().map(Into::into).collect();
-    if argv
-        .get(1)
-        .and_then(|arg| arg.to_str())
-        .is_some_and(|arg| arg.starts_with('-') && !matches!(arg, "-h" | "--help" | "-V" | "--version"))
-    {
+    if argv.get(1).and_then(|arg| arg.to_str()).is_some_and(|arg| {
+        arg.starts_with('-') && !matches!(arg, "-h" | "--help" | "-V" | "--version")
+    }) {
         argv.insert(1, std::ffi::OsString::from("run"));
     }
     let cli = Cli::parse_from(argv);
