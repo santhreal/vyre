@@ -45,7 +45,6 @@ impl InMemoryPipelineCache {
             |shard| {
                 shard.entries.clear();
                 shard.bytes = 0;
-                shard.last_eviction = None;
             },
         )
     }
@@ -75,29 +74,12 @@ impl InMemoryPipelineCache {
         self.shards
             .iter()
             .map(|s| Self::lock_shard(s).entries.len())
-            .fold(0usize, |acc, value| {
-                cache_usize_add(
-                    acc,
-                    value,
-                    "entry count",
-                    "shard cache metrics before snapshotting",
-                )
-            })
+            .sum()
     }
 
     /// Current cached artifact bytes. Thread-safe snapshot.
     pub fn cached_bytes(&self) -> usize {
-        self.shards
-            .iter()
-            .map(|s| Self::lock_shard(s).bytes)
-            .fold(0usize, |acc, value| {
-                cache_usize_add(
-                    acc,
-                    value,
-                    "byte count",
-                    "shard cache metrics before snapshotting",
-                )
-            })
+        self.shards.iter().map(|s| Self::lock_shard(s).bytes).sum()
     }
 
     /// Whether the cache is empty.
@@ -105,19 +87,6 @@ impl InMemoryPipelineCache {
         self.shards
             .iter()
             .all(|s| Self::lock_shard(s).entries.is_empty())
-    }
-
-    /// Snapshot the most recent eviction report from every shard that has
-    /// evicted at least one artifact.
-    #[must_use]
-    pub fn eviction_reports(&self) -> Vec<InMemoryEvictionReport> {
-        let mut reports = Vec::new();
-        for shard in &self.shards {
-            if let Some(report) = Self::lock_shard(shard).last_eviction {
-                reports.push(report);
-            }
-        }
-        reports
     }
 }
 
@@ -127,61 +96,24 @@ impl Default for InMemoryPipelineCache {
     }
 }
 
-fn cache_usize_add(lhs: usize, rhs: usize, _label: &'static str, _fix: &'static str) -> usize {
-    lhs.saturating_add(rhs)
-}
-
-fn cache_usize_sub(lhs: usize, rhs: usize, _label: &'static str, _fix: &'static str) -> usize {
-    lhs.saturating_sub(rhs)
-}
-
-fn cache_u64_add(lhs: u64, rhs: u64, _label: &'static str, _fix: &'static str) -> u64 {
-    lhs.saturating_add(rhs)
-}
-
-fn cache_u64_sub(lhs: u64, rhs: u64, _label: &'static str, _fix: &'static str) -> u64 {
-    lhs.saturating_sub(rhs)
-}
-
-fn cache_usize_to_u64(value: usize, _label: &'static str, _fix: &'static str) -> u64 {
-    match u64::try_from(value) {
-        Ok(value) => value,
-        Err(_) => u64::MAX,
-    }
-}
-
 #[derive(Debug, Default)]
 struct InMemoryCacheShard {
     entries: FxHashMap<PipelineFingerprint, InMemoryCacheEntry>,
     bytes: usize,
     clock: u64,
-    last_eviction: Option<InMemoryEvictionReport>,
 }
 
 impl InMemoryCacheShard {
     fn next_tick(&mut self) -> u64 {
-        self.clock = cache_u64_add(
-            self.clock,
-            1,
-            "shard clock",
-            "recreate the cache before LRU timestamps wrap",
-        );
+        self.clock += 1;
         self.clock
     }
 
-    fn evict_to_limits(
-        &mut self,
-        max_entries: usize,
-        max_bytes: usize,
-    ) -> Option<InMemoryEvictionReport> {
-        let mut report = None;
+    /// Evict least-recently-used entries until both budgets hold. Returns the
+    /// evicted entry count and byte total.
+    fn evict_to_limits(&mut self, max_entries: usize, max_bytes: usize) -> (u64, u64) {
+        let (mut entries, mut bytes) = (0_u64, 0_u64);
         while self.entries.len() > max_entries || self.bytes > max_bytes {
-            let reason = InMemoryEvictionReason::from_limits(
-                self.entries.len(),
-                self.bytes,
-                max_entries,
-                max_bytes,
-            );
             let Some(victim) = self
                 .entries
                 .iter()
@@ -189,23 +121,15 @@ impl InMemoryCacheShard {
                 .map(|(fp, _)| *fp)
             else {
                 self.bytes = 0;
-                self.last_eviction = report;
-                return report;
+                break;
             };
             if let Some(removed) = self.entries.remove(&victim) {
-                self.bytes = cache_usize_sub(
-                    self.bytes,
-                    removed.bytes,
-                    "byte accounting during eviction",
-                    "rebuild the cache",
-                );
-                record_eviction_report(&mut report, reason, self.clock, &removed);
+                self.bytes = self.bytes.saturating_sub(removed.bytes);
+                entries += 1;
+                bytes += removed.bytes as u64;
             }
         }
-        if report.is_some() {
-            self.last_eviction = report;
-        }
-        report
+        (entries, bytes)
     }
 }
 
@@ -216,87 +140,6 @@ struct InMemoryCacheEntry {
     last_used: u64,
 }
 
-/// Reason the in-memory pipeline cache evicted retained artifacts.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum InMemoryEvictionReason {
-    /// Entry-count budget was exceeded.
-    EntryLimit,
-    /// Byte budget was exceeded.
-    ByteLimit,
-    /// Entry-count and byte budgets were both exceeded.
-    EntryAndByteLimit,
-    /// A rejected put removed an existing artifact for the same key.
-    RejectedPut,
-}
-
-impl InMemoryEvictionReason {
-    fn from_limits(entries: usize, bytes: usize, max_entries: usize, max_bytes: usize) -> Self {
-        match (entries > max_entries, bytes > max_bytes) {
-            (true, true) => Self::EntryAndByteLimit,
-            (true, false) => Self::EntryLimit,
-            (false, true) => Self::ByteLimit,
-            (false, false) => Self::EntryLimit,
-        }
-    }
-}
-
-/// Structured eviction report for one in-memory cache shard.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct InMemoryEvictionReport {
-    /// Number of entries removed by the eviction decision.
-    pub entries: u64,
-    /// Bytes removed by the eviction decision.
-    pub bytes: u64,
-    /// Maximum age of an evicted entry in shard clock ticks.
-    pub max_age_ticks: u64,
-    /// Why eviction happened.
-    pub reason: InMemoryEvictionReason,
-}
-
-fn record_eviction_report(
-    report: &mut Option<InMemoryEvictionReport>,
-    reason: InMemoryEvictionReason,
-    now: u64,
-    removed: &InMemoryCacheEntry,
-) {
-    let removed_bytes = cache_usize_to_u64(
-        removed.bytes,
-        "evicted byte count",
-        "shard cache artifacts before eviction",
-    );
-    let age = cache_u64_sub(
-        now,
-        removed.last_used,
-        "evicted entry age",
-        "rebuild the cache LRU clock",
-    );
-    match report {
-        Some(report) => {
-            report.entries = cache_u64_add(
-                report.entries,
-                1,
-                "eviction count",
-                "shard cache eviction work",
-            );
-            report.bytes = cache_u64_add(
-                report.bytes,
-                removed_bytes,
-                "evicted byte count",
-                "shard cache eviction work",
-            );
-            report.max_age_ticks = report.max_age_ticks.max(age);
-        }
-        None => {
-            *report = Some(InMemoryEvictionReport {
-                entries: 1,
-                bytes: removed_bytes,
-                max_age_ticks: age,
-                reason,
-            });
-        }
-    }
-}
-
 impl PipelineCacheStore for InMemoryPipelineCache {
     fn get(&self, fp: &PipelineFingerprint) -> Option<Vec<u8>> {
         self.get_arc(fp).map(|artifact| (*artifact).clone())
@@ -305,16 +148,16 @@ impl PipelineCacheStore for InMemoryPipelineCache {
     /// V7-PERF-009: zero-clone hot-path lookup. The cache already stores
     /// payloads behind `Arc<Vec<u8>>`, so a hit is one refcount bump.
     fn get_arc(&self, fp: &PipelineFingerprint) -> Option<Arc<Vec<u8>>> {
-        PipelineCacheCounters::increment(&self.metrics.lookups, "lookups");
+        PipelineCacheCounters::add(&self.metrics.lookups, 1);
         let i = Self::shard_index(fp);
         let mut shard = Self::lock_shard(&self.shards[i]);
         let tick = shard.next_tick();
         let Some(entry) = shard.entries.get_mut(fp) else {
-            PipelineCacheCounters::increment(&self.metrics.misses, "misses");
+            PipelineCacheCounters::add(&self.metrics.misses, 1);
             return None;
         };
         entry.last_used = tick;
-        PipelineCacheCounters::increment(&self.metrics.hits, "hits");
+        PipelineCacheCounters::add(&self.metrics.hits, 1);
         Some(Arc::clone(&entry.artifact))
     }
 
@@ -326,52 +169,20 @@ impl PipelineCacheStore for InMemoryPipelineCache {
             || self.max_bytes_per_shard == 0
             || bytes > self.max_bytes_per_shard
         {
-            PipelineCacheCounters::increment(&self.metrics.rejected_puts, "rejected puts");
+            PipelineCacheCounters::add(&self.metrics.rejected_puts, 1);
             if let Some(removed) = shard.entries.remove(&fp) {
-                let tick = shard.next_tick();
-                shard.bytes = cache_usize_sub(
-                    shard.bytes,
-                    removed.bytes,
-                    "byte accounting while rejecting put",
-                    "rebuild the cache",
-                );
-                let mut report = None;
-                record_eviction_report(
-                    &mut report,
-                    InMemoryEvictionReason::RejectedPut,
-                    tick,
-                    &removed,
-                );
-                shard.last_eviction = report;
-                PipelineCacheCounters::increment(&self.metrics.evictions, "evictions");
-                PipelineCacheCounters::add(
-                    &self.metrics.evicted_bytes,
-                    cache_usize_to_u64(
-                        removed.bytes,
-                        "evicted byte count",
-                        "shard cache artifacts before eviction",
-                    ),
-                    "evicted bytes",
-                );
+                shard.bytes = shard.bytes.saturating_sub(removed.bytes);
+                PipelineCacheCounters::add(&self.metrics.evictions, 1);
+                PipelineCacheCounters::add(&self.metrics.evicted_bytes, removed.bytes as u64);
             }
             return;
         }
 
         if let Some(existing) = shard.entries.remove(&fp) {
-            shard.bytes = cache_usize_sub(
-                shard.bytes,
-                existing.bytes,
-                "byte accounting while replacing entry",
-                "rebuild the cache",
-            );
+            shard.bytes = shard.bytes.saturating_sub(existing.bytes);
         }
         let tick = shard.next_tick();
-        shard.bytes = cache_usize_add(
-            shard.bytes,
-            bytes,
-            "byte accounting while inserting entry",
-            "lower per-shard cache byte budget",
-        );
+        shard.bytes += bytes;
         shard.entries.insert(
             fp,
             InMemoryCacheEntry {
@@ -380,28 +191,18 @@ impl PipelineCacheStore for InMemoryPipelineCache {
                 last_used: tick,
             },
         );
-        PipelineCacheCounters::increment(&self.metrics.puts, "puts");
-        if let Some(report) =
-            shard.evict_to_limits(self.max_entries_per_shard, self.max_bytes_per_shard)
-        {
-            PipelineCacheCounters::add(&self.metrics.evictions, report.entries, "evictions");
-            PipelineCacheCounters::add(&self.metrics.evicted_bytes, report.bytes, "evicted bytes");
+        PipelineCacheCounters::add(&self.metrics.puts, 1);
+        let (evicted, evicted_bytes) =
+            shard.evict_to_limits(self.max_entries_per_shard, self.max_bytes_per_shard);
+        if evicted > 0 {
+            PipelineCacheCounters::add(&self.metrics.evictions, evicted);
+            PipelineCacheCounters::add(&self.metrics.evicted_bytes, evicted_bytes);
         }
     }
 
     fn metrics(&self) -> PipelineCacheMetrics {
-        self.metrics.snapshot(
-            cache_usize_to_u64(
-                self.cached_bytes(),
-                "retained byte snapshot",
-                "shard cache metrics before snapshotting",
-            ),
-            cache_usize_to_u64(
-                self.len(),
-                "entry count snapshot",
-                "shard cache metrics before snapshotting",
-            ),
-        )
+        self.metrics
+            .snapshot(self.cached_bytes() as u64, self.len() as u64)
     }
 }
 
@@ -500,31 +301,7 @@ mod tests {
     }
 
     #[test]
-    fn in_memory_cache_eviction_report_records_reason_entries_bytes_and_age() {
-        let cache = InMemoryPipelineCache::with_limits(1, 8);
-        let a = PipelineFingerprint([0; 32]);
-        let mut b_bytes = [0; 32];
-        b_bytes[1] = 1;
-        let b = PipelineFingerprint(b_bytes);
-
-        cache.put(a, vec![1; 4]);
-        assert!(cache.get(&a).is_some());
-        cache.put(b, vec![2; 4]);
-
-        let reports = cache.eviction_reports();
-        assert_eq!(reports.len(), 1);
-        let report = reports[0];
-        assert_eq!(report.reason, InMemoryEvictionReason::EntryLimit);
-        assert_eq!(report.entries, 1);
-        assert_eq!(report.bytes, 4);
-        assert!(
-            report.max_age_ticks > 0,
-            "Fix: eviction reports must expose LRU age, got {report:?}"
-        );
-    }
-
-    #[test]
-    fn rejected_oversize_put_records_eviction_reason_for_replaced_entry() {
+    fn rejected_oversize_put_evicts_the_replaced_entry() {
         let cache = InMemoryPipelineCache::with_limits(8, 8);
         let fp = PipelineFingerprint([0; 32]);
 
@@ -532,12 +309,11 @@ mod tests {
         cache.put(fp, vec![2; 9]);
 
         assert!(cache.get(&fp).is_none());
-        let reports = cache.eviction_reports();
-        assert_eq!(reports.len(), 1);
-        let report = reports[0];
-        assert_eq!(report.reason, InMemoryEvictionReason::RejectedPut);
-        assert_eq!(report.entries, 1);
-        assert_eq!(report.bytes, 4);
+        let metrics = cache.metrics();
+        assert_eq!(metrics.rejected_puts, 1);
+        assert_eq!(metrics.evictions, 1);
+        assert_eq!(metrics.evicted_bytes, 4);
+        assert_eq!(metrics.cached_bytes, 0);
     }
 
     #[test]

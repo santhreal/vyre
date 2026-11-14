@@ -30,75 +30,15 @@ pub struct PipelineCacheMetrics {
     pub entries: u64,
 }
 
-/// Pipeline-cache metric arithmetic failure.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PipelineCacheMetricError {
-    field: &'static str,
-    message: String,
-}
-
-impl PipelineCacheMetricError {
-    fn new(field: &'static str, message: impl Into<String>) -> Self {
-        Self {
-            field,
-            message: message.into(),
-        }
-    }
-
-    /// Metric field that failed arithmetic.
-    #[must_use]
-    pub const fn field(&self) -> &'static str {
-        self.field
-    }
-
-    /// Actionable failure text.
-    #[must_use]
-    pub fn message(&self) -> &str {
-        &self.message
-    }
-}
-
-impl std::fmt::Display for PipelineCacheMetricError {
-    fn fmt(&self, formatter: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(formatter, "{}", self.message)
-    }
-}
-
-impl std::error::Error for PipelineCacheMetricError {}
-
 impl PipelineCacheMetrics {
     /// Cache-hit rate in parts per million.
     #[must_use]
     pub fn hit_rate_ppm(&self) -> u32 {
-        self.try_hit_rate_ppm().unwrap_or(u32::MAX)
-    }
-
-    /// Fallibly compute cache-hit rate in parts per million.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`PipelineCacheMetricError`] when the numerator or final value
-    /// cannot fit the public metric ABI.
-    pub fn try_hit_rate_ppm(&self) -> Result<u32, PipelineCacheMetricError> {
         if self.lookups == 0 {
-            return Ok(0);
+            return 0;
         }
-        let numerator =
-            self.hits
-                .checked_mul(1_000_000)
-                .ok_or_else(|| PipelineCacheMetricError::new(
-                    "hit_rate_ppm",
-                    "pipeline cache hit-rate numerator overflowed u64. Fix: snapshot and reset cache metrics before counters saturate.",
-                ))?;
-        let value = numerator / self.lookups;
-        u32::try_from(value).map_err(|source| {
-            PipelineCacheMetricError::new(
-                "hit_rate_ppm",
-                format!(
-                    "pipeline cache hit-rate ppm cannot fit u32: {source}. Fix: snapshot and reset cache metrics before counters saturate."
-                ),
-            )
-        })
+        (u128::from(self.hits) * 1_000_000 / u128::from(self.lookups)).min(u128::from(u32::MAX))
+            as u32
     }
 
     /// Sum two readouts, clamping each counter at `u64::MAX`.
@@ -106,9 +46,7 @@ impl PipelineCacheMetrics {
     /// `PipelineCacheStore::metrics` returns a value, so an aggregate readout
     /// has nowhere to report an overflow to. Clamping is the contract; a
     /// counter that reaches `u64::MAX` is already past every rate this cache
-    /// can be asked about. The fallible surface that matters is on the write
-    /// side, where [`PipelineCacheCounters::try_add`] rejects the increment
-    /// that would wrap.
+    /// can be asked about.
     pub(super) fn saturating_add(self, rhs: Self) -> Self {
         Self {
             lookups: self.lookups.saturating_add(rhs.lookups),
@@ -140,38 +78,9 @@ pub(super) struct PipelineCacheCounters {
 }
 
 impl PipelineCacheCounters {
-    pub(super) fn increment(counter: &AtomicU64, label: &'static str) {
-        Self::add(counter, 1, label);
-    }
-
-    pub(super) fn add(counter: &AtomicU64, value: u64, label: &'static str) {
-        if let Err(error) = Self::try_add(counter, value, label) {
-            tracing::warn!(error = %error, label, "pipeline cache counter saturated");
-            counter.store(u64::MAX, Ordering::Relaxed);
-        }
-    }
-
-    pub(super) fn try_add(
-        counter: &AtomicU64,
-        value: u64,
-        label: &'static str,
-    ) -> Result<(), PipelineCacheMetricError> {
-        let mut current = counter.load(Ordering::Relaxed);
-        loop {
-            let Some(next) = current.checked_add(value) else {
-                return Err(PipelineCacheMetricError::new(
-                    label,
-                    format!(
-                        "pipeline cache counter {label} overflowed u64. Fix: snapshot and reset cache metrics before counters saturate."
-                    ),
-                ));
-            };
-            match counter.compare_exchange_weak(current, next, Ordering::Relaxed, Ordering::Relaxed)
-            {
-                Ok(_) => return Ok(()),
-                Err(observed) => current = observed,
-            }
-        }
+    #[inline]
+    pub(super) fn add(counter: &AtomicU64, value: u64) {
+        counter.fetch_add(value, Ordering::Relaxed);
     }
 
     pub(super) fn snapshot(&self, cached_bytes: u64, entries: u64) -> PipelineCacheMetrics {
@@ -191,12 +100,10 @@ impl PipelineCacheCounters {
     }
 }
 
-// Inline: covers `PipelineCacheCounters`, `add`, which no integration test can name.
+// Inline: covers the crate-private `saturating_add`, which no integration test can name.
 #[cfg(test)]
 mod tests {
-    use std::sync::atomic::AtomicU64;
-
-    use super::{PipelineCacheCounters, PipelineCacheMetrics};
+    use super::PipelineCacheMetrics;
 
     #[test]
     fn pipeline_cache_metrics_generated_hit_rates_are_exact_ppm() {
@@ -227,52 +134,5 @@ mod tests {
 
         assert_eq!(metrics.cached_bytes, u64::MAX);
         assert_eq!(metrics.hits, 42);
-    }
-
-    #[test]
-    fn pipeline_cache_counter_add_uses_checked_shared_arithmetic() {
-        let counter = AtomicU64::new(41);
-
-        PipelineCacheCounters::add(&counter, 1, "generated counter");
-
-        assert_eq!(counter.load(std::sync::atomic::Ordering::Relaxed), 42);
-    }
-
-    #[test]
-    fn pipeline_cache_counter_try_add_rejects_overflow_without_panic() {
-        let counter = AtomicU64::new(u64::MAX);
-
-        let error = PipelineCacheCounters::try_add(&counter, 1, "generated counter")
-            .expect_err("Fix: fallible counter add must reject overflow");
-
-        assert_eq!(error.field(), "generated counter");
-        assert!(error.message().contains("Fix:"));
-        assert_eq!(counter.load(std::sync::atomic::Ordering::Relaxed), u64::MAX);
-    }
-
-    #[test]
-    fn pipeline_cache_counter_compat_add_saturates_on_overflow() {
-        let counter = AtomicU64::new(u64::MAX);
-
-        PipelineCacheCounters::add(&counter, 1, "generated counter");
-
-        assert_eq!(counter.load(std::sync::atomic::Ordering::Relaxed), u64::MAX);
-    }
-
-    #[test]
-    fn pipeline_cache_hit_rate_try_path_rejects_overflow_without_panic() {
-        let metrics = PipelineCacheMetrics {
-            lookups: 1,
-            hits: u64::MAX,
-            ..PipelineCacheMetrics::default()
-        };
-
-        let error = metrics
-            .try_hit_rate_ppm()
-            .expect_err("Fix: fallible hit-rate path must reject numerator overflow");
-
-        assert_eq!(error.field(), "hit_rate_ppm");
-        assert!(error.message().contains("Fix:"));
-        assert_eq!(metrics.hit_rate_ppm(), u32::MAX);
     }
 }
