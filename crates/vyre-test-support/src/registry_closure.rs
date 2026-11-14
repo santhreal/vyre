@@ -35,8 +35,8 @@ use crate::read_source_file_bounded;
 /// * **now-covered**: a waiver entry that has since gained a test/registry footprint;
 /// * **unwaived**: an uncovered builder missing from the waiver (the real finding to fix).
 ///
-/// `floor` is the minimum expected builder count; it fails loudly if the source enumeration
-/// silently breaks (e.g. a parser regression that finds zero builders).
+/// When `floor > 0`, at least one `pub fn ... -> Program` builder must be enumerated
+/// so a broken parser or source walk cannot pass vacuously on an empty set.
 ///
 /// # Panics
 /// Panics (i.e. fails the test) on any guard violation, or if a source/test file is unreadable.
@@ -186,10 +186,9 @@ pub fn assert_registry_closure_crates(crate_dirs: &[PathBuf], waiver: &[&str], f
          whose only builders are test-gated fixtures reports zero builders and still scans files."
     );
     assert!(
-        builders.len() >= floor,
-        "[{crate_name}] expected >= {floor} source `pub fn -> Program` builders (excluding `&self` \
-         methods and IR-transform passes), found {}, the source enumeration is broken.",
-        builders.len()
+        floor == 0 || !builders.is_empty(),
+        "[{crate_name}] expected at least 1 source `pub fn -> Program` builder (excluding `&self` \
+         methods and IR-transform passes), found 0; the source enumeration is broken."
     );
 }
 
@@ -583,6 +582,61 @@ mod tests {
         assert_eq!(blocks.len(), 1);
         assert!(blocks[0].contains("OperationRegistration"));
         assert!(blocks[0].ends_with('}'));
+    }
+
+    fn fixture_dir() -> tempfile::TempDir {
+        let base = crate::monorepo::cargo_target_directory().join("registry-closure-tests");
+        fs::create_dir_all(&base).expect("create scratch parent in cargo target dir");
+        tempfile::tempdir_in(base).expect("create tempdir in cargo target dir")
+    }
+
+    /// WHY: closes the class where deleting dead builders breaks hardcoded per-crate
+    /// count floors while preserving the non-vacuous source-walk and parser anchors.
+    /// Catches an empty source directory or a broken builder-signature scan returning
+    /// zero builders when `floor > 0`. Does not judge individual builder parity logic.
+    #[test]
+    fn non_zero_floor_accepts_shrunk_non_empty_builder_set() {
+        let dir = fixture_dir();
+        let src = dir.path().join("src");
+        fs::create_dir_all(&src).unwrap();
+        fs::write(
+            src.join("lib.rs"),
+            "pub fn build_one() -> Program { loop {} }\n\
+             #[cfg(test)]\n\
+             mod tests {\n\
+                 #[test]\n\
+                 fn covers_builder() { let _ = super::build_one; }\n\
+             }\n",
+        )
+        .unwrap();
+        assert_registry_closure(dir.path(), &[], 10);
+    }
+
+    #[test]
+    #[should_panic(expected = "expected at least 1 source `pub fn -> Program` builder")]
+    fn non_zero_floor_rejects_empty_builder_enumeration() {
+        let dir = fixture_dir();
+        let src = dir.path().join("src");
+        fs::create_dir_all(&src).unwrap();
+        fs::write(src.join("lib.rs"), "pub fn helper() -> u32 { 1 }\n").unwrap();
+        assert_registry_closure(dir.path(), &[], 1);
+    }
+
+    #[test]
+    fn zero_floor_accepts_crate_without_builders_when_sources_exist() {
+        let dir = fixture_dir();
+        let src = dir.path().join("src");
+        fs::create_dir_all(&src).unwrap();
+        fs::write(src.join("lib.rs"), "pub fn helper() -> u32 { 1 }\n").unwrap();
+        assert_registry_closure(dir.path(), &[], 0);
+    }
+
+    #[test]
+    #[should_panic(expected = "no production `.rs` file")]
+    fn zero_floor_rejects_missing_production_sources() {
+        let dir = fixture_dir();
+        fs::create_dir_all(dir.path().join("src")).unwrap();
+        assert_registry_closure(dir.path(), &[], 0);
     }
 }
 
