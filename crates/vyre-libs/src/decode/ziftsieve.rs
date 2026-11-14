@@ -15,10 +15,6 @@ use vyre_foundation::composition::wrap_anonymous_region;
 
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
-use crate::decode::buffers::{scoped_decode_input_buffer, scoped_decode_output_buffer};
-
-const FAMILY_PREFIX: &str = "decode_ziftsieve";
-
 /// Canonical primitive op id.
 pub const OP_ID: &str = "vyre-libs::decode::ziftsieve_literal_copy";
 /// One invocation processes one indexed LZ4 sequence.
@@ -204,31 +200,6 @@ pub fn ziftsieve_literal_copy(buffers: ZiftsieveBuffers<'_>, extents: ZiftsieveE
         ],
         WORKGROUP_SIZE,
         vec![wrap_anonymous_region(OP_ID, body)],
-    )
-}
-
-/// Build a literal-copy Program whose generic `input` and `output` bindings are
-/// rewritten to family-scoped names.
-///
-/// A fused decode kernel binds several decoders in one program, where the
-/// generic names collide. An explicitly named binding is left as the caller
-/// wrote it.
-#[must_use]
-pub fn ziftsieve_gpu(buffers: ZiftsieveBuffers<'_>, extents: ZiftsieveExtents) -> Program {
-    let input = scoped_decode_input_buffer(FAMILY_PREFIX, buffers.input);
-    let output = scoped_decode_output_buffer(
-        FAMILY_PREFIX,
-        "output",
-        buffers.output,
-        &["output", "decoded"],
-    );
-    ziftsieve_literal_copy(
-        ZiftsieveBuffers {
-            input: &input,
-            output: &output,
-            ..buffers
-        },
-        extents,
     )
 }
 
@@ -498,74 +469,5 @@ mod primitive_tests {
                 vyre_primitives::wire::pack_u32_slice(&[0u32; 3]),
             ],
         );
-    }
-}
-
-#[cfg(test)]
-#[allow(clippy::expect_used, clippy::unwrap_used)]
-mod tests {
-    use super::*;
-
-    /// WHY: the generic `input` and `output` names are what a fused decode
-    /// kernel collides on, so the rewrite in `ziftsieve_gpu` is the only thing
-    /// that separates it from the explicitly named builder. An explicit caller
-    /// name must survive the rewrite, or composition by name breaks.
-    #[test]
-    fn generic_binding_names_are_family_scoped_and_explicit_ones_are_kept() {
-        let scoped = ziftsieve_gpu(ZiftsieveBuffers::CANONICAL, ZiftsieveExtents::default());
-        let names: Vec<&str> = scoped
-            .buffers()
-            .iter()
-            .map(|buffer| buffer.name())
-            .collect();
-        assert!(
-            names.contains(&"__vyre_decode_ziftsieve_input")
-                && names.contains(&"__vyre_decode_ziftsieve_output"),
-            "Fix: generic `input`/`output` must be rewritten to family-scoped names, got {names:?}"
-        );
-        let explicit = ziftsieve_gpu(
-            ZiftsieveBuffers {
-                input: "block_words",
-                output: "literals",
-                ..ZiftsieveBuffers::CANONICAL
-            },
-            ZiftsieveExtents::default(),
-        );
-        let names: Vec<&str> = explicit
-            .buffers()
-            .iter()
-            .map(|buffer| buffer.name())
-            .collect();
-        assert!(
-            names.contains(&"block_words") && names.contains(&"literals"),
-            "Fix: an explicit caller name must be preserved, got {names:?}"
-        );
-    }
-
-    /// WHY: the module carries exactly one registered op id after the two
-    /// pre-move copies collapsed. A second id reaching the program identity is
-    /// the duplication this collapse removed, so every builder here must name
-    /// the same single operation.
-    #[test]
-    fn one_op_id_reaches_every_builder() {
-        use vyre_foundation::ir::Node;
-        use vyre_foundation::visit::walk_nodes;
-
-        let scoped = ziftsieve_gpu(ZiftsieveBuffers::CANONICAL, ZiftsieveExtents::default());
-        let explicit =
-            ziftsieve_literal_copy(ZiftsieveBuffers::CANONICAL, ZiftsieveExtents::default());
-        for program in [&scoped, &explicit] {
-            let mut ids: Vec<String> = Vec::new();
-            walk_nodes(program, |node| {
-                if let Node::Region { generator, .. } = node {
-                    ids.push(generator.as_str().to_string());
-                }
-            });
-            assert_eq!(
-                ids,
-                vec![OP_ID.to_string()],
-                "Fix: every ziftsieve builder must name only `{OP_ID}`, got {ids:?}"
-            );
-        }
     }
 }

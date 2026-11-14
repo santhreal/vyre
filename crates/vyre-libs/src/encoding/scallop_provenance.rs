@@ -7,7 +7,7 @@
 //! # The self-use
 //!
 //! When a vyre Program goes through optimizer passes (canonicalize,
-//! cse, region_inline, dce, fuse_cse, …), each pass may transform a
+//! cse, region_inline, dce, …), each pass may transform a
 //! sub-tree of Regions, dropping or merging the `source_region`
 //! annotation on the way. The host-side `Region::source_region` field
 //! preserves direct authorship, but does NOT close the transitive

@@ -20,8 +20,6 @@ mod algebraic_law;
 mod all_algebraic_laws;
 #[macro_use]
 mod op_wire;
-/// Versioned cross-engine analysis fact records.
-pub mod analysis;
 /// Atomic operation enum  -  the bounded set of read-modify-write primitives.
 /// Specification element.
 mod atomic_op;

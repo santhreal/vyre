@@ -1,7 +1,5 @@
 //! Static LR tables: productions and the action and goto slices a parse reads.
 
-use super::Action;
-
 /// A single grammar production: `lhs nonterminal -> rhs_len symbols`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Production {
@@ -30,31 +28,4 @@ pub struct LrTables {
     pub goto: &'static [u32],
     /// Production rules indexed by production id.
     pub productions: &'static [Production],
-}
-
-impl LrTables {
-    /// Look up the action for `(state, token)`.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `state` or `token` are out of bounds. Public parser entry
-    /// points validate hostile token streams before calling this method.
-    #[must_use]
-    #[inline]
-    pub fn action_at(&self, state: u32, token: u32) -> Action {
-        let idx = (state as usize) * (self.num_tokens as usize) + (token as usize);
-        Action::unpack(self.action[idx])
-    }
-
-    /// Look up the goto for `(state, nonterminal)`. `u32::MAX` means no goto.
-    ///
-    /// # Panics
-    ///
-    /// Panics if `state` or `nt` are out of bounds.
-    #[must_use]
-    #[inline]
-    pub fn goto_at(&self, state: u32, nt: u32) -> u32 {
-        let idx = (state as usize) * (self.num_nonterminals as usize) + (nt as usize);
-        self.goto[idx]
-    }
 }

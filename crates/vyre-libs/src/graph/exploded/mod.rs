@@ -70,7 +70,6 @@ pub use encoding::{
 pub use layout::{
     IfdsCsrLayout, IfdsCsrProgramCacheKey, IfdsCsrRuleInputFingerprint, IfdsCsrStaticInputKey,
 };
-pub use program_ir::build_ifds_csr_program;
 #[cfg(test)]
 pub use validation::{ifds_node_count_checked, ifds_node_count_saturating};
 pub use validation::{

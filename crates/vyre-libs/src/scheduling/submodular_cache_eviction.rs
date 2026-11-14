@@ -53,22 +53,19 @@
 //! evict every pipeline whose picked == 0
 //! ```
 
-use super::decode_u32_output_exact;
 use crate::math::submodular_greedy::{argmax_of_marginals, NO_WINNER};
 use crate::plumbing::host::dispatch_buffers::{
-    ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
+    decode_u32_scalar_exact, ensure_input_slots, execute_program, write_u32_slice_le_bytes,
+    write_zero_bytes,
 };
 #[cfg(test)]
 use crate::plumbing::host::scratch::reserve_vec_capacity;
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Caller-owned semantic execution scratch for submodular cache eviction.
 #[derive(Debug, Default)]
 pub struct SubmodularEvictionGpuScratch {
     inputs: Vec<Vec<u8>>,
-    winner: Vec<u32>,
 }
 
 /// Compute the retention set through semantic execution of the submodular
@@ -173,14 +170,7 @@ fn execute_argmax_step_with_scratch(
     write_u32_slice_le_bytes(&mut scratch.inputs[1], picked);
     write_zero_bytes(&mut scratch.inputs[2], std::mem::size_of::<u32>());
     write_zero_bytes(&mut scratch.inputs[3], std::mem::size_of::<u32>());
-    let outputs = execute_single_program(
-        executor,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
-        program,
-        &scratch.inputs,
-        policy,
-    )
-    .map(|output| output.outputs)?;
+    let outputs = execute_program(executor, program, &scratch.inputs, policy)?;
     let [winner_idx_out, winner_gain_out] = match outputs.as_slice() {
         [idx, gain] => [idx, gain],
         _ => {
@@ -190,10 +180,8 @@ fn execute_argmax_step_with_scratch(
             )))
         }
     };
-    decode_u32_output_exact(winner_idx_out, 1, "winner_idx", &mut scratch.winner)?;
-    let winner_idx = scratch.winner[0];
-    decode_u32_output_exact(winner_gain_out, 1, "winner_gain", &mut scratch.winner)?;
-    let winner_gain = scratch.winner[0];
+    let winner_idx = decode_u32_scalar_exact(winner_idx_out, "winner_idx")?;
+    let winner_gain = decode_u32_scalar_exact(winner_gain_out, "winner_gain")?;
     Ok((winner_idx, winner_gain))
 }
 
@@ -354,7 +342,6 @@ mod tests {
         .unwrap();
 
         let input_capacities = scratch.inputs.iter().map(Vec::capacity).collect::<Vec<_>>();
-        let winner_capacity = scratch.winner.capacity();
         let picked_capacity = picked.capacity();
         let mut gains_again = vec![3u32, 7, 2, 9, 5];
 
@@ -373,7 +360,6 @@ mod tests {
             scratch.inputs.iter().map(Vec::capacity).collect::<Vec<_>>(),
             input_capacities
         );
-        assert_eq!(scratch.winner.capacity(), winner_capacity);
         assert_eq!(picked.capacity(), picked_capacity);
         assert_eq!(picked, vec![0, 1, 0, 1, 1]);
         assert_eq!(gains_again, vec![3, 0, 2, 0, 0]);

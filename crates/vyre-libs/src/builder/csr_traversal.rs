@@ -182,70 +182,6 @@ impl<'a> CsrTraversalComposer<'a> {
         ]
     }
 
-    /// Emit edge walk over source node `src` with edge-kind mask filtering and in-bounds destination check.
-    #[must_use]
-    pub fn emit_neighbor_walk<F>(
-        &self,
-        src: Expr,
-        edge_var: Option<&str>,
-        on_neighbor: F,
-    ) -> Vec<Node>
-    where
-        F: Fn(Expr, Expr) -> Vec<Node>,
-    {
-        let edge_iter = edge_var
-            .map(|s| s.to_string())
-            .unwrap_or_else(|| self.local_name("e"));
-        let kind_mask_var = self.local_name("kind_mask");
-        let dst_var = self.local_name("dst");
-
-        let inner = on_neighbor(Expr::var(dst_var.as_str()), Expr::var(edge_iter.as_str()));
-        let dst_guard = if self.node_count > 0 {
-            vec![
-                Node::let_bind(
-                    dst_var.as_str(),
-                    Expr::load(self.buffers.targets, Expr::var(edge_iter.as_str())),
-                ),
-                Node::if_then(
-                    Expr::lt(Expr::var(dst_var.as_str()), Expr::u32(self.node_count)),
-                    inner,
-                ),
-            ]
-        } else {
-            vec![
-                Node::let_bind(
-                    dst_var.as_str(),
-                    Expr::load(self.buffers.targets, Expr::var(edge_iter.as_str())),
-                ),
-                Node::block(inner),
-            ]
-        };
-
-        let loop_body = match self.buffers.edge_kind_mask {
-            Some(mask_buf) => {
-                vec![
-                    Node::let_bind(
-                        kind_mask_var.as_str(),
-                        Expr::load(mask_buf, Expr::var(edge_iter.as_str())),
-                    ),
-                    Node::if_then(
-                        Expr::ne(
-                            Expr::bitand(
-                                Expr::var(kind_mask_var.as_str()),
-                                Expr::u32(self.allow_mask),
-                            ),
-                            Expr::u32(0),
-                        ),
-                        dst_guard,
-                    ),
-                ]
-            }
-            None => dst_guard,
-        };
-
-        self.emit_row_bounds_and_loop(src, edge_iter.as_str(), loop_body)
-    }
-
     /// Emit ONLY the CSR edge walk for source node `src`: load edge range, filter by kind mask,
     /// atomic-OR the target bit into `frontier_out`, and invoke `on_new_bit()` when a bit flips 0→1.
     #[must_use]
@@ -594,22 +530,6 @@ impl<'a> CsrTraversalComposer<'a> {
                     body,
                 )],
             )],
-        )
-    }
-
-    /// Build parallel in-place forward expansion program with atomic changed flag.
-    #[must_use]
-    pub fn build_parallel_forward_or_changed(&self, frontier_out: &str, changed: &str) -> Program {
-        let mut buffers = csr_read_only_buffers(self.node_count, self.edge_count);
-        csr_push_frontier_changed_buffers(&mut buffers, frontier_out, changed, self.node_count);
-
-        let body =
-            self.emit_parallel_forward_or_changed_body(frontier_out, changed, None, None, None);
-
-        Program::wrapped(
-            buffers,
-            self.workgroup_size,
-            vec![wrap_anonymous_region(self.op_id, body)],
         )
     }
 

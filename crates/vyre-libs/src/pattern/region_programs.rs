@@ -18,6 +18,8 @@ pub const COMPACT_FIRST_PER_REGION_PATTERN_OP_ID: &str =
 /// Region-dedup lane packing for scanner match buffers.
 pub const REGION_DEDUP_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
+const T: Expr = Expr::LogicalIndex { axis: 0 };
+
 /// GPU survivor-flag companion to `region::dedup_regions_inplace`.
 ///
 /// Input contract: `pids`, `starts`, `ends` are three parallel
@@ -42,10 +44,9 @@ pub fn dedup_regions_flag_program(
     survivors: &str,
     count: u32,
 ) -> Program {
-    let t = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::if_then(
-        Expr::lt(t.clone(), Expr::u32(count)),
-        dedup_regions_cluster_nodes(pids, starts, ends, survivors, None, count, t.clone()),
+        Expr::lt(T, Expr::u32(count)),
+        dedup_regions_cluster_nodes(pids, starts, ends, survivors, None, count),
     )];
 
     Program::wrapped(
@@ -83,18 +84,9 @@ pub fn dedup_regions_cluster_program(
     merged_ends: &str,
     count: u32,
 ) -> Program {
-    let t = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::if_then(
-        Expr::lt(t.clone(), Expr::u32(count)),
-        dedup_regions_cluster_nodes(
-            pids,
-            starts,
-            ends,
-            survivors,
-            Some(merged_ends),
-            count,
-            t.clone(),
-        ),
+        Expr::lt(T, Expr::u32(count)),
+        dedup_regions_cluster_nodes(pids, starts, ends, survivors, Some(merged_ends), count),
     )];
 
     Program::wrapped(
@@ -119,17 +111,16 @@ fn dedup_regions_cluster_nodes(
     survivors: &str,
     merged_ends: Option<&str>,
     count: u32,
-    t: Expr,
 ) -> Vec<Node> {
     let mut nodes = vec![
-        Node::let_bind("pid_i", Expr::load(pids, t.clone())),
-        Node::let_bind("start_i", Expr::load(starts, t.clone())),
-        Node::let_bind("end_i", Expr::load(ends, t.clone())),
+        Node::let_bind("pid_i", Expr::load(pids, T)),
+        Node::let_bind("start_i", Expr::load(starts, T)),
+        Node::let_bind("end_i", Expr::load(ends, T)),
         Node::let_bind("has_prev_overlap", Expr::u32(0)),
         Node::loop_for(
             "j",
             Expr::u32(0),
-            t.clone(),
+            T,
             vec![
                 Node::let_bind("pid_j", Expr::load(pids, Expr::var("j"))),
                 Node::let_bind("end_j", Expr::load(ends, Expr::var("j"))),
@@ -150,7 +141,7 @@ fn dedup_regions_cluster_nodes(
                 Expr::u32(0),
             ),
         ),
-        Node::store(survivors, t.clone(), Expr::var("survivor")),
+        Node::store(survivors, T, Expr::var("survivor")),
     ];
 
     if let Some(merged_ends) = merged_ends {
@@ -159,7 +150,7 @@ fn dedup_regions_cluster_nodes(
             Node::let_bind("cluster_active", Expr::var("survivor")),
             Node::loop_for(
                 "k",
-                Expr::add(t.clone(), Expr::u32(1)),
+                Expr::add(T, Expr::u32(1)),
                 Expr::u32(count),
                 vec![
                     Node::let_bind("pid_k", Expr::load(pids, Expr::var("k"))),
@@ -199,7 +190,7 @@ fn dedup_regions_cluster_nodes(
                     ),
                 ],
             ),
-            Node::store(merged_ends, t, Expr::var("merged_end")),
+            Node::store(merged_ends, T, Expr::var("merged_end")),
         ]);
     }
 
@@ -241,29 +232,25 @@ pub fn region_sort_program(
         );
     }
 
-    let t = Expr::LogicalIndex { axis: 0 };
-    let pid_eq = Expr::eq(Expr::var("pid_j"), Expr::var("pid_i"));
-    let start_eq = Expr::eq(Expr::var("start_j"), Expr::var("start_i"));
+    let pid_eq = || Expr::eq(Expr::var("pid_j"), Expr::var("pid_i"));
+    let start_eq = || Expr::eq(Expr::var("start_j"), Expr::var("start_i"));
     let lower_key = Expr::or(
         Expr::lt(Expr::var("pid_j"), Expr::var("pid_i")),
         Expr::or(
             Expr::and(
-                pid_eq.clone(),
+                pid_eq(),
                 Expr::lt(Expr::var("start_j"), Expr::var("start_i")),
             ),
             Expr::and(
-                pid_eq.clone(),
-                Expr::and(
-                    start_eq.clone(),
-                    Expr::lt(Expr::var("end_j"), Expr::var("end_i")),
-                ),
+                pid_eq(),
+                Expr::and(start_eq(), Expr::lt(Expr::var("end_j"), Expr::var("end_i"))),
             ),
         ),
     );
     let stable_tie = Expr::and(
-        pid_eq,
+        pid_eq(),
         Expr::and(
-            start_eq,
+            start_eq(),
             Expr::and(
                 Expr::eq(Expr::var("end_j"), Expr::var("end_i")),
                 Expr::lt(Expr::var("j"), Expr::var("i")),
@@ -272,9 +259,9 @@ pub fn region_sort_program(
     );
 
     let body = vec![Node::if_then(
-        Expr::lt(t.clone(), Expr::u32(count)),
+        Expr::lt(T, Expr::u32(count)),
         vec![
-            Node::let_bind("i", t.clone()),
+            Node::let_bind("i", T),
             Node::let_bind("pid_i", Expr::load(pids_in, Expr::var("i"))),
             Node::let_bind("start_i", Expr::load(starts_in, Expr::var("i"))),
             Node::let_bind("end_i", Expr::load(ends_in, Expr::var("i"))),
@@ -288,7 +275,7 @@ pub fn region_sort_program(
                     Node::let_bind("start_j", Expr::load(starts_in, Expr::var("j"))),
                     Node::let_bind("end_j", Expr::load(ends_in, Expr::var("j"))),
                     Node::if_then(
-                        Expr::or(lower_key.clone(), stable_tie.clone()),
+                        Expr::or(lower_key, stable_tie),
                         vec![Node::assign(
                             "rank",
                             Expr::add(Expr::var("rank"), Expr::u32(1)),
@@ -351,16 +338,15 @@ pub fn cap_regions_per_pattern_flag_program(
     k: u32,
     count: u32,
 ) -> Program {
-    let t = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::if_then(
-        Expr::lt(t.clone(), Expr::u32(count)),
+        Expr::lt(T, Expr::u32(count)),
         vec![
-            Node::let_bind("pid_i", Expr::load(pids, t.clone())),
+            Node::let_bind("pid_i", Expr::load(pids, T)),
             Node::let_bind("rank", Expr::u32(0)),
             Node::loop_for(
                 "j",
                 Expr::u32(0),
-                t.clone(),
+                T,
                 vec![
                     Node::let_bind("pid_j", Expr::load(pids, Expr::var("j"))),
                     Node::if_then(
@@ -380,7 +366,7 @@ pub fn cap_regions_per_pattern_flag_program(
                     Expr::u32(0),
                 ),
             ),
-            Node::store(survivors, t.clone(), Expr::var("survivor")),
+            Node::store(survivors, T, Expr::var("survivor")),
         ],
     )];
 
@@ -424,17 +410,16 @@ pub fn compact_first_per_region_pattern_flag_program(
     survivors: &str,
     count: u32,
 ) -> Program {
-    let t = Expr::LogicalIndex { axis: 0 };
     let body = vec![Node::if_then(
-        Expr::lt(t.clone(), Expr::u32(count)),
+        Expr::lt(T, Expr::u32(count)),
         vec![
-            Node::let_bind("region_i", Expr::load(regions, t.clone())),
-            Node::let_bind("pid_i", Expr::load(pids, t.clone())),
+            Node::let_bind("region_i", Expr::load(regions, T)),
+            Node::let_bind("pid_i", Expr::load(pids, T)),
             Node::let_bind("dup", Expr::u32(0)),
             Node::loop_for(
                 "j",
                 Expr::u32(0),
-                t.clone(),
+                T,
                 vec![
                     Node::let_bind("region_j", Expr::load(regions, Expr::var("j"))),
                     Node::let_bind("pid_j", Expr::load(pids, Expr::var("j"))),
@@ -455,7 +440,7 @@ pub fn compact_first_per_region_pattern_flag_program(
                     Expr::u32(0),
                 ),
             ),
-            Node::store(survivors, t.clone(), Expr::var("survivor")),
+            Node::store(survivors, T, Expr::var("survivor")),
         ],
     )];
 

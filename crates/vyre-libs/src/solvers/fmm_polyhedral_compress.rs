@@ -43,8 +43,8 @@
 
 use crate::math::fmm::{l2p_zeroth_f32_step, m2l_zeroth_f32_step, p2m_zeroth_f32_step};
 use crate::plumbing::host::dispatch_buffers::{
-    decode_f32_output_exact, ensure_input_slots, require_exactly_one_output,
-    write_f32_slice_le_bytes, write_u32_slice_le_bytes, write_zero_bytes,
+    ensure_input_slots, execute_program_sole_f32_into, write_f32_slice_le_bytes,
+    write_u32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 #[cfg(test)]
@@ -261,14 +261,15 @@ pub fn aggregate_to_cells_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[1], cell_assignment);
     write_zero_bytes(&mut scratch.inputs[2], out_bytes);
 
-    let outputs = crate::plumbing::host::dispatch_buffers::execute_program(
+    execute_program_sole_f32_into(
         dispatcher,
         program,
         &scratch.inputs,
         policy,
-    )?;
-    let output = require_exactly_one_output(&outputs, "aggregate_to_cells_via")?;
-    decode_f32_output_exact(output, n_cells as usize, "aggregate_to_cells_via", out)
+        n_cells as usize,
+        "aggregate_to_cells_via",
+        out,
+    )
 }
 
 /// Translate source-cell moments to target-cell locals through the active backend.
@@ -328,14 +329,15 @@ pub fn translate_to_targets_via_with_scratch_into(
     write_f32_slice_le_bytes(&mut scratch.inputs[1], cell_distances);
     write_zero_bytes(&mut scratch.inputs[2], out_bytes);
 
-    let outputs = crate::plumbing::host::dispatch_buffers::execute_program(
+    execute_program_sole_f32_into(
         dispatcher,
         program,
         &scratch.inputs,
         policy,
-    )?;
-    let output = require_exactly_one_output(&outputs, "translate_to_targets_via")?;
-    decode_f32_output_exact(output, n_cells as usize, "translate_to_targets_via", out)
+        n_cells as usize,
+        "translate_to_targets_via",
+        out,
+    )
 }
 
 /// Evaluate target-cell locals into per-region affinity scores through the active backend.
@@ -408,14 +410,15 @@ pub fn evaluate_at_regions_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[1], cell_assignment);
     write_zero_bytes(&mut scratch.inputs[2], out_bytes);
 
-    let outputs = crate::plumbing::host::dispatch_buffers::execute_program(
+    execute_program_sole_f32_into(
         dispatcher,
         program,
         &scratch.inputs,
         policy,
-    )?;
-    let output = require_exactly_one_output(&outputs, "evaluate_at_regions_via")?;
-    decode_f32_output_exact(output, out_len, "evaluate_at_regions_via", out)
+        out_len,
+        "evaluate_at_regions_via",
+        out,
+    )
 }
 
 /// Run the full P2M → M2L → L2P FMM compressor through the active backend.
@@ -661,29 +664,6 @@ mod tests {
         assert_eq!(scratch.cell_moments, [1.0]);
         assert_eq!(scratch.cell_local, [2.0]);
         assert_eq!(out, [3.0]);
-    }
-
-    #[test]
-    fn fmm_dispatch_output_count_is_exact() {
-        let empty: Vec<Vec<u8>> = Vec::new();
-        let missing =
-            require_exactly_one_output(&empty, "fmm").expect_err("missing output must fail");
-        assert!(missing
-            .to_string()
-            .contains("exactly one output buffer, got 0"));
-
-        let extra = vec![vec![1], vec![2]];
-        let surplus =
-            require_exactly_one_output(&extra, "fmm").expect_err("surplus output must fail");
-        assert!(surplus
-            .to_string()
-            .contains("exactly one output buffer, got 2"));
-
-        let one = vec![vec![3]];
-        assert_eq!(
-            require_exactly_one_output(&one, "fmm").expect("one output is exact"),
-            [3]
-        );
     }
 
     #[test]

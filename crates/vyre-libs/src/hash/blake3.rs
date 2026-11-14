@@ -25,54 +25,44 @@ pub const MSG_SCHEDULE: [[usize; 16]; 7] = [
     [11, 15, 5, 0, 1, 9, 8, 6, 14, 10, 2, 12, 3, 4, 7, 13],
 ];
 
+const STATE_VARS: [&str; 16] = [
+    "s0", "s1", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9", "s10", "s11", "s12", "s13", "s14",
+    "s15",
+];
+const MSG_VARS: [&str; 16] = [
+    "m0", "m1", "m2", "m3", "m4", "m5", "m6", "m7", "m8", "m9", "m10", "m11", "m12", "m13", "m14",
+    "m15",
+];
+
 /// Emit the BLAKE3 `G` mixing quartet.
 #[must_use]
 pub fn blake3_g(a: usize, b: usize, c: usize, d: usize, mx: &str, my: &str) -> Vec<Node> {
-    let sa = format!("s{a}");
-    let sb = format!("s{b}");
-    let sc = format!("s{c}");
-    let sd = format!("s{d}");
-
+    let (sa, sb, sc, sd) = (STATE_VARS[a], STATE_VARS[b], STATE_VARS[c], STATE_VARS[d]);
     vec![
         Node::assign(
-            sa.clone(),
-            Expr::add(
-                Expr::add(Expr::var(sa.clone()), Expr::var(sb.clone())),
-                Expr::var(mx),
-            ),
+            sa,
+            Expr::add(Expr::add(Expr::var(sa), Expr::var(sb)), Expr::var(mx)),
         ),
         Node::assign(
-            sd.clone(),
-            rotate_right(
-                Expr::bitxor(Expr::var(sd.clone()), Expr::var(sa.clone())),
-                16,
-            ),
+            sd,
+            rotate_right(Expr::bitxor(Expr::var(sd), Expr::var(sa)), 16),
+        ),
+        Node::assign(sc, Expr::add(Expr::var(sc), Expr::var(sd))),
+        Node::assign(
+            sb,
+            rotate_right(Expr::bitxor(Expr::var(sb), Expr::var(sc)), 12),
         ),
         Node::assign(
-            sc.clone(),
-            Expr::add(Expr::var(sc.clone()), Expr::var(sd.clone())),
+            sa,
+            Expr::add(Expr::add(Expr::var(sa), Expr::var(sb)), Expr::var(my)),
         ),
         Node::assign(
-            sb.clone(),
-            rotate_right(
-                Expr::bitxor(Expr::var(sb.clone()), Expr::var(sc.clone())),
-                12,
-            ),
+            sd,
+            rotate_right(Expr::bitxor(Expr::var(sd), Expr::var(sa)), 8),
         ),
+        Node::assign(sc, Expr::add(Expr::var(sc), Expr::var(sd))),
         Node::assign(
-            sa.clone(),
-            Expr::add(
-                Expr::add(Expr::var(sa.clone()), Expr::var(sb.clone())),
-                Expr::var(my),
-            ),
-        ),
-        Node::assign(
-            sd.clone(),
-            rotate_right(Expr::bitxor(Expr::var(sd.clone()), Expr::var(sa)), 8),
-        ),
-        Node::assign(sc.clone(), Expr::add(Expr::var(sc.clone()), Expr::var(sd))),
-        Node::assign(
-            sb.clone(),
+            sb,
             rotate_right(Expr::bitxor(Expr::var(sb), Expr::var(sc)), 7),
         ),
     ]
@@ -85,11 +75,9 @@ pub fn blake3_round(round_idx: usize, perm: &[usize; 16]) -> Vec<Node> {
     for (i, &src) in perm.iter().enumerate() {
         body.push(Node::let_bind(
             format!("r{round_idx}_m{i}"),
-            Expr::var(format!("m{src}")),
+            Expr::var(MSG_VARS[src]),
         ));
     }
-
-    let parent = Ident::from(BLAKE3_ROUND_OP_ID);
     let quartets: [(usize, usize, usize, usize, usize, usize); 8] = [
         (0, 4, 8, 12, 0, 1),
         (1, 5, 9, 13, 2, 3),
@@ -103,7 +91,7 @@ pub fn blake3_round(round_idx: usize, perm: &[usize; 16]) -> Vec<Node> {
     for (a, b, c, d, mx, my) in quartets {
         body.push(Node::Region {
             generator: Ident::from(BLAKE3_G_OP_ID),
-            source_region: Some(parent.clone()),
+            source_region: Some(Ident::from(BLAKE3_ROUND_OP_ID)),
             body: Arc::new(blake3_g(
                 a,
                 b,
@@ -149,11 +137,8 @@ pub fn blake3_g_program(state: &str, message: &str, out: &str) -> Program {
 #[must_use]
 pub fn blake3_round_program(state: &str, message: &str, out: &str) -> Program {
     let mut body = load_state_nodes(state);
-    for i in 0..16 {
-        body.push(Node::let_bind(
-            format!("m{i}"),
-            Expr::load(message, Expr::u32(i)),
-        ));
+    for (i, &mv) in MSG_VARS.iter().enumerate() {
+        body.push(Node::let_bind(mv, Expr::load(message, Expr::u32(i as u32))));
     }
     body.push(Node::Block(blake3_round(0, &MSG_SCHEDULE[0])));
     body.extend(store_state_nodes(out));
@@ -181,19 +166,20 @@ fn rotate_right(x: Expr, n: u32) -> Expr {
 }
 
 fn load_state_nodes(state: &str) -> Vec<Node> {
-    (0..16)
-        .map(|i| Node::let_bind(format!("s{i}"), Expr::load(state, Expr::u32(i))))
+    STATE_VARS
+        .iter()
+        .enumerate()
+        .map(|(i, &sv)| Node::let_bind(sv, Expr::load(state, Expr::u32(i as u32))))
         .collect()
 }
 
 fn store_state_nodes(out: &str) -> Vec<Node> {
-    (0..16)
-        .map(|i| Node::store(out, Expr::u32(i), Expr::var(format!("s{i}"))))
+    STATE_VARS
+        .iter()
+        .enumerate()
+        .map(|(i, &sv)| Node::store(out, Expr::u32(i as u32), Expr::var(sv)))
         .collect()
 }
-
-const EXPECTED_BLAKE3_ZERO_OUTPUT_BYTES: [u8; 64] = [0; 64];
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library_unconstrained(
         BLAKE3_G_OP_ID,
@@ -206,9 +192,7 @@ inventory::submit! {
                 to_bytes(&[0; 16]),
             ]]
         }),
-        Some(|| {
-            vec![vec![EXPECTED_BLAKE3_ZERO_OUTPUT_BYTES.to_vec()]]
-        }),
+        Some(|| vec![vec![vec![0; 64]]]),
     )
     .with_uncharacterized()
 }
@@ -225,9 +209,7 @@ inventory::submit! {
                 to_bytes(&[0; 16]),
             ]]
         }),
-        Some(|| {
-            vec![vec![EXPECTED_BLAKE3_ZERO_OUTPUT_BYTES.to_vec()]]
-        }),
+        Some(|| vec![vec![vec![0; 64]]]),
     )
     .with_uncharacterized()
 }

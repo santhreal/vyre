@@ -47,6 +47,8 @@ define_go_keyword_call_extractor!(
     "Extract Go `defer f(...)` calls as callee spans."
 );
 
+const T: Expr = Expr::LogicalIndex { axis: 0 };
+
 #[allow(clippy::too_many_arguments)]
 fn go_extract_span_program(
     tok_types: &str,
@@ -59,7 +61,6 @@ fn go_extract_span_program(
     op_id: &str,
     body: Vec<Node>,
 ) -> Program {
-    let t = Expr::logical_index(0);
     let mut buffers = super::token_stream_decls(tok_types, tok_starts, tok_lens, haystack);
     buffers.extend([
         BufferDecl::storage(out_records, 4, BufferAccess::ReadWrite, DataType::U32),
@@ -70,7 +71,7 @@ fn go_extract_span_program(
         [256, 1, 1],
         vec![wrap_anonymous_region(
             op_id,
-            vec![Node::if_then(Expr::lt(t, num_tokens), body)],
+            vec![Node::if_then(Expr::lt(T, num_tokens), body)],
         )],
     )
     .with_entry_op_id(op_id)
@@ -89,16 +90,15 @@ fn go_extract_keyword_calls(
     keyword: &[u8],
     op_id: &str,
 ) -> Program {
-    let t = Expr::logical_index(0);
     let body = vec![emit_keyword_span_record_nodes(
         haystack,
         tok_types,
         tok_starts,
         tok_lens,
-        t.clone(),
+        T,
         num_tokens.clone(),
         keyword,
-        token_type_eq(tok_types, Expr::add(t, Expr::u32(1)), TOK_IDENTIFIER),
+        token_type_eq(tok_types, Expr::add(T, Expr::u32(1)), TOK_IDENTIFIER),
         out_calls,
         out_counts,
         "call_idx",
@@ -120,25 +120,20 @@ pub fn go_extract_channel_sends(
     out_ops: &str,
     out_counts: &str,
 ) -> Program {
-    let t = Expr::logical_index(0);
-    let next = Expr::add(t.clone(), Expr::u32(1));
-    let after = Expr::add(t.clone(), Expr::u32(2));
+    let next = || Expr::add(T, Expr::u32(1));
+    let after = || Expr::add(T, Expr::u32(2));
     let body = vec![Node::if_then(
-        Expr::lt(Expr::add(t.clone(), Expr::u32(1)), num_tokens.clone()),
+        Expr::lt(next(), num_tokens.clone()),
         vec![Node::if_then(
             Expr::and(
                 Expr::and(
-                    token_type_eq(tok_types, t.clone(), TOK_IDENTIFIER),
-                    token_type_eq(tok_types, next.clone(), TOK_ARROW),
+                    token_type_eq(tok_types, T, TOK_IDENTIFIER),
+                    token_type_eq(tok_types, next(), TOK_ARROW),
                 ),
                 Expr::and(
                     // `chan<- T` is a send-only channel TYPE, not a send.
                     Expr::not(token_is_chan_keyword(
-                        haystack,
-                        tok_types,
-                        tok_starts,
-                        tok_lens,
-                        t.clone(),
+                        haystack, tok_types, tok_starts, tok_lens, T,
                     )),
                     Expr::and(
                         // `in <-chan T` is a receive-only channel TYPE in a
@@ -151,13 +146,13 @@ pub fn go_extract_channel_sends(
                         // bound is a conjunct and the index is clamped: a
                         // conjunct alone leaves the loads beside it running.
                         Expr::not(Expr::and(
-                            Expr::lt(after.clone(), num_tokens.clone()),
+                            Expr::lt(after(), num_tokens.clone()),
                             token_is_chan_keyword(
                                 haystack,
                                 tok_types,
                                 tok_starts,
                                 tok_lens,
-                                clamped_token_index(after.clone(), num_tokens.clone()),
+                                clamped_token_index(after(), num_tokens.clone()),
                             ),
                         )),
                         // `return <-ch` and friends are receives. Without this
@@ -165,16 +160,12 @@ pub fn go_extract_channel_sends(
                         // channel operand and the receive is miscounted as a
                         // send.
                         Expr::not(token_is_receive_leading_keyword(
-                            haystack,
-                            tok_types,
-                            tok_starts,
-                            tok_lens,
-                            t.clone(),
+                            haystack, tok_types, tok_starts, tok_lens, T,
                         )),
                     ),
                 ),
             ),
-            emit_span_record_nodes(tok_starts, tok_lens, out_ops, out_counts, "send_idx", t),
+            emit_span_record_nodes(tok_starts, tok_lens, out_ops, out_counts, "send_idx", T),
         )],
     )];
 
@@ -203,34 +194,39 @@ pub fn go_extract_channel_receives(
     out_ops: &str,
     out_counts: &str,
 ) -> Program {
-    let t = Expr::logical_index(0);
-    let next = Expr::add(t.clone(), Expr::u32(1));
+    let next = || Expr::add(T, Expr::u32(1));
     // Saturating: at t == 0 this stays 0 and the guard below is written so the
     // token at 0 can never be its own predecessor.
-    let previous = Expr::select(
-        Expr::gt(t.clone(), Expr::u32(0)),
-        Expr::sub(t.clone(), Expr::u32(1)),
-        Expr::u32(0),
-    );
+    let previous = || {
+        Expr::select(
+            Expr::gt(T, Expr::u32(0)),
+            Expr::sub(T, Expr::u32(1)),
+            Expr::u32(0),
+        )
+    };
     // A receive's operand may not be preceded by a plain identifier: that
     // shape is `ch <- v`, a SEND. It MAY be preceded by a keyword such as
     // `return`, because `return <-ch` is a receive in expression position.
     let preceded_by_operand = Expr::and(
-        Expr::gt(t.clone(), Expr::u32(0)),
+        Expr::gt(T, Expr::u32(0)),
         Expr::and(
-            token_type_eq(tok_types, previous.clone(), TOK_IDENTIFIER),
+            token_type_eq(tok_types, previous(), TOK_IDENTIFIER),
             Expr::not(token_is_receive_leading_keyword(
-                haystack, tok_types, tok_starts, tok_lens, previous,
+                haystack,
+                tok_types,
+                tok_starts,
+                tok_lens,
+                previous(),
             )),
         ),
     );
     let body = vec![Node::if_then(
-        Expr::lt(Expr::add(t.clone(), Expr::u32(1)), num_tokens.clone()),
+        Expr::lt(next(), num_tokens.clone()),
         vec![Node::if_then(
             Expr::and(
                 Expr::and(
-                    token_type_eq(tok_types, t.clone(), TOK_ARROW),
-                    token_type_eq(tok_types, next.clone(), TOK_IDENTIFIER),
+                    token_type_eq(tok_types, T, TOK_ARROW),
+                    token_type_eq(tok_types, next(), TOK_IDENTIFIER),
                 ),
                 Expr::and(
                     // `<-chan T` is a receive-only channel TYPE. The token
@@ -241,12 +237,19 @@ pub fn go_extract_channel_receives(
                         tok_types,
                         tok_starts,
                         tok_lens,
-                        next.clone(),
+                        next(),
                     )),
                     Expr::not(preceded_by_operand),
                 ),
             ),
-            emit_span_record_nodes(tok_starts, tok_lens, out_ops, out_counts, "recv_idx", next),
+            emit_span_record_nodes(
+                tok_starts,
+                tok_lens,
+                out_ops,
+                out_counts,
+                "recv_idx",
+                next(),
+            ),
         )],
     )];
 
@@ -275,32 +278,24 @@ pub fn go_extract_channel_creations(
     out_ops: &str,
     out_counts: &str,
 ) -> Program {
-    let t = Expr::logical_index(0);
     let body = vec![Node::if_then(
-        Expr::lt(Expr::add(t.clone(), Expr::u32(2)), num_tokens.clone()),
+        Expr::lt(Expr::add(T, Expr::u32(2)), num_tokens.clone()),
         vec![Node::if_then(
             Expr::and(
-                token_is_keyword(
-                    haystack,
-                    tok_types,
-                    tok_starts,
-                    tok_lens,
-                    t.clone(),
-                    b"make",
-                ),
+                token_is_keyword(haystack, tok_types, tok_starts, tok_lens, T, b"make"),
                 Expr::and(
-                    token_type_eq(tok_types, Expr::add(t.clone(), Expr::u32(1)), TOK_LPAREN),
+                    token_type_eq(tok_types, Expr::add(T, Expr::u32(1)), TOK_LPAREN),
                     token_is_keyword(
                         haystack,
                         tok_types,
                         tok_starts,
                         tok_lens,
-                        Expr::add(t.clone(), Expr::u32(2)),
+                        Expr::add(T, Expr::u32(2)),
                         b"chan",
                     ),
                 ),
             ),
-            emit_span_record_nodes(tok_starts, tok_lens, out_ops, out_counts, "create_idx", t),
+            emit_span_record_nodes(tok_starts, tok_lens, out_ops, out_counts, "create_idx", T),
         )],
     )];
     go_extract_span_program(

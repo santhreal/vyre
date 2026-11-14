@@ -12,17 +12,19 @@ use vyre_compiler::SemanticExecutionError;
 
 #[cfg(feature = "graph-dispatch")]
 mod inputs;
-#[cfg(feature = "graph-dispatch")]
+#[cfg(any(feature = "graph-dispatch", feature = "solvers"))]
 mod u32_outputs;
 
 #[cfg(feature = "graph-dispatch")]
 pub(crate) use inputs::{
     fingerprint_u32_slice, refresh_keyed_dispatch_inputs, DispatchInput, U32SliceFingerprint,
 };
+#[cfg(any(feature = "graph-dispatch", feature = "solvers"))]
+pub(crate) use u32_outputs::dispatch_single_u32_output_from_prepared_into;
 #[cfg(feature = "graph-dispatch")]
 pub(crate) use u32_outputs::{
-    dispatch_single_u32_output_from_prepared_into, dispatch_two_u32_outputs_from_prepared_into,
-    dispatch_u32_outputs_from_prepared_into, U32Readback,
+    dispatch_two_u32_outputs_from_prepared_into, dispatch_u32_outputs_from_prepared_into,
+    U32Readback,
 };
 /// Graph node identity for a single-program wrapper dispatch.
 ///
@@ -246,46 +248,6 @@ pub fn require_exactly_one_output<'a>(
     Ok(output)
 }
 
-/// Position of the writable buffer `name` within returned dispatcher outputs.
-///
-/// Output buffers correspond to non-Workgroup buffers that are either backend-allocated
-/// or declared with `BufferAccess::ReadWrite`, in `program.buffers()` order.
-#[must_use]
-pub fn output_buffer_index(program: &vyre_foundation::ir::Program, name: &str) -> Option<usize> {
-    program.output_buffer_indices().iter().position(|&index| {
-        program
-            .buffers()
-            .get(index as usize)
-            .is_some_and(|decl| decl.name() == name)
-    })
-}
-
-/// Return the output buffer corresponding to `name` from a program's returned outputs.
-///
-/// Accepts programs that return multiple output buffers (such as scratch or write-complete
-/// sibling buffers) and extracts the requested buffer by name.
-///
-/// Gated to match its one caller: the `solvers` QSVT matrix-function fusion path.
-pub fn require_named_output<'a>(
-    outputs: &'a [Vec<u8>],
-    program: &vyre_foundation::ir::Program,
-    name: &str,
-    context: &str,
-) -> Result<&'a [u8], SemanticExecutionError> {
-    let index = output_buffer_index(program, name).ok_or_else(|| {
-        SemanticExecutionError::InvalidRequest(format!(
-            "Fix: {context} program does not declare an output buffer named `{name}`."
-        ))
-    })?;
-
-    outputs.get(index).map(|buf| buf.as_slice()).ok_or_else(|| {
-        SemanticExecutionError::Backend(format!(
-            "Fix: {context} expected output buffer `{name}` at index {index}, but dispatcher returned {} output buffer(s).",
-            outputs.len()
-        ))
-    })
-}
-
 /// Decode a dispatcher u32 output buffer with exact byte-count validation.
 pub fn decode_u32_output_exact(
     bytes: &[u8],
@@ -363,6 +325,76 @@ pub fn decode_f32_output_exact(
         .map_err(SemanticExecutionError::Backend)
 }
 
+/// Decode a single-word dispatcher u32 output buffer without heap allocation.
+pub fn decode_u32_scalar_exact(bytes: &[u8], context: &str) -> Result<u32, SemanticExecutionError> {
+    let Ok(word) = <[u8; 4]>::try_from(bytes) else {
+        return Err(SemanticExecutionError::Backend(format!(
+            "Fix: {context} expected 4 output bytes, got {}.",
+            bytes.len()
+        )));
+    };
+    Ok(u32::from_le_bytes(word))
+}
+
+/// Run one program and decode its first output buffer as exact-length `u32` words.
+pub fn execute_program_first_u32_into(
+    dispatcher: &dyn vyre_compiler::SemanticExecutor,
+    program: vyre_foundation::ir::Program,
+    inputs: &[Vec<u8>],
+    policy: &vyre_compiler::SemanticExecutionPolicy,
+    expected_words: usize,
+    context: &str,
+    out: &mut Vec<u32>,
+) -> Result<(), SemanticExecutionError> {
+    let output = execute_program_first_output(dispatcher, program, inputs, policy, context)?;
+    decode_u32_output_exact(&output, expected_words, context, out)
+}
+
+/// Run one program requiring a sole output buffer and decode it as exact-length `u32` words.
+pub fn execute_program_sole_u32_into(
+    dispatcher: &dyn vyre_compiler::SemanticExecutor,
+    program: vyre_foundation::ir::Program,
+    inputs: &[Vec<u8>],
+    policy: &vyre_compiler::SemanticExecutionPolicy,
+    expected_words: usize,
+    context: &str,
+    out: &mut Vec<u32>,
+) -> Result<(), SemanticExecutionError> {
+    let outputs = execute_program(dispatcher, program, inputs, policy)?;
+    let output = require_exactly_one_output(&outputs, context)?;
+    decode_u32_output_exact(output, expected_words, context, out)
+}
+
+/// Run one program requiring a sole output buffer and decode it as exact-length `i32` words.
+pub fn execute_program_sole_i32_into(
+    dispatcher: &dyn vyre_compiler::SemanticExecutor,
+    program: vyre_foundation::ir::Program,
+    inputs: &[Vec<u8>],
+    policy: &vyre_compiler::SemanticExecutionPolicy,
+    expected_words: usize,
+    context: &str,
+    out: &mut Vec<i32>,
+) -> Result<(), SemanticExecutionError> {
+    let outputs = execute_program(dispatcher, program, inputs, policy)?;
+    let output = require_exactly_one_output(&outputs, context)?;
+    decode_i32_output_exact(output, expected_words, context, out)
+}
+
+/// Run one program requiring a sole output buffer and decode it as exact-length `f32` words.
+pub fn execute_program_sole_f32_into(
+    dispatcher: &dyn vyre_compiler::SemanticExecutor,
+    program: vyre_foundation::ir::Program,
+    inputs: &[Vec<u8>],
+    policy: &vyre_compiler::SemanticExecutionPolicy,
+    expected_words: usize,
+    context: &str,
+    out: &mut Vec<f32>,
+) -> Result<(), SemanticExecutionError> {
+    let outputs = execute_program(dispatcher, program, inputs, policy)?;
+    let output = require_exactly_one_output(&outputs, context)?;
+    decode_f32_output_exact(output, expected_words, context, out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -433,54 +465,5 @@ mod tests {
             require_exactly_one_output(&one, "dispatch-buffer test").expect("one output is exact"),
             [3]
         );
-    }
-
-    /// The named-output extractors ride the `solvers` dialect, so this case does
-    /// too; without the predicate a build with tests and without `solvers`
-    /// cannot compile.
-    #[test]
-    fn require_named_output_extracts_by_name_and_accepts_sibling_scratch() {
-        use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
-
-        let program = Program::wrapped(
-            vec![
-                BufferDecl::storage("in_ro", 0, BufferAccess::ReadOnly, DataType::U32)
-                    .with_count(4),
-                BufferDecl::storage("primary_out", 1, BufferAccess::ReadWrite, DataType::U32)
-                    .with_count(4),
-                BufferDecl::storage("scratch_sibling", 2, BufferAccess::ReadWrite, DataType::U32)
-                    .with_count(8),
-            ],
-            [1, 1, 1],
-            Vec::new(),
-        );
-
-        assert_eq!(output_buffer_index(&program, "primary_out"), Some(0));
-        assert_eq!(output_buffer_index(&program, "scratch_sibling"), Some(1));
-        assert_eq!(output_buffer_index(&program, "in_ro"), None);
-        assert_eq!(output_buffer_index(&program, "missing"), None);
-
-        let outputs = vec![vec![1, 2, 3, 4], vec![5, 6, 7, 8, 9, 10, 11, 12]];
-
-        let primary = require_named_output(&outputs, &program, "primary_out", "test_extract")
-            .expect("primary output extracted");
-        assert_eq!(primary, &[1, 2, 3, 4]);
-
-        let scratch = require_named_output(&outputs, &program, "scratch_sibling", "test_extract")
-            .expect("scratch output extracted");
-        assert_eq!(scratch, &[5, 6, 7, 8, 9, 10, 11, 12]);
-
-        let missing_decl = require_named_output(&outputs, &program, "missing", "test_extract")
-            .expect_err("undeclared buffer must fail with InvalidRequest");
-        assert!(matches!(
-            missing_decl,
-            SemanticExecutionError::InvalidRequest(_)
-        ));
-
-        let empty_outputs: Vec<Vec<u8>> = Vec::new();
-        let missing_slot =
-            require_named_output(&empty_outputs, &program, "primary_out", "test_extract")
-                .expect_err("missing dispatcher slot must fail with BackendError");
-        assert!(matches!(missing_slot, SemanticExecutionError::Backend(_)));
     }
 }

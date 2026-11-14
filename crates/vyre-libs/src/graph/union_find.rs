@@ -221,18 +221,6 @@ pub fn union_find_program(
     )
 }
 
-/// Build the union-find alias-analysis program.
-#[must_use]
-pub fn union_find_alias_program(
-    parent: &str,
-    edge_a: &str,
-    edge_b: &str,
-    node_count: u32,
-    edge_count: u32,
-) -> Program {
-    union_find_program(parent, edge_a, edge_b, node_count, edge_count)
-}
-
 /// Path-compress every entry in `parent` so each cell holds the
 /// canonical root of its component.
 #[cfg(test)]

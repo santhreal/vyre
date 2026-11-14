@@ -69,23 +69,23 @@ impl ShardedSafetensorIndex {
                 maximum: MAX_TENSORS,
             });
         }
-        let mut shard_names = BTreeMap::<PathBuf, Vec<String>>::new();
+        let mut shard_names = BTreeMap::<PathBuf, Vec<&str>>::new();
         for (tensor, shard) in &raw.weight_map {
             if tensor.is_empty() || tensor.len() > MAX_TENSOR_NAME_BYTES {
                 return Err(SafetensorError::InvalidName {
-                    name: tensor.clone(),
+                    name: String::from(tensor.as_str()),
                 });
             }
             if shard.is_empty() || shard.len() > MAX_SHARD_PATH_BYTES {
                 return Err(SafetensorError::UnsafeShardPath {
-                    path: PathBuf::from(shard),
+                    path: PathBuf::from(shard.as_str()),
                 });
             }
-            let shard = PathBuf::from(shard);
+            let shard = PathBuf::from(shard.as_str());
             if !safe_relative_path(&shard) {
                 return Err(SafetensorError::UnsafeShardPath { path: shard });
             }
-            shard_names.entry(shard).or_default().push(tensor.clone());
+            shard_names.entry(shard).or_default().push(tensor.as_str());
         }
         let mut shards = BTreeMap::new();
         let mut tensors = BTreeMap::new();
@@ -98,14 +98,14 @@ impl ShardedSafetensorIndex {
             }
             let index = SafetensorIndex::open(canonical_shard)?;
             for name in expected_names {
-                let tensor = index.tensor(&name).cloned().ok_or_else(|| {
-                    SafetensorError::MissingMappedTensor {
-                        name: name.clone(),
-                        shard: shard.clone(),
-                    }
-                })?;
+                let Some(tensor) = index.tensor(name).cloned() else {
+                    return Err(SafetensorError::MissingMappedTensor {
+                        name: String::from(name),
+                        shard,
+                    });
+                };
                 tensors.insert(
-                    name,
+                    String::from(name),
                     CheckpointTensor {
                         shard: shard.clone(),
                         tensor,
@@ -115,8 +115,8 @@ impl ShardedSafetensorIndex {
             for tensor in index.tensors() {
                 if !raw.weight_map.contains_key(&tensor.name) {
                     return Err(SafetensorError::UnmappedShardTensor {
-                        name: tensor.name.clone(),
-                        shard: shard.clone(),
+                        name: String::from(tensor.name.as_str()),
+                        shard,
                     });
                 }
             }

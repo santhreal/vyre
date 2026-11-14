@@ -73,6 +73,7 @@ pub(crate) fn dispatch_single_u32_output_from_prepared_into(
     )
 }
 
+#[cfg(feature = "graph-dispatch")]
 /// Dispatch already-prepared inputs and decode two named u32 output buffers.
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn dispatch_two_u32_outputs_from_prepared_into(

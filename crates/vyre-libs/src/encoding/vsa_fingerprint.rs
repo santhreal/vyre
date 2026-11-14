@@ -7,11 +7,9 @@
 
 use crate::hash::hypervector::hypervector_xor_bind;
 use crate::plumbing::host::dispatch_buffers::{
-    decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
+    ensure_input_slots, execute_program_first_u32_into, write_u32_slice_le_bytes,
 };
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 #[cfg(test)]
 use vyre_reference::composition_witness::hamming_similarity_witness as hamming_similarity;
 
@@ -178,21 +176,15 @@ fn dispatch_xor_bind_with_scratch_into(
     write_u32_slice_le_bytes(&mut inputs[0], a);
     write_u32_slice_le_bytes(&mut inputs[1], b);
 
-    let outputs = execute_single_program(
+    execute_program_first_u32_into(
         dispatcher,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &inputs[..2],
         policy,
+        out_len,
+        "fingerprint_via XOR",
+        out,
     )
-    .map(|output| output.outputs)?;
-    if outputs.is_empty() {
-        return Err(SemanticExecutionError::Backend(format!(
-            "Fix: fingerprint_via XOR expected at least one output buffer, got {}.",
-            outputs.len()
-        )));
-    }
-    decode_u32_output_exact(&outputs[0], out_len, "fingerprint_via XOR", out)
 }
 
 /// Approximate cache lookup: return the index of the cached entry

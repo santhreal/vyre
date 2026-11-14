@@ -5,5 +5,5 @@ pub mod spectral_schedule;
 pub mod submodular_cache_eviction;
 
 pub(crate) use crate::plumbing::host::dispatch_buffers::{
-    checked_product_count, checked_square_cells, decode_u32_output_exact,
+    checked_product_count, checked_square_cells,
 };

@@ -165,7 +165,7 @@ impl TokenSampler<'_> {
 
         let fused =
             fuse_programs(&[adjust, select, draw]).map_err(|error| SamplingError::Fusion {
-                reason: error.to_string(),
+                reason: format!("{error}"),
             })?;
         Ok(tag_program(
             SAMPLE_TOKEN_OP_ID,
@@ -237,14 +237,17 @@ pub fn logit_adjust(
         vocabulary,
         [64, 1, 1],
         |i| {
-            let logit = Expr::load(logits, i.clone());
+            let load_logit = || Expr::load(logits, i.clone());
             let penalized = Expr::select(
-                Expr::gt(logit.clone(), Expr::f32(0.0)),
-                Expr::div(logit.clone(), Expr::f32(penalty)),
-                Expr::mul(logit.clone(), Expr::f32(penalty)),
+                Expr::gt(load_logit(), Expr::f32(0.0)),
+                Expr::div(load_logit(), Expr::f32(penalty)),
+                Expr::mul(load_logit(), Expr::f32(penalty)),
             );
             let seen = Expr::gt(Expr::load(counts, i.clone()), Expr::u32(0));
-            let value = Expr::div(Expr::select(seen, penalized, logit), Expr::f32(temperature));
+            let value = Expr::div(
+                Expr::select(seen, penalized, load_logit()),
+                Expr::f32(temperature),
+            );
             (i, value)
         },
     )
@@ -274,9 +277,9 @@ pub fn nucleus_select(
         return vyre_foundation::composition::trap_program(
             NUCLEUS_SELECT_OP_ID,
             Some((token, DataType::U32)),
-            "Fix: nucleus_select requires candidates > 0; an empty candidate set has no token to \
-             draw."
-                .to_string(),
+            String::from(
+                "Fix: nucleus_select requires candidates > 0; an empty candidate set has no token to draw.",
+            ),
         );
     }
     let buffers = vec![
@@ -306,9 +309,7 @@ fn nucleus_select_body(
     candidates: u32,
     top_p: f32,
 ) -> Vec<Node> {
-    let kept = Expr::var("kept");
-    let mass = Expr::var("mass");
-
+    // Candidate prefix length and accumulated probability mass.
     // Walk the candidates in descending order until the accumulated mass
     // reaches top_p. `kept` stays zero until the crossing, which both stops the
     // accumulation and records the prefix length.
@@ -320,14 +321,14 @@ fn nucleus_select_body(
             Expr::u32(0),
             Expr::u32(candidates),
             vec![Node::if_then(
-                Expr::eq(kept.clone(), Expr::u32(0)),
+                Expr::eq(Expr::var("kept"), Expr::u32(0)),
                 vec![
                     Node::assign(
                         "mass",
-                        Expr::add(mass.clone(), Expr::load(weights, Expr::var("j"))),
+                        Expr::add(Expr::var("mass"), Expr::load(weights, Expr::var("j"))),
                     ),
                     Node::if_then(
-                        Expr::ge(mass.clone(), Expr::f32(top_p)),
+                        Expr::ge(Expr::var("mass"), Expr::f32(top_p)),
                         vec![Node::assign(
                             "kept",
                             Expr::add(Expr::var("j"), Expr::u32(1)),
@@ -339,7 +340,7 @@ fn nucleus_select_body(
         // The candidate set never reached top_p, so the nucleus is all of it
         // and `mass` already holds its total.
         Node::if_then(
-            Expr::eq(kept.clone(), Expr::u32(0)),
+            Expr::eq(Expr::var("kept"), Expr::u32(0)),
             vec![Node::assign("kept", Expr::u32(candidates))],
         ),
     ];
@@ -348,13 +349,13 @@ fn nucleus_select_body(
     // rescaled to sum to one.
     body.push(Node::let_bind(
         "target",
-        Expr::mul(Expr::load(uniform, Expr::u32(0)), mass.clone()),
+        Expr::mul(Expr::load(uniform, Expr::u32(0)), Expr::var("mass")),
     ));
     // The last kept candidate is the answer when the running sum never reaches
     // the target, which rounding at the end of the prefix can produce.
     body.push(Node::let_bind(
         "chosen",
-        Expr::load(selected, Expr::sub(kept.clone(), Expr::u32(1))),
+        Expr::load(selected, Expr::sub(Expr::var("kept"), Expr::u32(1))),
     ));
     body.push(Node::let_bind("found", Expr::u32(0)));
     body.push(Node::let_bind("drawn", Expr::f32(0.0)));
@@ -365,7 +366,7 @@ fn nucleus_select_body(
         vec![Node::if_then(
             Expr::and(
                 Expr::eq(Expr::var("found"), Expr::u32(0)),
-                Expr::lt(Expr::var("d"), kept.clone()),
+                Expr::lt(Expr::var("d"), Expr::var("kept")),
             ),
             vec![
                 Node::assign(
@@ -494,10 +495,10 @@ inventory::submit! {
         LOGIT_ADJUST_OP_ID,
         logit_adjust_fixture_program,
         Some(|| vec![vec![
-            FIXTURE_LOGITS_BYTES.to_vec(),
-            FIXTURE_COUNTS_BYTES.to_vec(),
+            FIXTURE_LOGITS_BYTES.into(),
+            FIXTURE_COUNTS_BYTES.into(),
         ]]),
-        Some(|| vec![vec![EXPECTED_LOGIT_ADJUST_OUTPUT_BYTES.to_vec()]]),
+        Some(|| vec![vec![EXPECTED_LOGIT_ADJUST_OUTPUT_BYTES.into()]]),
     )
     .with_category("llm")
     .with_uncharacterized()
@@ -509,12 +510,12 @@ inventory::submit! {
         nucleus_select_fixture_program,
         Some(|| {
             vec![vec![
-                EXPECTED_TOP_K_INDICES_BYTES.to_vec(),
-                EXPECTED_NUCLEUS_WEIGHTS_BYTES.to_vec(),
-                FIXTURE_UNIFORM_BYTES.to_vec(),
+                EXPECTED_TOP_K_INDICES_BYTES.into(),
+                EXPECTED_NUCLEUS_WEIGHTS_BYTES.into(),
+                FIXTURE_UNIFORM_BYTES.into(),
             ]]
         }),
-        Some(|| vec![vec![EXPECTED_NUCLEUS_SELECT_OUTPUT_BYTES.to_vec()]]),
+        Some(|| vec![vec![EXPECTED_NUCLEUS_SELECT_OUTPUT_BYTES.into()]]),
     )
     .with_category("llm")
     .with_uncharacterized()
@@ -522,11 +523,11 @@ inventory::submit! {
 
 fn sample_token_fixture_inputs() -> Vec<Vec<Vec<u8>>> {
     vec![vec![
-        FIXTURE_LOGITS_BYTES.to_vec(),
-        FIXTURE_COUNTS_BYTES.to_vec(),
-        FIXTURE_ZERO_F32_CANDIDATES_BYTES.to_vec(),
-        FIXTURE_ZERO_U32_CANDIDATES_BYTES.to_vec(),
-        FIXTURE_UNIFORM_BYTES.to_vec(),
+        FIXTURE_LOGITS_BYTES.into(),
+        FIXTURE_COUNTS_BYTES.into(),
+        FIXTURE_ZERO_F32_CANDIDATES_BYTES.into(),
+        FIXTURE_ZERO_U32_CANDIDATES_BYTES.into(),
+        FIXTURE_UNIFORM_BYTES.into(),
     ]]
 }
 
@@ -537,12 +538,12 @@ inventory::submit! {
         Some(sample_token_fixture_inputs),
         Some(|| {
             vec![vec![
-                EXPECTED_LOGIT_ADJUST_OUTPUT_BYTES.to_vec(),
-                EXPECTED_TOP_K_INDICES_BYTES.to_vec(),
-                EXPECTED_NUCLEUS_WEIGHTS_BYTES.to_vec(),
-                EXPECTED_KEPT_EXPONENTIALS_BYTES.to_vec(),
-                EXPECTED_TOP_K_INDICES_BYTES.to_vec(),
-                EXPECTED_NUCLEUS_SELECT_OUTPUT_BYTES.to_vec(),
+                EXPECTED_LOGIT_ADJUST_OUTPUT_BYTES.into(),
+                EXPECTED_TOP_K_INDICES_BYTES.into(),
+                EXPECTED_NUCLEUS_WEIGHTS_BYTES.into(),
+                EXPECTED_KEPT_EXPONENTIALS_BYTES.into(),
+                EXPECTED_TOP_K_INDICES_BYTES.into(),
+                EXPECTED_NUCLEUS_SELECT_OUTPUT_BYTES.into(),
             ]]
         }),
     )

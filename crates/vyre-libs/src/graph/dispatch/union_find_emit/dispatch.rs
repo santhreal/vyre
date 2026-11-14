@@ -28,7 +28,7 @@ pub(super) struct UnionFindStaticInputKey {
 /// Build the union-find alias-analysis program and record that the substrate
 /// requested a dataflow-fixpoint primitive.
 #[must_use]
-pub fn union_find_alias_program(
+fn union_find_alias_program(
     parent: &str,
     edge_a: &str,
     edge_b: &str,

@@ -25,21 +25,7 @@
 /// Empty, and it must stay that way by fixing builders rather than listing
 /// them: the enumerator's stale and now-covered guards make this list
 /// only-shrinkable, so anything added here is a debt with no scheduled payer.
-const COVERAGE_WAIVER: &[&str] = &[
-    "atomic_grid_stride_u32",
-    "attribute_child",
-    "attribute_serial_child",
-    "build_ifds_csr_program",
-    "csr_forward_or_changed_parallel_batch",
-    "csr_forward_or_changed_parallel_batch_global",
-    "csr_forward_or_changed_parallel_batch_global_slot",
-    "f32_elementwise_mul",
-    "impact_mask_from_closure",
-    "tiled_dot",
-    "tiled_mean",
-    "tiled_softmax",
-    "union_find_alias_program",
-];
+const COVERAGE_WAIVER: &[&str] = &[];
 
 /// Minimum builder count the source enumeration must find.
 ///
@@ -49,7 +35,7 @@ const COVERAGE_WAIVER: &[&str] = &[
 /// 495 it would have passed while 270 builders vanished, which is what a broken
 /// walk looks like. It moves with the population, up when the crate grows and
 /// down when a deliberate removal takes builders with it.
-const BUILDER_FLOOR: usize = 450;
+const BUILDER_FLOOR: usize = 433;
 
 #[test]
 fn every_program_builder_is_tested_registered_or_explicitly_waived() {

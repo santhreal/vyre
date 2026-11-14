@@ -55,16 +55,12 @@ fn horner(value: &Expr, coefficients: &[u32]) -> Expr {
 /// [`INFINITY_BITS`] is an infinity, and anything above it is a NaN.
 fn flushed_argument(argument: &Expr) -> (Expr, Expr) {
     let raw = Expr::bitcast_f32_to_u32(argument.clone());
-    let magnitude = Expr::bitand(
-        Expr::bitcast_f32_to_u32(argument.clone()),
-        Expr::u32(ABS_MASK),
-    );
     let flushed = Expr::select(
-        Expr::lt(magnitude, Expr::u32(MIN_NORMAL_BITS)),
-        Expr::bitand(
-            Expr::bitcast_f32_to_u32(argument.clone()),
-            Expr::u32(SIGN_MASK),
+        Expr::lt(
+            Expr::bitand(raw.clone(), Expr::u32(ABS_MASK)),
+            Expr::u32(MIN_NORMAL_BITS),
         ),
+        Expr::bitand(raw.clone(), Expr::u32(SIGN_MASK)),
         raw,
     );
     (
@@ -379,26 +375,35 @@ fn cosine_kernel(square: &Expr) -> Expr {
     )
 }
 
-/// `sin(x)` for `|x| <= 401`, and [`NAN_RESULT_BITS`] outside that domain.
-pub(super) fn sine(argument: &Expr) -> Expr {
+fn circular_select(
+    argument: &Expr,
+    rotation: u32,
+    small_fallback: impl FnOnce(Expr) -> Expr,
+    swap_kernels: bool,
+) -> Expr {
     let circular = circular_reduction(argument);
     let square = Expr::mul(circular.reduced.clone(), circular.reduced.clone());
-    let result = Expr::mul(
-        quadrant_sign(&circular.quadrant, 0),
-        Expr::select(
-            quadrant_is_odd(&circular.quadrant),
+    let (odd_branch, even_branch) = if swap_kernels {
+        (
+            sine_kernel(&circular.reduced, &square),
+            cosine_kernel(&square),
+        )
+    } else {
+        (
             cosine_kernel(&square),
             sine_kernel(&circular.reduced, &square),
-        ),
+        )
+    };
+    let result = Expr::mul(
+        quadrant_sign(&circular.quadrant, rotation),
+        Expr::select(quadrant_is_odd(&circular.quadrant), odd_branch, even_branch),
     );
-    // Below 2^-12 the reduction cannot improve on the argument itself, and
-    // returning it keeps a small magnitude exact.
     let result = Expr::select(
         Expr::lt(
             circular.magnitude.clone(),
             Expr::u32(SIN_COS_SMALL_ARGUMENT_BITS),
         ),
-        circular.value,
+        small_fallback(circular.value),
         result,
     );
     Expr::select(
@@ -408,29 +413,12 @@ pub(super) fn sine(argument: &Expr) -> Expr {
     )
 }
 
+/// `sin(x)` for `|x| <= 401`, and [`NAN_RESULT_BITS`] outside that domain.
+pub(super) fn sine(argument: &Expr) -> Expr {
+    circular_select(argument, 0, |v| v, false)
+}
+
 /// `cos(x)` for `|x| <= 401`, and [`NAN_RESULT_BITS`] outside that domain.
 pub(super) fn cosine(argument: &Expr) -> Expr {
-    let circular = circular_reduction(argument);
-    let square = Expr::mul(circular.reduced.clone(), circular.reduced.clone());
-    let result = Expr::mul(
-        quadrant_sign(&circular.quadrant, 1),
-        Expr::select(
-            quadrant_is_odd(&circular.quadrant),
-            sine_kernel(&circular.reduced, &square),
-            cosine_kernel(&square),
-        ),
-    );
-    let result = Expr::select(
-        Expr::lt(
-            circular.magnitude.clone(),
-            Expr::u32(SIN_COS_SMALL_ARGUMENT_BITS),
-        ),
-        constant(ONE_BITS),
-        result,
-    );
-    Expr::select(
-        Expr::gt(circular.magnitude, Expr::u32(SIN_COS_DOMAIN_BITS)),
-        constant(NAN_RESULT_BITS),
-        result,
-    )
+    circular_select(argument, 1, |_| constant(ONE_BITS), true)
 }

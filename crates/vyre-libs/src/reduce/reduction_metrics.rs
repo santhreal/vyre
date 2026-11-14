@@ -7,16 +7,15 @@
 //! host loops in each pass.
 
 use crate::plumbing::host::dispatch_buffers::{
-    ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
+    decode_u32_scalar_exact, ensure_input_slots, execute_program_first_output,
+    execute_program_first_u32_into, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::reduce::{
     all::reduce_all, any::reduce_any, count_non_zero::reduce_count_non_zero,
     histogram::histogram_atomic_scatter, max::reduce_max, min::reduce_min,
     segment_reduce::segment_reduce_sum, sum::reduce_sum,
 };
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Caller-owned scratch for reduction metric dispatches.
 #[derive(Debug, Default)]
@@ -69,8 +68,6 @@ pub fn reduce_metric_via_with_scratch(
     values: &[u32],
     scratch: &mut ReductionMetricsGpuScratch,
 ) -> Result<u32, SemanticExecutionError> {
-    bump_reduction_metrics_calls();
-
     let count = checked_len(values.len(), "reduce_metric_via")?;
     let program = match metric {
         ReductionMetric::Sum => reduce_sum("values", "out", count),
@@ -83,15 +80,14 @@ pub fn reduce_metric_via_with_scratch(
     ensure_input_slots(&mut scratch.inputs, 2);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], values);
     write_zero_bytes(&mut scratch.inputs[1], std::mem::size_of::<u32>());
-    let outputs = execute_single_program(
+    let output = execute_program_first_output(
         executor,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &scratch.inputs,
         policy,
-    )?
-    .outputs;
-    decode_scalar(&outputs, "reduce_metric_via")
+        "reduce_metric_via",
+    )?;
+    decode_u32_scalar_exact(&output, "reduce_metric_via")
 }
 
 /// Wrapping sum of active work items through the reduce primitive.
@@ -210,8 +206,6 @@ pub fn segment_reduce_sum_via_with_scratch_into(
     scratch: &mut ReductionMetricsGpuScratch,
     out: &mut Vec<u32>,
 ) -> Result<(), SemanticExecutionError> {
-    bump_reduction_metrics_calls();
-
     let num_segments = validate_segment_offsets(input, segment_offsets)?;
     let input_count = u32::try_from(input.len().max(1)).map_err(|_| {
         SemanticExecutionError::InvalidRequest(format!(
@@ -237,16 +231,11 @@ pub fn segment_reduce_sum_via_with_scratch_into(
         &mut scratch.inputs[2],
         num_segments as usize * std::mem::size_of::<u32>(),
     );
-    let outputs = execute_single_program(
+    execute_program_first_u32_into(
         executor,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &scratch.inputs,
         policy,
-    )?
-    .outputs;
-    decode_first_output(
-        &outputs,
         num_segments as usize,
         "segment_reduce_sum_via",
         out,
@@ -265,8 +254,6 @@ pub fn histogram_atomic_scatter_via(
     input: &[u32],
     num_bins: u32,
 ) -> Result<Vec<u32>, SemanticExecutionError> {
-    bump_reduction_metrics_calls();
-
     let count = checked_nonzero_len(input.len(), "histogram_atomic_scatter_via")?;
     if num_bins == 0 {
         return Err(SemanticExecutionError::InvalidRequest(
@@ -282,25 +269,18 @@ pub fn histogram_atomic_scatter_via(
         &mut scratch.inputs[1],
         bin_count * std::mem::size_of::<u32>(),
     );
-    let outputs = execute_single_program(
+    let mut out = Vec::new();
+    execute_program_first_u32_into(
         executor,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &scratch.inputs,
         policy,
-    )?
-    .outputs;
-    let mut out = Vec::new();
-    decode_first_output(
-        &outputs,
         bin_count,
         "histogram_atomic_scatter_via",
         &mut out,
     )?;
     Ok(out)
 }
-
-fn bump_reduction_metrics_calls() {}
 
 fn checked_len(len: usize, context: &'static str) -> Result<u32, SemanticExecutionError> {
     u32::try_from(len).map_err(|_| {
@@ -346,34 +326,6 @@ fn validate_segment_offsets(
         }
     }
     Ok(num_segments as u32)
-}
-
-fn decode_first_output(
-    outputs: &[Vec<u8>],
-    words: usize,
-    context: &'static str,
-    out: &mut Vec<u32>,
-) -> Result<(), SemanticExecutionError> {
-    if outputs.is_empty() {
-        return Err(SemanticExecutionError::Backend(format!(
-            "Fix: {context} expected at least one output buffer, got 0."
-        )));
-    }
-    crate::plumbing::host::dispatch_buffers::decode_u32_output_exact(
-        &outputs[0],
-        words,
-        context,
-        out,
-    )
-}
-
-fn decode_scalar(
-    outputs: &[Vec<u8>],
-    context: &'static str,
-) -> Result<u32, SemanticExecutionError> {
-    let mut out = Vec::new();
-    decode_first_output(outputs, 1, context, &mut out)?;
-    Ok(out[0])
 }
 
 #[cfg(test)]

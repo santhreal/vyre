@@ -45,9 +45,7 @@
 mod dense_step;
 mod four_russians;
 mod mode_selection;
-mod plan_cache_key;
 mod sparse_dense_step;
-mod traversal_plan;
 
 pub use dense_step::adaptive_dense_step;
 pub use four_russians::{
@@ -61,17 +59,7 @@ pub use mode_selection::{
     select_adaptive_traversal_mode, select_dense_traversal_kernel, AdaptiveTraversalMode,
     DenseTraversalKernel,
 };
-pub use plan_cache_key::{
-    adaptive_four_russians_graph_content_hash, adaptive_sparse_queue_graph_content_hash,
-    adaptive_traversal_graph_content_hash, adaptive_traversal_program_layout_hash,
-    adaptive_traversal_split_program_layout_hash, AdaptiveTraversalPlanCacheKey,
-    AdaptiveTraversalProgramKind,
-};
 pub use sparse_dense_step::adaptive_sparse_dense_step;
-pub use traversal_plan::{
-    plan_adaptive_dense_step, plan_adaptive_traversal_step, AdaptiveDenseStepPlan,
-    AdaptiveTraversalBuffers, AdaptiveTraversalStepPlan,
-};
 
 const ADAPTIVE_TRAVERSAL_LINEAR_WORKGROUP_SIZE: [u32; 3] = [256, 1, 1];
 
@@ -87,22 +75,3 @@ pub const HYBRID_OP_ID: &str = "vyre-libs::graph::adaptive_traverse_sparse_dense
 /// Canonical op id for graph-level dense Four-Russians traversal planning.
 pub const FOUR_RUSSIANS_DENSE_OP_ID: &str =
     "vyre-libs::graph::adaptive_traverse_four_russians_dense";
-
-/// Canonical input-frontier buffer name.
-pub const NAME_FRONTIER_IN: &str = "adap_frontier_in";
-/// Canonical output-frontier buffer name.
-pub const NAME_FRONTIER_OUT: &str = "adap_frontier_out";
-/// Canonical frontier-popcount buffer name.
-pub const NAME_FRONTIER_POPCOUNT: &str = "adap_frontier_popcount";
-/// Canonical CSR row-offset buffer name.
-pub const NAME_EDGE_OFFSETS: &str = "adap_edge_offsets";
-/// Canonical CSR edge-target buffer name.
-pub const NAME_EDGE_TARGETS: &str = "adap_edge_targets";
-/// Canonical CSR edge-kind mask buffer name.
-pub const NAME_EDGE_KIND_MASK: &str = "adap_edge_kind_mask";
-/// Canonical dense adjacency-row buffer name.
-pub const NAME_ADJ_ROWS_DENSE: &str = "adap_adj_rows_dense";
-/// Canonical compacted active-source queue buffer name.
-pub const NAME_ACTIVE_QUEUE: &str = "adap_active_queue";
-/// Canonical resident active-queue length buffer name.
-pub const NAME_QUEUE_LEN: &str = "adap_queue_len";

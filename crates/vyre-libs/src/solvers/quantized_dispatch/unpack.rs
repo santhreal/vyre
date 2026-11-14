@@ -1,9 +1,7 @@
 //! Device dispatch that expands packed INT4 lanes back to i32.
 
 use super::*;
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Unpack packed signed INT4 lanes through the dispatch backend.
 ///
@@ -77,16 +75,11 @@ pub fn unpack_i4x8_via_with_scratch_into(
     ensure_input_slots(inputs, 2);
     write_u32_slice_le_bytes(&mut inputs[0], packed_words);
     write_zero_bytes(&mut inputs[1], out_bytes);
-    let outputs = execute_single_program(
+    execute_program_sole_i32_into(
         dispatcher,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
         program.clone(),
         &inputs[..2],
         policy,
-    )
-    .map(|output| output.outputs)?;
-    decode_i32_output_exact(
-        expect_one_output("unpack_i4x8_via", &outputs)?,
         lane_words,
         "unpack_i4x8_via",
         out,

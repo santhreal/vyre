@@ -31,10 +31,5 @@ pub use program_parallel::{
 pub use program_parallel_batch::{
     csr_forward_or_changed_parallel_batch, try_csr_forward_or_changed_parallel_batch,
 };
-pub use program_parallel_batch_global::{
-    csr_forward_or_changed_parallel_batch_global,
-    csr_forward_or_changed_parallel_batch_global_slot,
-    try_csr_forward_or_changed_parallel_batch_global_slot,
-};
 pub use program_serial::csr_forward_or_changed;
 pub use validate::{copy_csr_forward_seed_frontier_into, validate_csr_forward_or_changed_flag};

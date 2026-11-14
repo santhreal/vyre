@@ -132,6 +132,9 @@ fn frontier_popcount_expr(frontier_out: &str, words: u32) -> Expr {
     sum
 }
 
+const T: Expr = Expr::LogicalIndex { axis: 0 };
+const Q: Expr = Expr::LogicalIndex { axis: 1 };
+
 fn persistent_bfs_single_workgroup(
     shape: ProgramGraphShape,
     frontier_in: &str,
@@ -141,7 +144,6 @@ fn persistent_bfs_single_workgroup(
     density_active: Option<&str>,
 ) -> Program {
     let words = bitset_words(shape.node_count);
-    let t = Expr::logical_index(0);
 
     let unrolled_iter = |iter: u32| -> Node {
         persistent_bfs_step_child_prefixed_with_active(
@@ -172,7 +174,7 @@ fn persistent_bfs_single_workgroup(
         // invariant to whole-tile over-dispatch. In the intended schedule the
         // global and within-tile zero points are the same point.
         Node::if_then(
-            Expr::eq(t.clone(), Expr::u32(0)),
+            Expr::eq(T, Expr::u32(0)),
             vec![Node::loop_for(
                 "seed_word_idx",
                 Expr::u32(0),
@@ -186,7 +188,7 @@ fn persistent_bfs_single_workgroup(
         ),
         // Zero the global changed flag.
         Node::if_then(
-            Expr::eq(t.clone(), Expr::u32(0)),
+            Expr::eq(T, Expr::u32(0)),
             vec![
                 Node::store("changed", Expr::u32(0), Expr::u32(0)),
                 Node::store("wg_active", Expr::u32(0), Expr::u32(1)),
@@ -207,7 +209,7 @@ fn persistent_bfs_single_workgroup(
             Some(density) => vec![
                 Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
                 Node::if_then(
-                    Expr::eq(t.clone(), Expr::u32(0)),
+                    Expr::eq(T, Expr::u32(0)),
                     vec![Node::store(
                         density,
                         step_index,
@@ -232,7 +234,7 @@ fn persistent_bfs_single_workgroup(
             vec![
                 Node::let_bind("local_changed", Expr::u32(0)),
                 Node::if_then(
-                    Expr::lt(t.clone(), Expr::u32(shape.node_count)),
+                    Expr::lt(T, Expr::u32(shape.node_count)),
                     vec![
                         crate::graph::csr_forward_or_changed::csr_forward_or_changed_child_prefixed(
                             OP_ID,
@@ -245,7 +247,7 @@ fn persistent_bfs_single_workgroup(
                     ],
                 ),
                 Node::if_then(
-                    Expr::eq(t.clone(), Expr::u32(0)),
+                    Expr::eq(T, Expr::u32(0)),
                     vec![Node::store(
                         "wg_active",
                         Expr::u32(0),
@@ -287,7 +289,7 @@ fn persistent_bfs_single_workgroup(
     // case `wg_active` is still its seed value 1). The leader that reads it here
     // (`LogicalIndex(0)==0`) is the same point that wrote it last, so no barrier is needed.
     entry.push(Node::if_then(
-        Expr::eq(t.clone(), Expr::u32(0)),
+        Expr::eq(T, Expr::u32(0)),
         vec![Node::store(
             "converged",
             Expr::u32(0),
@@ -328,20 +330,15 @@ fn persistent_bfs_grid_sync_parallel(
     density_active: Option<&str>,
 ) -> Program {
     let words = bitset_words(shape.node_count);
-    let t = Expr::logical_index(0);
     const GRID_CHANGED_WORDS: u32 = 3;
     const GRID_ACTIVE_BASE: u32 = 1;
     let mut entry: Vec<Node> = vec![
         Node::if_then(
-            Expr::lt(t.clone(), Expr::u32(words)),
-            vec![Node::store(
-                frontier_out,
-                t.clone(),
-                Expr::load(frontier_in, t.clone()),
-            )],
+            Expr::lt(T, Expr::u32(words)),
+            vec![Node::store(frontier_out, T, Expr::load(frontier_in, T))],
         ),
         Node::if_then(
-            Expr::eq(t.clone(), Expr::u32(0)),
+            Expr::eq(T, Expr::u32(0)),
             if max_iters > 0 {
                 vec![
                     Node::store("changed", Expr::u32(0), Expr::u32(0)),
@@ -361,7 +358,7 @@ fn persistent_bfs_grid_sync_parallel(
         let active_index = GRID_ACTIVE_BASE + (iter & 1);
         let next_active_index = GRID_ACTIVE_BASE + ((iter + 1) & 1);
         entry.push(Node::if_then(
-            Expr::eq(t.clone(), Expr::u32(0)),
+            Expr::eq(T, Expr::u32(0)),
             vec![Node::store(
                 "changed",
                 Expr::u32(next_active_index),
@@ -397,7 +394,7 @@ fn persistent_bfs_grid_sync_parallel(
             Some(density) => {
                 entry.push(grid_sync_barrier());
                 entry.push(Node::if_then(
-                    Expr::eq(t.clone(), Expr::u32(0)),
+                    Expr::eq(T, Expr::u32(0)),
                     vec![
                         Node::store(density, Expr::u32(iter), Expr::u32(0)),
                         Node::loop_for(
@@ -441,7 +438,7 @@ fn persistent_bfs_grid_sync_parallel(
         entry.push(grid_sync_barrier());
         let final_active_index = GRID_ACTIVE_BASE + (max_iters & 1);
         entry.push(Node::if_then(
-            Expr::eq(t.clone(), Expr::u32(0)),
+            Expr::eq(T, Expr::u32(0)),
             vec![Node::store(
                 "converged",
                 Expr::u32(0),
@@ -457,7 +454,7 @@ fn persistent_bfs_grid_sync_parallel(
         ));
     } else {
         entry.push(Node::if_then(
-            Expr::eq(t.clone(), Expr::u32(0)),
+            Expr::eq(T, Expr::u32(0)),
             vec![Node::store("converged", Expr::u32(0), Expr::u32(0))],
         ));
     }
@@ -639,30 +636,23 @@ fn try_persistent_bfs_batch_inner(
 ) -> Result<Program, String> {
     let words = bitset_words(shape.node_count).max(1);
     let total_words = checked_batch_frontier_words(words, query_count, BATCH_OP_ID)?;
-    let q = Expr::logical_index(1);
-    let base = Expr::mul(q.clone(), Expr::u32(words));
-    let lane = Expr::logical_index(0);
+    let base = || Expr::mul(Q, Expr::u32(words));
     let uses_grid_sync = persistent_bfs_batch_needs_grid_sync(shape);
 
     let mut entry: Vec<Node> = vec![
         Node::if_then(
-            Expr::lt(lane.clone(), Expr::u32(words)),
+            Expr::lt(T, Expr::u32(words)),
             vec![Node::store(
                 frontier_out,
-                Expr::add(base.clone(), lane.clone()),
-                Expr::load(frontier_in, Expr::add(base.clone(), lane.clone())),
+                Expr::add(base(), T),
+                Expr::load(frontier_in, Expr::add(base(), T)),
             )],
         ),
         Node::if_then(
-            Expr::eq(lane, Expr::u32(0)),
+            Expr::eq(T, Expr::u32(0)),
             vec![
-                Node::store(changed, q.clone(), Expr::u32(0)),
-                // Init converged[q] = 0 (not converged). When max_iters == 0 no
-                // step runs and this seed value stands, matching the single-query
-                // "max_iters == 0 -> converged 0" contract. When max_iters > 0 the
-                // per-step reset below overwrites it and the trailing publish sets
-                // the real value.
-                Node::store(converged, q.clone(), Expr::u32(0)),
+                Node::store(changed, Q, Expr::u32(0)),
+                Node::store(converged, Q, Expr::u32(0)),
             ],
         ),
     ];
@@ -822,25 +812,23 @@ fn persistent_bfs_batch_record_density(
     iter_index: Expr,
     word_var: &str,
 ) -> Node {
-    let q = Expr::logical_index(1);
-    let base = Expr::mul(q.clone(), Expr::u32(words));
-    let density_index = Expr::add(Expr::mul(q, Expr::u32(max_iters)), iter_index);
+    let make_idx = |idx: Expr| Expr::add(Expr::mul(Q, Expr::u32(max_iters)), idx);
     Node::if_then(
-        Expr::eq(Expr::logical_index(0), Expr::u32(0)),
+        Expr::eq(T, Expr::u32(0)),
         vec![
-            Node::store(density, density_index.clone(), Expr::u32(0)),
+            Node::store(density, make_idx(iter_index.clone()), Expr::u32(0)),
             Node::loop_for(
                 word_var,
                 Expr::u32(0),
                 Expr::u32(words),
                 vec![Node::store(
                     density,
-                    density_index.clone(),
+                    make_idx(iter_index.clone()),
                     Expr::add(
-                        Expr::load(density, density_index.clone()),
+                        Expr::load(density, make_idx(iter_index)),
                         Expr::popcount(Expr::load(
                             frontier_out,
-                            Expr::add(base.clone(), Expr::var(word_var)),
+                            Expr::add(Expr::mul(Q, Expr::u32(words)), Expr::var(word_var)),
                         )),
                     ),
                 )],
@@ -868,9 +856,7 @@ fn persistent_bfs_batch_parallel_step_body(
     uses_grid_sync: bool,
 ) -> Vec<Node> {
     let local = |name: &str| -> String { format!("{local_prefix}_{name}") };
-    let q = Expr::logical_index(1);
-    let base = Expr::mul(q.clone(), Expr::u32(words));
-    let src = Expr::logical_index(0);
+    let base = || Expr::mul(Q, Expr::u32(words));
     let in_bounds = local("in_bounds");
     let word_idx = local("word_idx");
     let bit_mask = local("bit_mask");
@@ -891,13 +877,13 @@ fn persistent_bfs_batch_parallel_step_body(
         crate::graph::edge_scan::csr_edge_expand_nodes(
             shape,
             frontier_out,
-            src.clone(),
-            |word| Expr::add(base.clone(), word),
+            T,
+            |word| Expr::add(base(), word),
             || {
                 vec![
                     Node::let_bind(
                         changed_old.as_str(),
-                        Expr::atomic_or(changed, q.clone(), Expr::u32(1)),
+                        Expr::atomic_or(changed, Q, Expr::u32(1)),
                     ),
                     // Mark THIS step active for query q. `converged[q]` is reset to
                     // 0 at the top of the step, so after the loop it holds "did the
@@ -906,7 +892,7 @@ fn persistent_bfs_batch_parallel_step_body(
                     // convergence needs the last-step state, not the cumulative OR.
                     Node::let_bind(
                         converged_old.as_str(),
-                        Expr::atomic_or(converged, q.clone(), Expr::u32(1)),
+                        Expr::atomic_or(converged, Q, Expr::u32(1)),
                     ),
                 ]
             },
@@ -922,20 +908,17 @@ fn persistent_bfs_batch_parallel_step_body(
         // in one workgroup, so a workgroup barrier synchronizes the reset; in the
         // grid-sync path the barrier is grid-wide.
         Node::if_then(
-            Expr::eq(src.clone(), Expr::u32(0)),
-            vec![Node::store(converged, q.clone(), Expr::u32(0))],
+            Expr::eq(T, Expr::u32(0)),
+            vec![Node::store(converged, Q, Expr::u32(0))],
         ),
-        Node::let_bind(
-            in_bounds.as_str(),
-            Expr::lt(src.clone(), Expr::u32(shape.node_count)),
-        ),
+        Node::let_bind(in_bounds.as_str(), Expr::lt(T, Expr::u32(shape.node_count))),
     ];
     // Snapshot path: the load lands before the barrier and the guard after it, so
     // the address, the load and the test are separate statements rather than one
     // `frontier_bits::when_bit_set` probe. The word index is `select`ed to zero out
     // of bounds so the pre-barrier load stays in range for the tail lanes.
     body.extend(bind_bit_address(
-        &src,
+        &T,
         word_idx.as_str(),
         bit_mask.as_str(),
         |word| Expr::select(Expr::var(in_bounds.as_str()), word, Expr::u32(0)),
@@ -945,7 +928,7 @@ fn persistent_bfs_batch_parallel_step_body(
             src_word.as_str(),
             Expr::load(
                 frontier_out,
-                Expr::add(base.clone(), Expr::var(word_idx.as_str())),
+                Expr::add(base(), Expr::var(word_idx.as_str())),
             ),
         ),
         Node::let_bind(

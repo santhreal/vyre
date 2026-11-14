@@ -127,10 +127,6 @@ pub mod dedup_conv_ast_walk_family_guard;
 #[path = "delegating_builder_equivalence.rs"]
 pub mod delegating_builder_equivalence;
 
-/// Integration tests from `tests/device_resident_token_fact_graph_ownership.rs`.
-#[path = "device_resident_token_fact_graph_ownership.rs"]
-pub mod device_resident_token_fact_graph_ownership;
-
 /// Integration tests from `tests/dominator_tree_composition.rs`.
 #[cfg(feature = "graph")]
 #[path = "dominator_tree_composition.rs"]

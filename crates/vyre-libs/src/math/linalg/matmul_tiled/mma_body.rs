@@ -21,31 +21,28 @@ pub(super) fn cooperative_matmul_body_mma(
     tile: TileShape,
     dtype: DataType,
 ) -> Vec<Node> {
+    let is_f16 = matches!(dtype, DataType::F16);
+    let is_bf16 = matches!(dtype, DataType::BF16);
     let to_f32 = |value: Expr| Expr::cast(DataType::F32, value);
-    let from_f32 = |value: Expr| Expr::cast(dtype.clone(), value);
-    let col = Expr::var("col");
-    let row0 = Expr::var("row0");
-    let row1 = Expr::var("row1");
-    let row2 = Expr::var("row2");
-    let row3 = Expr::var("row3");
-    let col_in_bounds = Expr::lt(col.clone(), Expr::u32(shape.n));
-    let row0_in_bounds = Expr::and(
-        Expr::lt(row0.clone(), Expr::u32(shape.m)),
-        col_in_bounds.clone(),
-    );
-    let row1_in_bounds = Expr::and(
-        Expr::lt(row1.clone(), Expr::u32(shape.m)),
-        col_in_bounds.clone(),
-    );
-    let row2_in_bounds = Expr::and(
-        Expr::lt(row2.clone(), Expr::u32(shape.m)),
-        col_in_bounds.clone(),
-    );
-    let row3_in_bounds = Expr::and(
-        Expr::lt(row3.clone(), Expr::u32(shape.m)),
-        col_in_bounds.clone(),
-    );
-
+    let from_f32 = move |value: Expr| {
+        let out_dtype = if is_f16 {
+            DataType::F16
+        } else if is_bf16 {
+            DataType::BF16
+        } else {
+            DataType::F32
+        };
+        Expr::cast(out_dtype, value)
+    };
+    let col_in_bounds = || Expr::lt(Expr::var("col"), Expr::u32(shape.n));
+    let row_in_bounds =
+        |r: &'static str| Expr::and(Expr::lt(Expr::var(r), Expr::u32(shape.m)), col_in_bounds());
+    const ROWS: [(&str, &str, &str); 4] = [
+        ("row0", "acc0", "mma_c0"),
+        ("row1", "acc1", "mma_c1"),
+        ("row2", "acc2", "mma_c2"),
+        ("row3", "acc3", "mma_c3"),
+    ];
     let mut body = bind_output_tile_coordinates(
         shape,
         tile,
@@ -67,13 +64,10 @@ pub(super) fn cooperative_matmul_body_mma(
     ]);
     if let Some(bias) = bias {
         body.push(Node::if_then(
-            col_in_bounds.clone(),
-            vec![
-                Node::assign("acc0", to_f32(Expr::load(bias, col.clone()))),
-                Node::assign("acc1", to_f32(Expr::load(bias, col.clone()))),
-                Node::assign("acc2", to_f32(Expr::load(bias, col.clone()))),
-                Node::assign("acc3", to_f32(Expr::load(bias, col.clone()))),
-            ],
+            col_in_bounds(),
+            ROWS.iter()
+                .map(|&(_, acc, _)| Node::assign(acc, to_f32(Expr::load(bias, Expr::var("col")))))
+                .collect(),
         ));
     }
     body.push(Node::loop_for(
@@ -84,26 +78,41 @@ pub(super) fn cooperative_matmul_body_mma(
             "b_val",
             to_f32(Expr::load(
                 b,
-                Expr::add(Expr::mul(Expr::var("kk"), Expr::u32(shape.n)), col.clone()),
+                Expr::add(
+                    Expr::mul(Expr::var("kk"), Expr::u32(shape.n)),
+                    Expr::var("col"),
+                ),
             )),
         )]
         .into_iter()
         .chain(matmul_mma_fragment(
             to_f32(Expr::load(
                 a,
-                Expr::add(Expr::mul(row0.clone(), Expr::u32(shape.k)), Expr::var("kk")),
+                Expr::add(
+                    Expr::mul(Expr::var("row0"), Expr::u32(shape.k)),
+                    Expr::var("kk"),
+                ),
             )),
             to_f32(Expr::load(
                 a,
-                Expr::add(Expr::mul(row1.clone(), Expr::u32(shape.k)), Expr::var("kk")),
+                Expr::add(
+                    Expr::mul(Expr::var("row1"), Expr::u32(shape.k)),
+                    Expr::var("kk"),
+                ),
             )),
             to_f32(Expr::load(
                 a,
-                Expr::add(Expr::mul(row2.clone(), Expr::u32(shape.k)), Expr::var("kk")),
+                Expr::add(
+                    Expr::mul(Expr::var("row2"), Expr::u32(shape.k)),
+                    Expr::var("kk"),
+                ),
             )),
             to_f32(Expr::load(
                 a,
-                Expr::add(Expr::mul(row3.clone(), Expr::u32(shape.k)), Expr::var("kk")),
+                Expr::add(
+                    Expr::mul(Expr::var("row3"), Expr::u32(shape.k)),
+                    Expr::var("kk"),
+                ),
             )),
             Expr::var("b_val"),
             Expr::var("b_val"),
@@ -112,59 +121,23 @@ pub(super) fn cooperative_matmul_body_mma(
             Expr::var("acc2"),
             Expr::var("acc3"),
         ))
-        .chain([
-            Node::if_then(
-                row0_in_bounds.clone(),
-                vec![Node::assign("acc0", Expr::var("mma_c0"))],
-            ),
-            Node::if_then(
-                row1_in_bounds.clone(),
-                vec![Node::assign("acc1", Expr::var("mma_c1"))],
-            ),
-            Node::if_then(
-                row2_in_bounds.clone(),
-                vec![Node::assign("acc2", Expr::var("mma_c2"))],
-            ),
-            Node::if_then(
-                row3_in_bounds.clone(),
-                vec![Node::assign("acc3", Expr::var("mma_c3"))],
-            ),
-        ])
+        .chain(ROWS.iter().map(|&(r, acc, mma)| {
+            Node::if_then(row_in_bounds(r), vec![Node::assign(acc, Expr::var(mma))])
+        }))
         .collect(),
     ));
-    body.extend([
+    body.extend(ROWS.iter().map(|&(r, acc, _)| {
         Node::if_then(
-            row0_in_bounds,
+            row_in_bounds(r),
             vec![Node::Store {
                 buffer: out.into(),
-                index: Expr::add(Expr::mul(row0, Expr::u32(shape.n)), col.clone()),
-                value: from_f32(Expr::var("acc0")),
+                index: Expr::add(
+                    Expr::mul(Expr::var(r), Expr::u32(shape.n)),
+                    Expr::var("col"),
+                ),
+                value: from_f32(Expr::var(acc)),
             }],
-        ),
-        Node::if_then(
-            row1_in_bounds,
-            vec![Node::Store {
-                buffer: out.into(),
-                index: Expr::add(Expr::mul(row1, Expr::u32(shape.n)), col.clone()),
-                value: from_f32(Expr::var("acc1")),
-            }],
-        ),
-        Node::if_then(
-            row2_in_bounds,
-            vec![Node::Store {
-                buffer: out.into(),
-                index: Expr::add(Expr::mul(row2, Expr::u32(shape.n)), col.clone()),
-                value: from_f32(Expr::var("acc2")),
-            }],
-        ),
-        Node::if_then(
-            row3_in_bounds,
-            vec![Node::Store {
-                buffer: out.into(),
-                index: Expr::add(Expr::mul(row3, Expr::u32(shape.n)), col),
-                value: from_f32(Expr::var("acc3")),
-            }],
-        ),
-    ]);
+        )
+    }));
     body
 }

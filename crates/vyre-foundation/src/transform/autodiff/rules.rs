@@ -17,6 +17,20 @@ pub struct AdjointContrib {
     pub adjoint: Expr,
 }
 
+fn neg(operand: Expr) -> Expr {
+    Expr::UnOp {
+        op: UnOp::Negate,
+        operand: Box::new(operand),
+    }
+}
+
+fn unary(op: UnOp, operand: Expr) -> Expr {
+    Expr::UnOp {
+        op,
+        operand: Box::new(operand),
+    }
+}
+
 /// Compute the adjoint contributions for a `BinOp` expression.
 ///
 /// Given `z = left ⊕ right` and `dz` (adjoint on z), returns `(d_left, d_right)`.
@@ -34,99 +48,58 @@ pub fn binop_adjoints(
     right: &Expr,
     adjoint: &Expr,
 ) -> Result<Vec<AdjointContrib>, AutodiffError> {
-    match op {
+    let (dl, dr) = match op {
         // d(a+b)/da = 1, d(a+b)/db = 1
-        BinOp::Add => Ok(vec![
-            AdjointContrib {
-                child: left.clone(),
-                adjoint: adjoint.clone(),
-            },
-            AdjointContrib {
-                child: right.clone(),
-                adjoint: adjoint.clone(),
-            },
-        ]),
+        BinOp::Add => {
+            let dz = adjoint.clone();
+            (dz.clone(), dz)
+        }
         // d(a-b)/da = 1, d(a-b)/db = -1
-        BinOp::Sub => Ok(vec![
-            AdjointContrib {
-                child: left.clone(),
-                adjoint: adjoint.clone(),
-            },
-            AdjointContrib {
-                child: right.clone(),
-                adjoint: Expr::UnOp {
-                    op: UnOp::Negate,
-                    operand: Box::new(adjoint.clone()),
-                },
-            },
-        ]),
+        BinOp::Sub => {
+            let dz = adjoint.clone();
+            (dz.clone(), neg(dz))
+        }
         // d(a*b)/da = b, d(a*b)/db = a
-        BinOp::Mul => Ok(vec![
-            AdjointContrib {
-                child: left.clone(),
-                adjoint: Expr::mul(adjoint.clone(), right.clone()),
-            },
-            AdjointContrib {
-                child: right.clone(),
-                adjoint: Expr::mul(adjoint.clone(), left.clone()),
-            },
-        ]),
+        BinOp::Mul => {
+            let dz = adjoint.clone();
+            (
+                Expr::mul(dz.clone(), right.clone()),
+                Expr::mul(dz, left.clone()),
+            )
+        }
         // d(a/b)/da = 1/b, d(a/b)/db = -a/b²
-        BinOp::Div => Ok(vec![
-            AdjointContrib {
-                child: left.clone(),
-                adjoint: Expr::div(adjoint.clone(), right.clone()),
-            },
-            AdjointContrib {
-                child: right.clone(),
-                adjoint: Expr::UnOp {
-                    op: UnOp::Negate,
-                    operand: Box::new(Expr::div(
-                        Expr::mul(adjoint.clone(), left.clone()),
-                        Expr::mul(right.clone(), right.clone()),
-                    )),
-                },
-            },
-        ]),
+        BinOp::Div => {
+            let (dz, r) = (adjoint.clone(), right.clone());
+            (
+                Expr::div(dz.clone(), r.clone()),
+                neg(Expr::div(
+                    Expr::mul(dz, left.clone()),
+                    Expr::mul(r.clone(), r),
+                )),
+            )
+        }
         // d(min(a,b))/da = (a < b) ? dz : 0, d(min(a,b))/db = (b <= a) ? dz : 0
         // Subgradient: route adjoint to the arg that was selected.
-        BinOp::Min => Ok(vec![
-            AdjointContrib {
-                child: left.clone(),
-                adjoint: Expr::Select {
-                    cond: Box::new(Expr::lt(left.clone(), right.clone())),
-                    true_val: Box::new(adjoint.clone()),
-                    false_val: Box::new(Expr::f32(0.0)),
-                },
-            },
-            AdjointContrib {
-                child: right.clone(),
-                adjoint: Expr::Select {
-                    cond: Box::new(Expr::le(left.clone(), right.clone())),
-                    true_val: Box::new(Expr::f32(0.0)),
-                    false_val: Box::new(adjoint.clone()),
-                },
-            },
-        ]),
+        BinOp::Min => {
+            let dz = adjoint.clone();
+            (
+                Expr::select(
+                    Expr::lt(left.clone(), right.clone()),
+                    dz.clone(),
+                    Expr::f32(0.0),
+                ),
+                Expr::select(Expr::le(left.clone(), right.clone()), Expr::f32(0.0), dz),
+            )
+        }
         // max: mirror of min
-        BinOp::Max => Ok(vec![
-            AdjointContrib {
-                child: left.clone(),
-                adjoint: Expr::Select {
-                    cond: Box::new(Expr::gt(left.clone(), right.clone())),
-                    true_val: Box::new(adjoint.clone()),
-                    false_val: Box::new(Expr::f32(0.0)),
-                },
-            },
-            AdjointContrib {
-                child: right.clone(),
-                adjoint: Expr::Select {
-                    cond: Box::new(Expr::gt(left.clone(), right.clone())),
-                    true_val: Box::new(Expr::f32(0.0)),
-                    false_val: Box::new(adjoint.clone()),
-                },
-            },
-        ]),
+        BinOp::Max => {
+            let cmp = Expr::gt(left.clone(), right.clone());
+            let dz = adjoint.clone();
+            (
+                Expr::select(cmp.clone(), dz.clone(), Expr::f32(0.0)),
+                Expr::select(cmp, Expr::f32(0.0), dz),
+            )
+        }
         // Non-differentiable
         BinOp::Mod
         | BinOp::BitAnd
@@ -155,12 +128,24 @@ pub fn binop_adjoints(
         | BinOp::RotateLeft
         | BinOp::RotateRight
         | BinOp::Opaque(_)
-        | _ => Err(AutodiffError::NotDifferentiable {
-            op: format!("BinOp::{op:?}"),
-            fix: "replace with a differentiable equivalent or gate behind a stop-gradient barrier"
-                .into(),
-        }),
-    }
+        | _ => {
+            return Err(AutodiffError::NotDifferentiable {
+                op: format!("BinOp::{op:?}"),
+                fix: "replace with a differentiable equivalent or gate behind a stop-gradient barrier"
+                    .into(),
+            });
+        }
+    };
+    Ok(vec![
+        AdjointContrib {
+            child: left.clone(),
+            adjoint: dl,
+        },
+        AdjointContrib {
+            child: right.clone(),
+            adjoint: dr,
+        },
+    ])
 }
 
 /// Compute the adjoint contribution for a `UnOp` expression.
@@ -179,189 +164,84 @@ pub fn unop_adjoint(
     operand: &Expr,
     adjoint: &Expr,
 ) -> Result<AdjointContrib, AutodiffError> {
+    if matches!(
+        op,
+        UnOp::BitNot
+            | UnOp::LogicalNot
+            | UnOp::Popcount
+            | UnOp::Clz
+            | UnOp::Ctz
+            | UnOp::ReverseBits
+            | UnOp::Floor
+            | UnOp::Ceil
+            | UnOp::Round
+            | UnOp::Trunc
+            | UnOp::Sign
+            | UnOp::IsNan
+            | UnOp::IsInf
+            | UnOp::IsFinite
+            | UnOp::Unpack4Low
+            | UnOp::Unpack4High
+            | UnOp::Unpack8Low
+            | UnOp::Unpack8High
+            | UnOp::BitcastF32ToU32
+            | UnOp::BitcastU32ToF32
+            | UnOp::Opaque(_)
+    ) {
+        return Err(AutodiffError::NotDifferentiable {
+            op: format!("UnOp::{op:?}"),
+            fix: "replace with a differentiable equivalent or gate behind a stop-gradient barrier"
+                .into(),
+        });
+    }
+    let (x, dz) = (operand.clone(), adjoint.clone());
     let dx = match op {
-        // d(-x)/dx = -1
-        UnOp::Negate => Expr::UnOp {
-            op: UnOp::Negate,
-            operand: Box::new(adjoint.clone()),
-        },
-        // d(exp(x))/dx = exp(x)
-        UnOp::Exp => Expr::mul(
-            adjoint.clone(),
-            Expr::UnOp {
-                op: UnOp::Exp,
-                operand: Box::new(operand.clone()),
-            },
-        ),
-        // d(log(x))/dx = 1/x
-        UnOp::Log => Expr::div(adjoint.clone(), operand.clone()),
-        // d(sqrt(x))/dx = 1 / (2*sqrt(x))
-        UnOp::Sqrt => Expr::div(
-            adjoint.clone(),
-            Expr::mul(
-                Expr::f32(2.0),
-                Expr::UnOp {
-                    op: UnOp::Sqrt,
-                    operand: Box::new(operand.clone()),
-                },
-            ),
-        ),
-        // d(tanh(x))/dx = 1 - tanh²(x)
+        UnOp::Negate => neg(dz),
+        UnOp::Exp => Expr::mul(dz, unary(UnOp::Exp, x)),
+        UnOp::Log => Expr::div(dz, x),
+        UnOp::Sqrt => Expr::div(dz, Expr::mul(Expr::f32(2.0), unary(UnOp::Sqrt, x))),
         UnOp::Tanh => {
-            let t = Expr::UnOp {
-                op: UnOp::Tanh,
-                operand: Box::new(operand.clone()),
-            };
-            Expr::mul(
-                adjoint.clone(),
-                Expr::sub(Expr::f32(1.0), Expr::mul(t.clone(), t)),
-            )
+            let t = unary(UnOp::Tanh, x);
+            Expr::mul(dz, Expr::sub(Expr::f32(1.0), Expr::mul(t.clone(), t)))
         }
-        // d(sin(x))/dx = cos(x)
-        UnOp::Sin => Expr::mul(
-            adjoint.clone(),
-            Expr::UnOp {
-                op: UnOp::Cos,
-                operand: Box::new(operand.clone()),
-            },
-        ),
-        // d(cos(x))/dx = -sin(x)
-        UnOp::Cos => Expr::UnOp {
-            op: UnOp::Negate,
-            operand: Box::new(Expr::mul(
-                adjoint.clone(),
-                Expr::UnOp {
-                    op: UnOp::Sin,
-                    operand: Box::new(operand.clone()),
-                },
-            )),
-        },
-        // d(abs(x))/dx = sign(x)
-        UnOp::Abs => Expr::mul(
-            adjoint.clone(),
-            Expr::UnOp {
-                op: UnOp::Sign,
-                operand: Box::new(operand.clone()),
-            },
-        ),
-        // d(exp2(x))/dx = exp2(x) * ln(2)
+        UnOp::Sin => Expr::mul(dz, unary(UnOp::Cos, x)),
+        UnOp::Cos => neg(Expr::mul(dz, unary(UnOp::Sin, x))),
+        UnOp::Abs => Expr::mul(dz, unary(UnOp::Sign, x)),
         UnOp::Exp2 => Expr::mul(
-            Expr::mul(
-                adjoint.clone(),
-                Expr::UnOp {
-                    op: UnOp::Exp2,
-                    operand: Box::new(operand.clone()),
-                },
-            ),
+            Expr::mul(dz, unary(UnOp::Exp2, x)),
             Expr::f32(core::f32::consts::LN_2),
         ),
-        // d(log2(x))/dx = 1 / (x * ln(2))
-        UnOp::Log2 => Expr::div(
-            adjoint.clone(),
-            Expr::mul(operand.clone(), Expr::f32(core::f32::consts::LN_2)),
-        ),
-        // d(tan(x))/dx = 1 + tan²(x) = sec²(x)
+        UnOp::Log2 => Expr::div(dz, Expr::mul(x, Expr::f32(core::f32::consts::LN_2))),
         UnOp::Tan => {
-            let t = Expr::UnOp {
-                op: UnOp::Tan,
-                operand: Box::new(operand.clone()),
-            };
-            Expr::mul(
-                adjoint.clone(),
-                Expr::add(Expr::f32(1.0), Expr::mul(t.clone(), t)),
-            )
+            let t = unary(UnOp::Tan, x);
+            Expr::mul(dz, Expr::add(Expr::f32(1.0), Expr::mul(t.clone(), t)))
         }
-        // d(sinh(x))/dx = cosh(x)
-        UnOp::Sinh => Expr::mul(
-            adjoint.clone(),
-            Expr::UnOp {
-                op: UnOp::Cosh,
-                operand: Box::new(operand.clone()),
-            },
-        ),
-        // d(cosh(x))/dx = sinh(x)
-        UnOp::Cosh => Expr::mul(
-            adjoint.clone(),
-            Expr::UnOp {
-                op: UnOp::Sinh,
-                operand: Box::new(operand.clone()),
-            },
-        ),
-        // d(asin(x))/dx = 1/sqrt(1-x²)
+        UnOp::Sinh => Expr::mul(dz, unary(UnOp::Cosh, x)),
+        UnOp::Cosh => Expr::mul(dz, unary(UnOp::Sinh, x)),
         UnOp::Asin => Expr::div(
-            adjoint.clone(),
-            Expr::UnOp {
-                op: UnOp::Sqrt,
-                operand: Box::new(Expr::sub(
-                    Expr::f32(1.0),
-                    Expr::mul(operand.clone(), operand.clone()),
-                )),
-            },
+            dz,
+            unary(
+                UnOp::Sqrt,
+                Expr::sub(Expr::f32(1.0), Expr::mul(x.clone(), x)),
+            ),
         ),
-        // d(acos(x))/dx = -1/sqrt(1-x²)
-        UnOp::Acos => Expr::UnOp {
-            op: UnOp::Negate,
-            operand: Box::new(Expr::div(
-                adjoint.clone(),
-                Expr::UnOp {
-                    op: UnOp::Sqrt,
-                    operand: Box::new(Expr::sub(
-                        Expr::f32(1.0),
-                        Expr::mul(operand.clone(), operand.clone()),
-                    )),
-                },
-            )),
-        },
-        // d(atan(x))/dx = 1/(1+x²)
-        UnOp::Atan => Expr::div(
-            adjoint.clone(),
-            Expr::add(Expr::f32(1.0), Expr::mul(operand.clone(), operand.clone())),
-        ),
-        // d(1/sqrt(x))/dx = -1/(2 * x^(3/2))
+        UnOp::Acos => neg(Expr::div(
+            dz,
+            unary(
+                UnOp::Sqrt,
+                Expr::sub(Expr::f32(1.0), Expr::mul(x.clone(), x)),
+            ),
+        )),
+        UnOp::Atan => Expr::div(dz, Expr::add(Expr::f32(1.0), Expr::mul(x.clone(), x))),
         UnOp::InverseSqrt => {
-            let sqrt_x = Expr::UnOp {
-                op: UnOp::Sqrt,
-                operand: Box::new(operand.clone()),
-            };
-            Expr::UnOp {
-                op: UnOp::Negate,
-                operand: Box::new(Expr::div(
-                    adjoint.clone(),
-                    Expr::mul(Expr::f32(2.0), Expr::mul(operand.clone(), sqrt_x)),
-                )),
-            }
+            let sqrt_x = unary(UnOp::Sqrt, x.clone());
+            neg(Expr::div(
+                dz,
+                Expr::mul(Expr::f32(2.0), Expr::mul(x, sqrt_x)),
+            ))
         }
-        // d(1/x)/dx = -1/x²
-        UnOp::Reciprocal => Expr::UnOp {
-            op: UnOp::Negate,
-            operand: Box::new(Expr::div(
-                adjoint.clone(),
-                Expr::mul(operand.clone(), operand.clone()),
-            )),
-        },
-        // Non-differentiable
-        UnOp::BitNot
-        | UnOp::LogicalNot
-        | UnOp::Popcount
-        | UnOp::Clz
-        | UnOp::Ctz
-        | UnOp::ReverseBits
-        | UnOp::Floor
-        | UnOp::Ceil
-        | UnOp::Round
-        | UnOp::Trunc
-        | UnOp::Sign
-        | UnOp::IsNan
-        | UnOp::IsInf
-        | UnOp::IsFinite
-        | UnOp::Unpack4Low
-        | UnOp::Unpack4High
-        | UnOp::Unpack8Low
-        | UnOp::Unpack8High
-        | UnOp::BitcastF32ToU32
-        | UnOp::BitcastU32ToF32
-        | UnOp::Opaque(_)
-        | _ => {
+        UnOp::Reciprocal => neg(Expr::div(dz, Expr::mul(x.clone(), x))),
+        _ => {
             return Err(AutodiffError::NotDifferentiable {
                 op: format!("UnOp::{op:?}"),
                 fix: "replace with a differentiable equivalent or gate behind a stop-gradient barrier".into(),
@@ -379,18 +259,19 @@ pub fn unop_adjoint(
 /// `d/da = b * dz`, `d/db = a * dz`, `d/dc = dz`.
 #[must_use]
 pub fn fma_adjoints(a: &Expr, b: &Expr, c: &Expr, adjoint: &Expr) -> Vec<AdjointContrib> {
+    let dz = adjoint.clone();
     vec![
         AdjointContrib {
             child: a.clone(),
-            adjoint: Expr::mul(adjoint.clone(), b.clone()),
+            adjoint: Expr::mul(dz.clone(), b.clone()),
         },
         AdjointContrib {
             child: b.clone(),
-            adjoint: Expr::mul(adjoint.clone(), a.clone()),
+            adjoint: Expr::mul(dz.clone(), a.clone()),
         },
         AdjointContrib {
             child: c.clone(),
-            adjoint: adjoint.clone(),
+            adjoint: dz,
         },
     ]
 }

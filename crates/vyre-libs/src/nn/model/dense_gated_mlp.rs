@@ -40,15 +40,26 @@ pub enum DenseGatedMlpError {
     Graph(#[from] ProgramGraphError),
 }
 
+fn scalar_dtype(dtype: &DataType) -> DataType {
+    match dtype {
+        DataType::F16 => DataType::F16,
+        DataType::BF16 => DataType::BF16,
+        _ => DataType::F32,
+    }
+}
+
 fn contract(
-    dtype: DataType,
-    shape: Vec<ShapeDim>,
+    dtype: &DataType,
+    dims: &[u32],
     lifetime: ValueLifetime,
     access: BufferAccess,
 ) -> ValueContract {
     ValueContract {
-        dtype,
-        shape,
+        dtype: scalar_dtype(dtype),
+        shape: dims
+            .iter()
+            .map(|&d| ShapeDim::Known(u64::from(d)))
+            .collect(),
         access,
         lifetime,
     }
@@ -65,9 +76,9 @@ pub(crate) fn dense_gated_mlp_graph_with_lifetime(
     output_lifetime: ValueLifetime,
 ) -> Result<ProgramGraph, DenseGatedMlpError> {
     if spec.batch == 0 || spec.sequence == 0 || spec.hidden_dim == 0 || spec.intermediate_dim == 0 {
-        return Err(DenseGatedMlpError::Primitive(
-            "batch, sequence, hidden_dim, and intermediate_dim must be nonzero".to_string(),
-        ));
+        return Err(DenseGatedMlpError::Primitive(String::from(
+            "batch, sequence, hidden_dim, and intermediate_dim must be nonzero",
+        )));
     }
     if !matches!(spec.dtype, DataType::F16 | DataType::BF16 | DataType::F32) {
         return Err(DenseGatedMlpError::Primitive(format!(
@@ -75,97 +86,92 @@ pub(crate) fn dense_gated_mlp_graph_with_lifetime(
             spec.dtype
         )));
     }
-    let rows = spec
-        .batch
-        .checked_mul(spec.sequence)
-        .ok_or_else(|| DenseGatedMlpError::Primitive("batch*sequence overflows u32".to_string()))?;
+    let rows = spec.batch.checked_mul(spec.sequence).ok_or_else(|| {
+        DenseGatedMlpError::Primitive(String::from("batch*sequence overflows u32"))
+    })?;
     let hidden_count = rows.checked_mul(spec.hidden_dim).ok_or_else(|| {
-        DenseGatedMlpError::Primitive("token rows*hidden_dim overflows u32".to_string())
+        DenseGatedMlpError::Primitive(String::from("token rows*hidden_dim overflows u32"))
     })?;
     let intermediate_count = rows.checked_mul(spec.intermediate_dim).ok_or_else(|| {
-        DenseGatedMlpError::Primitive("token rows*intermediate_dim overflows u32".to_string())
+        DenseGatedMlpError::Primitive(String::from("token rows*intermediate_dim overflows u32"))
     })?;
     spec.hidden_dim
         .checked_mul(spec.intermediate_dim)
         .ok_or_else(|| {
-            DenseGatedMlpError::Primitive(
-                "hidden_dim*intermediate_dim weight count overflows u32".to_string(),
-            )
+            DenseGatedMlpError::Primitive(String::from(
+                "hidden_dim*intermediate_dim weight count overflows u32",
+            ))
         })?;
 
-    let hidden_shape = vec![
-        ShapeDim::Known(u64::from(spec.batch)),
-        ShapeDim::Known(u64::from(spec.sequence)),
-        ShapeDim::Known(u64::from(spec.hidden_dim)),
-    ];
-    let intermediate_shape = vec![
-        ShapeDim::Known(u64::from(spec.batch)),
-        ShapeDim::Known(u64::from(spec.sequence)),
-        ShapeDim::Known(u64::from(spec.intermediate_dim)),
-    ];
-    let norm_weight_shape = vec![ShapeDim::Known(u64::from(spec.hidden_dim))];
-    let up_weight_shape = vec![
-        ShapeDim::Known(u64::from(spec.intermediate_dim)),
-        ShapeDim::Known(u64::from(spec.hidden_dim)),
-    ];
-    let down_weight_shape = vec![
-        ShapeDim::Known(u64::from(spec.hidden_dim)),
-        ShapeDim::Known(u64::from(spec.intermediate_dim)),
-    ];
-    let read_hidden = contract(
-        spec.dtype.clone(),
-        hidden_shape.clone(),
-        ValueLifetime::Invocation,
-        BufferAccess::ReadOnly,
-    );
-    let write_hidden = contract(
-        spec.dtype.clone(),
-        hidden_shape.clone(),
-        ValueLifetime::Invocation,
-        BufferAccess::ReadWrite,
-    );
-    let read_intermediate = contract(
-        spec.dtype.clone(),
-        intermediate_shape.clone(),
-        ValueLifetime::Invocation,
-        BufferAccess::ReadOnly,
-    );
-    let write_intermediate = contract(
-        spec.dtype.clone(),
-        intermediate_shape,
-        ValueLifetime::Invocation,
-        BufferAccess::ReadWrite,
-    );
-    let norm_weight_contract = contract(
-        spec.dtype.clone(),
-        norm_weight_shape,
-        ValueLifetime::Constant,
-        BufferAccess::ReadOnly,
-    );
-    let up_weight_contract = contract(
-        spec.dtype.clone(),
-        up_weight_shape,
-        ValueLifetime::Constant,
-        BufferAccess::ReadOnly,
-    );
-    let down_weight_contract = contract(
-        spec.dtype.clone(),
-        down_weight_shape,
-        ValueLifetime::Constant,
-        BufferAccess::ReadOnly,
-    );
+    let hidden_dims = [spec.batch, spec.sequence, spec.hidden_dim];
+    let intermediate_dims = [spec.batch, spec.sequence, spec.intermediate_dim];
+    let norm_weight_dims = [spec.hidden_dim];
+    let up_weight_dims = [spec.intermediate_dim, spec.hidden_dim];
+    let down_weight_dims = [spec.hidden_dim, spec.intermediate_dim];
+    let read_hidden = || {
+        contract(
+            &spec.dtype,
+            &hidden_dims,
+            ValueLifetime::Invocation,
+            BufferAccess::ReadOnly,
+        )
+    };
+    let write_hidden = || {
+        contract(
+            &spec.dtype,
+            &hidden_dims,
+            ValueLifetime::Invocation,
+            BufferAccess::ReadWrite,
+        )
+    };
+    let read_intermediate = || {
+        contract(
+            &spec.dtype,
+            &intermediate_dims,
+            ValueLifetime::Invocation,
+            BufferAccess::ReadOnly,
+        )
+    };
+    let write_intermediate = || {
+        contract(
+            &spec.dtype,
+            &intermediate_dims,
+            ValueLifetime::Invocation,
+            BufferAccess::ReadWrite,
+        )
+    };
+    let norm_weight_contract = || {
+        contract(
+            &spec.dtype,
+            &norm_weight_dims,
+            ValueLifetime::Constant,
+            BufferAccess::ReadOnly,
+        )
+    };
+    let up_weight_contract = || {
+        contract(
+            &spec.dtype,
+            &up_weight_dims,
+            ValueLifetime::Constant,
+            BufferAccess::ReadOnly,
+        )
+    };
+    let down_weight_contract = || {
+        contract(
+            &spec.dtype,
+            &down_weight_dims,
+            ValueLifetime::Constant,
+            BufferAccess::ReadOnly,
+        )
+    };
 
     let mut graph = ProgramGraph::new();
-    let residual = graph.add_external_value("residual", read_hidden.clone())?;
-    let norm_weight = graph.add_external_value(
-        "post_attention_layernorm.weight",
-        norm_weight_contract.clone(),
-    )?;
-    let gate_weight =
-        graph.add_external_value("mlp.gate_proj.weight", up_weight_contract.clone())?;
-    let up_weight = graph.add_external_value("mlp.up_proj.weight", up_weight_contract.clone())?;
-    let down_weight =
-        graph.add_external_value("mlp.down_proj.weight", down_weight_contract.clone())?;
+    let residual = graph.add_external_value("residual", read_hidden())?;
+    let norm_weight =
+        graph.add_external_value("post_attention_layernorm.weight", norm_weight_contract())?;
+    let gate_weight = graph.add_external_value("mlp.gate_proj.weight", up_weight_contract())?;
+    let up_weight = graph.add_external_value("mlp.up_proj.weight", up_weight_contract())?;
+    let down_weight = graph.add_external_value("mlp.down_proj.weight", down_weight_contract())?;
 
     let (_, normalized) = graph.add_node(
         "mlp.norm",
@@ -176,25 +182,25 @@ pub(crate) fn dense_gated_mlp_graph_with_lifetime(
             rows,
             spec.hidden_dim,
             spec.norm_eps,
-            spec.dtype.clone(),
+            scalar_dtype(&spec.dtype),
         )
-        .map_err(|error| DenseGatedMlpError::Primitive(error.to_string()))?,
+        .map_err(|error| DenseGatedMlpError::Primitive(format!("{error}")))?,
         vec![
             GraphInput {
                 buffer: "input".into(),
                 value: residual,
-                contract: read_hidden.clone(),
+                contract: read_hidden(),
             },
             GraphInput {
                 buffer: "weight".into(),
                 value: norm_weight,
-                contract: norm_weight_contract,
+                contract: norm_weight_contract(),
             },
         ],
         vec![GraphOutput {
             buffer: "output".into(),
             name: "mlp.normalized".into(),
-            contract: write_hidden.clone(),
+            contract: write_hidden(),
             retained_successor_of: None,
         }],
     )?;
@@ -207,25 +213,25 @@ pub(crate) fn dense_gated_mlp_graph_with_lifetime(
             rows,
             spec.hidden_dim,
             spec.intermediate_dim,
-            spec.dtype.clone(),
+            scalar_dtype(&spec.dtype),
         )
         .map_err(DenseGatedMlpError::Primitive)?,
         vec![
             GraphInput {
                 buffer: "input".into(),
                 value: normalized[0],
-                contract: read_hidden.clone(),
+                contract: read_hidden(),
             },
             GraphInput {
                 buffer: "weight".into(),
                 value: gate_weight,
-                contract: up_weight_contract.clone(),
+                contract: up_weight_contract(),
             },
         ],
         vec![GraphOutput {
             buffer: "output".into(),
             name: "mlp.gate".into(),
-            contract: write_intermediate.clone(),
+            contract: write_intermediate(),
             retained_successor_of: None,
         }],
     )?;
@@ -238,25 +244,25 @@ pub(crate) fn dense_gated_mlp_graph_with_lifetime(
             rows,
             spec.hidden_dim,
             spec.intermediate_dim,
-            spec.dtype.clone(),
+            scalar_dtype(&spec.dtype),
         )
         .map_err(DenseGatedMlpError::Primitive)?,
         vec![
             GraphInput {
                 buffer: "input".into(),
                 value: normalized[0],
-                contract: read_hidden.clone(),
+                contract: read_hidden(),
             },
             GraphInput {
                 buffer: "weight".into(),
                 value: up_weight,
-                contract: up_weight_contract,
+                contract: up_weight_contract(),
             },
         ],
         vec![GraphOutput {
             buffer: "output".into(),
             name: "mlp.up".into(),
-            contract: write_intermediate.clone(),
+            contract: write_intermediate(),
             retained_successor_of: None,
         }],
     )?;
@@ -267,25 +273,25 @@ pub(crate) fn dense_gated_mlp_graph_with_lifetime(
             "up",
             "output",
             intermediate_count,
-            spec.dtype.clone(),
+            scalar_dtype(&spec.dtype),
         )
         .map_err(DenseGatedMlpError::Primitive)?,
         vec![
             GraphInput {
                 buffer: "gate".into(),
                 value: gate_projection[0],
-                contract: read_intermediate.clone(),
+                contract: read_intermediate(),
             },
             GraphInput {
                 buffer: "up".into(),
                 value: up_projection[0],
-                contract: read_intermediate,
+                contract: read_intermediate(),
             },
         ],
         vec![GraphOutput {
             buffer: "output".into(),
             name: "mlp.activated".into(),
-            contract: write_intermediate,
+            contract: write_intermediate(),
             retained_successor_of: None,
         }],
     )?;
@@ -298,34 +304,25 @@ pub(crate) fn dense_gated_mlp_graph_with_lifetime(
             rows,
             spec.intermediate_dim,
             spec.hidden_dim,
-            spec.dtype.clone(),
+            scalar_dtype(&spec.dtype),
         )
         .map_err(DenseGatedMlpError::Primitive)?,
         vec![
             GraphInput {
                 buffer: "input".into(),
                 value: activated[0],
-                contract: contract(
-                    spec.dtype.clone(),
-                    vec![
-                        ShapeDim::Known(u64::from(spec.batch)),
-                        ShapeDim::Known(u64::from(spec.sequence)),
-                        ShapeDim::Known(u64::from(spec.intermediate_dim)),
-                    ],
-                    ValueLifetime::Invocation,
-                    BufferAccess::ReadOnly,
-                ),
+                contract: read_intermediate(),
             },
             GraphInput {
                 buffer: "weight".into(),
                 value: down_weight,
-                contract: down_weight_contract,
+                contract: down_weight_contract(),
             },
         ],
         vec![GraphOutput {
             buffer: "output".into(),
             name: "mlp.down".into(),
-            contract: write_hidden.clone(),
+            contract: write_hidden(),
             retained_successor_of: None,
         }],
     )?;
@@ -336,27 +333,27 @@ pub(crate) fn dense_gated_mlp_graph_with_lifetime(
             "branch",
             "output",
             hidden_count,
-            spec.dtype.clone(),
+            scalar_dtype(&spec.dtype),
         )
         .map_err(DenseGatedMlpError::Primitive)?,
         vec![
             GraphInput {
                 buffer: "residual".into(),
                 value: residual,
-                contract: read_hidden.clone(),
+                contract: read_hidden(),
             },
             GraphInput {
                 buffer: "branch".into(),
                 value: down_projection[0],
-                contract: read_hidden,
+                contract: read_hidden(),
             },
         ],
         vec![GraphOutput {
             buffer: "output".into(),
             name: "mlp.block_output".into(),
             contract: contract(
-                spec.dtype.clone(),
-                hidden_shape,
+                &spec.dtype,
+                &hidden_dims,
                 output_lifetime,
                 BufferAccess::ReadWrite,
             ),
@@ -365,6 +362,6 @@ pub(crate) fn dense_gated_mlp_graph_with_lifetime(
     )?;
     graph
         .analyze()
-        .map_err(|error| DenseGatedMlpError::Primitive(error.to_string()))?;
+        .map_err(|error| DenseGatedMlpError::Primitive(format!("{error}")))?;
     Ok(graph)
 }

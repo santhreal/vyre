@@ -29,9 +29,9 @@ pub(super) fn build_matmul_2d_linear(
 ) -> Result<Program, TensorRefError> {
     let (a_count, b_count, out_count) = matmul_2d_counts(a, b, out, m, k, n)?;
 
-    let idx = Expr::LogicalIndex { axis: 0 };
-    let row_expr = Expr::div(idx.clone(), Expr::u32(n));
-    let col_expr = Expr::rem(idx.clone(), Expr::u32(n));
+    const IDX: Expr = Expr::LogicalIndex { axis: 0 };
+    let row_expr = Expr::div(IDX, Expr::u32(n));
+    let col_expr = Expr::rem(IDX, Expr::u32(n));
 
     let a_load = Expr::load(
         a,
@@ -75,7 +75,7 @@ pub(super) fn build_matmul_2d_linear(
     };
 
     let body = vec![Node::if_then(
-        Expr::lt(idx.clone(), Expr::buf_len(out)),
+        Expr::lt(IDX, Expr::buf_len(out)),
         vec![
             Node::let_bind("row", row_expr),
             Node::let_bind("col", col_expr),
@@ -88,7 +88,7 @@ pub(super) fn build_matmul_2d_linear(
             ),
             Node::Store {
                 buffer: out.into(),
-                index: idx,
+                index: IDX,
                 value: store_value,
             },
         ],
@@ -123,26 +123,20 @@ pub(super) fn build_batched_3d_contraction(
     let b_count = element_count(b, &[batch, b_batch_stride])?;
     let out_count = element_count(out, &[batch, out_batch_stride])?;
 
-    let idx = Expr::var("idx");
-    let batch_idx = Expr::var("batch_idx");
-    let row = Expr::var("row");
-    let col = Expr::var("col");
-    let local_idx = Expr::var("local_idx");
-
     let body = vec![
         Node::let_bind("idx", Expr::LogicalIndex { axis: 0 }),
         Node::let_bind(
             "batch_idx",
-            Expr::div(idx.clone(), Expr::u32(out_batch_stride)),
+            Expr::div(Expr::var("idx"), Expr::u32(out_batch_stride)),
         ),
         Node::let_bind(
             "local_idx",
-            Expr::rem(idx.clone(), Expr::u32(out_batch_stride)),
+            Expr::rem(Expr::var("idx"), Expr::u32(out_batch_stride)),
         ),
-        Node::let_bind("row", Expr::div(local_idx.clone(), Expr::u32(n))),
-        Node::let_bind("col", Expr::rem(local_idx.clone(), Expr::u32(n))),
+        Node::let_bind("row", Expr::div(Expr::var("local_idx"), Expr::u32(n))),
+        Node::let_bind("col", Expr::rem(Expr::var("local_idx"), Expr::u32(n))),
         Node::if_then(
-            Expr::lt(idx.clone(), Expr::buf_len(out)),
+            Expr::lt(Expr::var("idx"), Expr::buf_len(out)),
             vec![
                 Node::let_bind("acc", Expr::f32(0.0)),
                 Node::loop_for(
@@ -157,9 +151,12 @@ pub(super) fn build_batched_3d_contraction(
                                 Expr::load(
                                     a,
                                     Expr::add(
-                                        Expr::mul(batch_idx.clone(), Expr::u32(a_batch_stride)),
+                                        Expr::mul(
+                                            Expr::var("batch_idx"),
+                                            Expr::u32(a_batch_stride),
+                                        ),
                                         Expr::add(
-                                            Expr::mul(row.clone(), Expr::u32(k)),
+                                            Expr::mul(Expr::var("row"), Expr::u32(k)),
                                             Expr::var("kk"),
                                         ),
                                     ),
@@ -167,10 +164,13 @@ pub(super) fn build_batched_3d_contraction(
                                 Expr::load(
                                     b,
                                     Expr::add(
-                                        Expr::mul(batch_idx.clone(), Expr::u32(b_batch_stride)),
+                                        Expr::mul(
+                                            Expr::var("batch_idx"),
+                                            Expr::u32(b_batch_stride),
+                                        ),
                                         Expr::add(
                                             Expr::mul(Expr::var("kk"), Expr::u32(n)),
-                                            col.clone(),
+                                            Expr::var("col"),
                                         ),
                                     ),
                                 ),
@@ -180,7 +180,7 @@ pub(super) fn build_batched_3d_contraction(
                 ),
                 Node::Store {
                     buffer: out.into(),
-                    index: idx,
+                    index: Expr::var("idx"),
                     value: Expr::var("acc"),
                 },
             ],
@@ -217,9 +217,8 @@ pub(super) fn build_batched_rows_contraction(
     let (input_count, weight_count, output_count) =
         projection_counts(x, w, out, rows, in_dim, out_dim)?;
 
-    let index = Expr::var("index");
-    let row = Expr::div(index.clone(), Expr::u32(out_dim));
-    let column = Expr::rem(index.clone(), Expr::u32(out_dim));
+    let row = Expr::div(Expr::var("index"), Expr::u32(out_dim));
+    let column = Expr::rem(Expr::var("index"), Expr::u32(out_dim));
     let accumulator = bias.map_or_else(
         || Expr::f32(0.0),
         |name| Expr::cast(acc_dtype.clone(), Expr::load(name, Expr::var("column"))),
@@ -239,7 +238,7 @@ pub(super) fn build_batched_rows_contraction(
     let body = vec![
         Node::let_bind("index", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
-            Expr::lt(index.clone(), Expr::u32(output_count)),
+            Expr::lt(Expr::var("index"), Expr::u32(output_count)),
             vec![
                 Node::let_bind("row", row),
                 Node::let_bind("column", column),
@@ -270,7 +269,7 @@ pub(super) fn build_batched_rows_contraction(
                 ),
                 Node::Store {
                     buffer: out.into(),
-                    index,
+                    index: Expr::var("index"),
                     value: Expr::cast(dtype.clone(), Expr::var("accumulator")),
                 },
             ],
@@ -302,18 +301,15 @@ pub(super) fn build_block_1d_contraction(
 ) -> Result<Program, TensorRefError> {
     let weight_count = element_count(w, &[in_dim, out_dim])?;
     let tile_count = in_dim.div_ceil(tile);
-    let lane = Expr::var("lane");
-    let kk = Expr::var("kk");
-
     let initial_acc = bias.map_or_else(
         || element_zero(dtype).unwrap_or_else(|| Expr::u32(0)),
-        |b| Expr::load(b, lane.clone()),
+        |b| Expr::load(b, Expr::var("lane")),
     );
 
     let body = vec![
         Node::let_bind("lane", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
-            Expr::lt(lane.clone(), Expr::u32(out_dim)),
+            Expr::lt(Expr::var("lane"), Expr::u32(out_dim)),
             vec![
                 Node::let_bind("acc", initial_acc),
                 Node::loop_for(
@@ -335,18 +331,21 @@ pub(super) fn build_block_1d_contraction(
                                     Expr::add(Expr::var("tile_base"), Expr::var("tile_k")),
                                 ),
                                 Node::if_then(
-                                    Expr::lt(kk.clone(), Expr::u32(in_dim)),
+                                    Expr::lt(Expr::var("kk"), Expr::u32(in_dim)),
                                     vec![Node::assign(
                                         "acc",
                                         Expr::add(
                                             Expr::var("acc"),
                                             Expr::mul(
-                                                Expr::load(x, kk.clone()),
+                                                Expr::load(x, Expr::var("kk")),
                                                 Expr::load(
                                                     w,
                                                     Expr::add(
-                                                        Expr::mul(kk.clone(), Expr::u32(out_dim)),
-                                                        lane.clone(),
+                                                        Expr::mul(
+                                                            Expr::var("kk"),
+                                                            Expr::u32(out_dim),
+                                                        ),
+                                                        Expr::var("lane"),
                                                     ),
                                                 ),
                                             ),
@@ -359,7 +358,7 @@ pub(super) fn build_block_1d_contraction(
                 ),
                 Node::Store {
                     buffer: out.into(),
-                    index: lane,
+                    index: Expr::var("lane"),
                     value: Expr::var("acc"),
                 },
             ],
@@ -387,8 +386,8 @@ pub(super) fn build_matvec_contraction(
     semiring: &ContractionSemiring,
     workgroup_size: [u32; 3],
 ) -> Result<Program, TensorRefError> {
-    let row = Expr::LogicalIndex { axis: 0 };
-    let row_base = Expr::mul(row.clone(), Expr::u32(n));
+    const ROW: Expr = Expr::LogicalIndex { axis: 0 };
+    let row_base = Expr::mul(ROW, Expr::u32(n));
 
     let combined = semiring.combine_expr(
         Expr::load(matrix, Expr::add(row_base, Expr::var("j"))),
@@ -397,17 +396,17 @@ pub(super) fn build_matvec_contraction(
     let folded = semiring.accumulate_expr(Expr::var("acc"), combined);
 
     let body = vec![Node::if_then(
-        Expr::lt(row.clone(), Expr::u32(n)),
+        Expr::lt(ROW, Expr::u32(n)),
         vec![
             Node::let_bind("acc", semiring.identity_expr(dtype)),
-            Node::let_bind("row_base", Expr::mul(row.clone(), Expr::u32(n))),
+            Node::let_bind("row_base", Expr::mul(ROW, Expr::u32(n))),
             Node::loop_for(
                 "j",
                 Expr::u32(0),
                 Expr::u32(n),
                 vec![Node::assign("acc", folded)],
             ),
-            Node::store(out, row, Expr::var("acc")),
+            Node::store(out, ROW, Expr::var("acc")),
         ],
     )];
 

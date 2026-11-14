@@ -40,10 +40,10 @@
 //! helpers instead of changing this row-level contract.
 
 use crate::graph::functorial::functor_apply_sized;
-use crate::plumbing::host::dispatch_buffers::{decode_u32_output_exact, u32_slice_to_le_bytes};
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
+use crate::plumbing::host::dispatch_buffers::{
+    execute_program_first_u32_into, u32_slice_to_le_bytes,
 };
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Dispatcher-backed functor application for IR-view rows.
 ///
@@ -121,9 +121,8 @@ pub fn apply_pass_functor_via_into(
         n_cols,
         target_n_cols,
     );
-    let outputs = execute_single_program(
+    execute_program_first_u32_into(
         dispatcher,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &[
             u32_slice_to_le_bytes(view_in),
@@ -131,16 +130,6 @@ pub fn apply_pass_functor_via_into(
             vec![0u8; target_n_cols as usize * std::mem::size_of::<u32>()],
         ],
         policy,
-    )
-    .map(|output| output.outputs)?;
-    if outputs.is_empty() {
-        return Err(SemanticExecutionError::Backend(format!(
-            "Fix: apply_pass_functor_via expected at least one output buffer, got {}.",
-            outputs.len()
-        )));
-    }
-    decode_u32_output_exact(
-        &outputs[0],
         target_n_cols as usize,
         "apply_pass_functor_via",
         out,

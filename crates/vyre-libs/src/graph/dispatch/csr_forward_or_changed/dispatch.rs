@@ -141,7 +141,7 @@ pub fn forward_closure_via_change_flag_gpu_with_scratch_into(
         changed_words,
     )?;
 
-    let program = cached.program.clone();
+    let program = &cached.program;
     let host_buffers = program
         .buffers()
         .iter()
@@ -163,12 +163,12 @@ pub fn forward_closure_via_change_flag_gpu_with_scratch_into(
         .collect::<Vec<_>>();
     let slot_payloads = slot_values
         .iter()
-        .map(|slot| slot.map_or_else(Vec::new, |value| value.to_le_bytes().to_vec()))
+        .map(|slot| slot.unwrap_or(0).to_le_bytes())
         .collect::<Vec<_>>();
 
     let mut graph = ProgramGraph::new();
     let mut request_inputs = BTreeMap::new();
-    let mut shared_ids = BTreeMap::new();
+    let mut shared_ids = Vec::with_capacity(host_buffers.len());
     let mut frontier_id = None;
     let mut frontier_contract = None;
     let mut changed_contract = None;
@@ -209,34 +209,34 @@ pub fn forward_closure_via_change_flag_gpu_with_scratch_into(
                         ))
                     })?;
                 request_inputs.insert(value, bytes.as_slice());
-                shared_ids.insert(name.to_string(), (value, contract));
+                shared_ids.push((name, value, contract));
             }
         }
     }
 
     let mut current_frontier = frontier_id.ok_or_else(|| {
-        SemanticExecutionError::InvalidRequest(
-            "forward fixpoint program omitted read-write `frontier_out`".to_string(),
-        )
+        SemanticExecutionError::InvalidRequest(String::from(
+            "forward fixpoint program omitted read-write `frontier_out`",
+        ))
     })?;
     let frontier_contract = frontier_contract.ok_or_else(|| {
-        SemanticExecutionError::InvalidRequest(
-            "forward fixpoint program omitted the frontier contract".to_string(),
-        )
+        SemanticExecutionError::InvalidRequest(String::from(
+            "forward fixpoint program omitted the frontier contract",
+        ))
     })?;
     let changed_contract = changed_contract.ok_or_else(|| {
-        SemanticExecutionError::InvalidRequest(
-            "forward fixpoint program omitted read-write `changed`".to_string(),
-        )
+        SemanticExecutionError::InvalidRequest(String::from(
+            "forward fixpoint program omitted read-write `changed`",
+        ))
     })?;
     let changed_bytes = host_buffers
         .iter()
         .position(|buffer| buffer.name() == "changed")
         .map(|index| dispatch_inputs[index].as_slice())
         .ok_or_else(|| {
-            SemanticExecutionError::InvalidRequest(
-                "forward fixpoint inputs omitted `changed` bytes".to_string(),
-            )
+            SemanticExecutionError::InvalidRequest(String::from(
+                "forward fixpoint inputs omitted `changed` bytes",
+            ))
         })?;
 
     let mut stage_changed = Vec::with_capacity(max_iters as usize);
@@ -250,30 +250,27 @@ pub fn forward_closure_via_change_flag_gpu_with_scratch_into(
             })?;
         request_inputs.insert(changed_input, changed_bytes);
 
-        let mut node_inputs = shared_ids
-            .iter()
-            .map(|(name, (value, contract))| GraphInput {
-                buffer: name.clone(),
-                value: *value,
-                contract: contract.clone(),
-            })
-            .collect::<Vec<_>>();
+        let mut node_inputs = Vec::with_capacity(shared_ids.len() + 3);
+        node_inputs.extend(shared_ids.iter().map(|(name, value, contract)| GraphInput {
+            buffer: String::from(*name),
+            value: *value,
+            contract: contract.clone(),
+        }));
         node_inputs.push(GraphInput {
-            buffer: "frontier_out".to_string(),
+            buffer: String::from("frontier_out"),
             value: current_frontier,
             contract: frontier_contract.clone(),
         });
         node_inputs.push(GraphInput {
-            buffer: "changed".to_string(),
+            buffer: String::from("changed"),
             value: changed_input,
             contract: changed_contract.clone(),
         });
         if let Some(slot) = slot_values[iter as usize] {
             let contract = slot_contract.clone().ok_or_else(|| {
-                SemanticExecutionError::InvalidRequest(
-                    "forward fixpoint plan requires `changed_slot`, but the program omitted it"
-                        .to_string(),
-                )
+                SemanticExecutionError::InvalidRequest(String::from(
+                    "forward fixpoint plan requires `changed_slot`, but the program omitted it",
+                ))
             })?;
             let slot_id = graph
                 .add_external_value(format!("changed_slot_{iter}"), contract.clone())
@@ -283,9 +280,9 @@ pub fn forward_closure_via_change_flag_gpu_with_scratch_into(
                     ))
                 })?;
             debug_assert_eq!(slot_payloads[iter as usize], slot.to_le_bytes());
-            request_inputs.insert(slot_id, slot_payloads[iter as usize].as_slice());
+            request_inputs.insert(slot_id, &slot_payloads[iter as usize]);
             node_inputs.push(GraphInput {
-                buffer: "changed_slot".to_string(),
+                buffer: String::from("changed_slot"),
                 value: slot_id,
                 contract,
             });
@@ -298,13 +295,13 @@ pub fn forward_closure_via_change_flag_gpu_with_scratch_into(
                 node_inputs,
                 vec![
                     GraphOutput {
-                        buffer: "frontier_out".to_string(),
+                        buffer: String::from("frontier_out"),
                         name: format!("frontier_{iter}"),
                         contract: frontier_contract.clone(),
                         retained_successor_of: Some(current_frontier),
                     },
                     GraphOutput {
-                        buffer: "changed".to_string(),
+                        buffer: String::from("changed"),
                         name: format!("changed_{iter}"),
                         contract: changed_contract.clone(),
                         retained_successor_of: Some(changed_input),

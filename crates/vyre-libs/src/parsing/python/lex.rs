@@ -23,11 +23,42 @@ fn load_byte(buffer: &str, index: Expr) -> Expr {
 /// same expression later discards, and both `Expr::and` and `Expr::select`
 /// evaluate every operand. The index is folded into range before the load, so a
 /// read that will be discarded is still inside the buffer.
-fn load_byte_bounded(buffer: &str, index: Expr, haystack_len: u32) -> Expr {
-    let in_range = Expr::lt(index.clone(), Expr::u32(haystack_len));
+const T: Expr = Expr::LogicalIndex { axis: 0 };
+
+const KEYWORDS: &[(&[u8], u32)] = &[
+    (b"def", TOK_DEF),
+    (b"async", TOK_ASYNC),
+    (b"class", TOK_CLASS),
+    (b"import", TOK_IMPORT),
+    (b"from", TOK_FROM),
+    (b"as", TOK_AS),
+    (b"with", TOK_WITH),
+    (b"await", TOK_AWAIT),
+    (b"match", TOK_MATCH),
+    (b"case", TOK_CASE),
+    (b"except", TOK_EXCEPT),
+];
+
+const PUNCTUATION: &[(u8, u32)] = &[
+    (b'(', TOK_LPAREN),
+    (b')', TOK_RPAREN),
+    (b'[', TOK_LBRACKET),
+    (b']', TOK_RBRACKET),
+    (b'{', TOK_LBRACE),
+    (b'}', TOK_RBRACE),
+    (b':', TOK_COLON),
+    (b',', TOK_COMMA),
+    (b'.', TOK_DOT),
+    (b'=', TOK_EQ),
+    (b'@', TOK_AT),
+    (b'*', TOK_STAR),
+];
+
+fn load_byte_bounded(buffer: &str, make_index: impl Fn() -> Expr, haystack_len: u32) -> Expr {
+    let in_range = || Expr::lt(make_index(), Expr::u32(haystack_len));
     Expr::select(
-        in_range.clone(),
-        load_byte(buffer, Expr::select(in_range, index, Expr::u32(0))),
+        in_range(),
+        load_byte(buffer, Expr::select(in_range(), make_index(), Expr::u32(0))),
         Expr::u32(0),
     )
 }
@@ -36,51 +67,36 @@ fn ascii(ch: u8) -> Expr {
     Expr::u32(ch as u32)
 }
 
-fn is_between(value: Expr, start: u8, end: u8) -> Expr {
+fn is_between(var: &str, start: u8, end: u8) -> Expr {
     Expr::and(
-        Expr::ge(value.clone(), ascii(start)),
-        Expr::le(value, ascii(end)),
+        Expr::ge(Expr::var(var), ascii(start)),
+        Expr::le(Expr::var(var), ascii(end)),
     )
 }
 
-fn is_alpha(value: Expr) -> Expr {
+fn is_alpha(var: &str) -> Expr {
+    Expr::or(is_between(var, b'a', b'z'), is_between(var, b'A', b'Z'))
+}
+
+fn is_ident_continue(var: &str) -> Expr {
     Expr::or(
-        is_between(value.clone(), b'a', b'z'),
-        is_between(value, b'A', b'Z'),
+        Expr::or(is_alpha(var), is_between(var, b'0', b'9')),
+        Expr::eq(Expr::var(var), ascii(b'_')),
     )
 }
 
-fn is_ident_continue(value: Expr) -> Expr {
-    Expr::or(
-        Expr::or(
-            is_alpha(value.clone()),
-            is_between(value.clone(), b'0', b'9'),
-        ),
-        Expr::eq(value, ascii(b'_')),
-    )
+fn is_ident_start(var: &str) -> Expr {
+    Expr::or(is_alpha(var), Expr::eq(Expr::var(var), ascii(b'_')))
 }
 
-fn is_ident_start(value: Expr) -> Expr {
-    Expr::or(is_alpha(value.clone()), Expr::eq(value, ascii(b'_')))
-}
-
-fn keyword_match(
-    haystack: &str,
-    base: Expr,
-    len_var: &str,
-    word: &[u8],
-    haystack_len: u32,
-) -> Expr {
+fn keyword_match(haystack: &str, len_var: &str, word: &[u8], haystack_len: u32) -> Expr {
     let mut expr = Expr::eq(Expr::var(len_var), Expr::u32(word.len() as u32));
     for (offset, byte) in word.iter().enumerate() {
+        let off = offset as u32;
         expr = Expr::and(
             expr,
             Expr::eq(
-                load_byte_bounded(
-                    haystack,
-                    Expr::add(base.clone(), Expr::u32(offset as u32)),
-                    haystack_len,
-                ),
+                load_byte_bounded(haystack, || Expr::add(T, Expr::u32(off)), haystack_len),
                 ascii(*byte),
             ),
         );
@@ -88,53 +104,13 @@ fn keyword_match(
     expr
 }
 
-fn classify_keyword(haystack: &str, base: Expr, haystack_len: u32) -> Vec<Node> {
-    vec![
+fn classify_keyword(haystack: &str, haystack_len: u32) -> impl Iterator<Item = Node> + '_ {
+    KEYWORDS.iter().map(move |(word, tok)| {
         Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"def", haystack_len),
-            vec![Node::assign("token_type", Expr::u32(TOK_DEF))],
-        ),
-        Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"async", haystack_len),
-            vec![Node::assign("token_type", Expr::u32(TOK_ASYNC))],
-        ),
-        Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"class", haystack_len),
-            vec![Node::assign("token_type", Expr::u32(TOK_CLASS))],
-        ),
-        Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"import", haystack_len),
-            vec![Node::assign("token_type", Expr::u32(TOK_IMPORT))],
-        ),
-        Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"from", haystack_len),
-            vec![Node::assign("token_type", Expr::u32(TOK_FROM))],
-        ),
-        Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"as", haystack_len),
-            vec![Node::assign("token_type", Expr::u32(TOK_AS))],
-        ),
-        Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"with", haystack_len),
-            vec![Node::assign("token_type", Expr::u32(TOK_WITH))],
-        ),
-        Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"await", haystack_len),
-            vec![Node::assign("token_type", Expr::u32(TOK_AWAIT))],
-        ),
-        Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"match", haystack_len),
-            vec![Node::assign("token_type", Expr::u32(TOK_MATCH))],
-        ),
-        Node::if_then(
-            keyword_match(haystack, base.clone(), "token_len", b"case", haystack_len),
-            vec![Node::assign("token_type", Expr::u32(TOK_CASE))],
-        ),
-        Node::if_then(
-            keyword_match(haystack, base, "token_len", b"except", haystack_len),
-            vec![Node::assign("token_type", Expr::u32(TOK_EXCEPT))],
-        ),
-    ]
+            keyword_match(haystack, "token_len", word, haystack_len),
+            vec![Node::assign("token_type", Expr::u32(*tok))],
+        )
+    })
 }
 
 /// GPU Python 3.12 sparse lexer.
@@ -151,23 +127,24 @@ pub fn python312_lexer(
     out_counts: &str,
     haystack_len: u32,
 ) -> Program {
-    let t = Expr::LogicalIndex { axis: 0 };
-    let body = vec![
-        Node::let_bind("ch", load_byte(haystack, t.clone())),
+    let mut body = vec![
+        Node::let_bind("ch", load_byte(haystack, T)),
         Node::let_bind(
             "prev",
             // `t - 1` wraps to `u32::MAX` at the first byte, and the select
             // evaluates its taken and untaken arm alike, so the index is folded
             // into range before the load.
             Expr::select(
-                Expr::gt(t.clone(), Expr::u32(0)),
+                Expr::gt(T, Expr::u32(0)),
                 load_byte_bounded(
                     haystack,
-                    Expr::select(
-                        Expr::gt(t.clone(), Expr::u32(0)),
-                        Expr::sub(t.clone(), Expr::u32(1)),
-                        Expr::u32(0),
-                    ),
+                    || {
+                        Expr::select(
+                            Expr::gt(T, Expr::u32(0)),
+                            Expr::sub(T, Expr::u32(1)),
+                            Expr::u32(0),
+                        )
+                    },
                     haystack_len,
                 ),
                 Expr::u32(0),
@@ -178,13 +155,13 @@ pub fn python312_lexer(
         Node::loop_for(
             "comment_rev",
             Expr::u32(0),
-            t.clone(),
+            T,
             vec![Node::if_then(
                 Expr::eq(Expr::var("comment_scan_active"), Expr::u32(1)),
                 vec![
                     Node::let_bind(
                         "comment_pos",
-                        Expr::sub(Expr::sub(t.clone(), Expr::u32(1)), Expr::var("comment_rev")),
+                        Expr::sub(Expr::sub(T, Expr::u32(1)), Expr::var("comment_rev")),
                     ),
                     Node::let_bind("comment_ch", load_byte(haystack, Expr::var("comment_pos"))),
                     Node::if_then(
@@ -211,15 +188,11 @@ pub fn python312_lexer(
         // downstream call sites uniform with the surrounding u32 vars.
         Node::let_bind(
             "is_ident_start",
-            Expr::select(is_ident_start(Expr::var("ch")), Expr::u32(1), Expr::u32(0)),
+            Expr::select(is_ident_start("ch"), Expr::u32(1), Expr::u32(0)),
         ),
         Node::let_bind(
             "prev_identish",
-            Expr::select(
-                is_ident_continue(Expr::var("prev")),
-                Expr::u32(1),
-                Expr::u32(0),
-            ),
+            Expr::select(is_ident_continue("prev"), Expr::u32(1), Expr::u32(0)),
         ),
         Node::if_then(
             Expr::eq(Expr::var("ch"), ascii(b'\n')),
@@ -239,7 +212,7 @@ pub fn python312_lexer(
                 Node::let_bind("scan_len", Expr::u32(1)),
                 Node::loop_for(
                     "j",
-                    Expr::add(t.clone(), Expr::u32(1)),
+                    Expr::add(T, Expr::u32(1)),
                     Expr::u32(haystack_len),
                     vec![Node::if_then(
                         Expr::eq(Expr::var("active"), Expr::u32(1)),
@@ -276,7 +249,7 @@ pub fn python312_lexer(
                 Node::let_bind("scan_len", Expr::u32(1)),
                 Node::loop_for(
                     "j",
-                    Expr::add(t.clone(), Expr::u32(1)),
+                    Expr::add(T, Expr::u32(1)),
                     Expr::u32(haystack_len),
                     vec![Node::if_then(
                         Expr::eq(Expr::var("active"), Expr::u32(1)),
@@ -321,14 +294,14 @@ pub fn python312_lexer(
                 Node::let_bind("scan_len", Expr::u32(0)),
                 Node::loop_for(
                     "j",
-                    t.clone(),
+                    T,
                     Expr::u32(haystack_len),
                     vec![Node::if_then(
                         Expr::eq(Expr::var("active"), Expr::u32(1)),
                         vec![
                             Node::let_bind("cur", load_byte(haystack, Expr::var("j"))),
                             Node::if_then_else(
-                                is_ident_continue(Expr::var("cur")),
+                                is_ident_continue("cur"),
                                 vec![Node::assign(
                                     "scan_len",
                                     Expr::add(Expr::var("scan_len"), Expr::u32(1)),
@@ -343,14 +316,14 @@ pub fn python312_lexer(
                 Node::assign("token_len", Expr::var("scan_len")),
             ]
             .into_iter()
-            .chain(classify_keyword(haystack, t.clone(), haystack_len))
+            .chain(classify_keyword(haystack, haystack_len))
             .collect(),
         ),
         Node::if_then(
             Expr::and(
                 Expr::eq(Expr::var("emit"), Expr::u32(0)),
                 Expr::and(
-                    is_between(Expr::var("ch"), b'0', b'9'),
+                    is_between("ch", b'0', b'9'),
                     Expr::eq(Expr::var("prev_identish"), Expr::u32(0)),
                 ),
             ),
@@ -359,7 +332,7 @@ pub fn python312_lexer(
                 Node::let_bind("scan_len", Expr::u32(0)),
                 Node::loop_for(
                     "j",
-                    t.clone(),
+                    T,
                     Expr::u32(haystack_len),
                     vec![Node::if_then(
                         Expr::eq(Expr::var("active"), Expr::u32(1)),
@@ -368,7 +341,7 @@ pub fn python312_lexer(
                             Node::if_then_else(
                                 Expr::or(
                                     Expr::or(
-                                        is_between(Expr::var("cur"), b'0', b'9'),
+                                        is_between("cur", b'0', b'9'),
                                         Expr::eq(Expr::var("cur"), ascii(b'_')),
                                     ),
                                     Expr::eq(Expr::var("cur"), ascii(b'.')),
@@ -387,138 +360,21 @@ pub fn python312_lexer(
                 Node::assign("token_len", Expr::var("scan_len")),
             ],
         ),
-        Node::if_then(
+    ];
+    for &(ch, tok) in PUNCTUATION {
+        body.push(Node::if_then(
             Expr::and(
                 Expr::eq(Expr::var("emit"), Expr::u32(0)),
-                Expr::eq(Expr::var("ch"), ascii(b'(')),
+                Expr::eq(Expr::var("ch"), ascii(ch)),
             ),
             vec![
                 Node::assign("emit", Expr::u32(1)),
-                Node::assign("token_type", Expr::u32(TOK_LPAREN)),
+                Node::assign("token_type", Expr::u32(tok)),
                 Node::assign("token_len", Expr::u32(1)),
             ],
-        ),
-        Node::if_then(
-            Expr::and(
-                Expr::eq(Expr::var("emit"), Expr::u32(0)),
-                Expr::eq(Expr::var("ch"), ascii(b')')),
-            ),
-            vec![
-                Node::assign("emit", Expr::u32(1)),
-                Node::assign("token_type", Expr::u32(TOK_RPAREN)),
-                Node::assign("token_len", Expr::u32(1)),
-            ],
-        ),
-        Node::if_then(
-            Expr::and(
-                Expr::eq(Expr::var("emit"), Expr::u32(0)),
-                Expr::eq(Expr::var("ch"), ascii(b'[')),
-            ),
-            vec![
-                Node::assign("emit", Expr::u32(1)),
-                Node::assign("token_type", Expr::u32(TOK_LBRACKET)),
-                Node::assign("token_len", Expr::u32(1)),
-            ],
-        ),
-        Node::if_then(
-            Expr::and(
-                Expr::eq(Expr::var("emit"), Expr::u32(0)),
-                Expr::eq(Expr::var("ch"), ascii(b']')),
-            ),
-            vec![
-                Node::assign("emit", Expr::u32(1)),
-                Node::assign("token_type", Expr::u32(TOK_RBRACKET)),
-                Node::assign("token_len", Expr::u32(1)),
-            ],
-        ),
-        Node::if_then(
-            Expr::and(
-                Expr::eq(Expr::var("emit"), Expr::u32(0)),
-                Expr::eq(Expr::var("ch"), ascii(b'{')),
-            ),
-            vec![
-                Node::assign("emit", Expr::u32(1)),
-                Node::assign("token_type", Expr::u32(TOK_LBRACE)),
-                Node::assign("token_len", Expr::u32(1)),
-            ],
-        ),
-        Node::if_then(
-            Expr::and(
-                Expr::eq(Expr::var("emit"), Expr::u32(0)),
-                Expr::eq(Expr::var("ch"), ascii(b'}')),
-            ),
-            vec![
-                Node::assign("emit", Expr::u32(1)),
-                Node::assign("token_type", Expr::u32(TOK_RBRACE)),
-                Node::assign("token_len", Expr::u32(1)),
-            ],
-        ),
-        Node::if_then(
-            Expr::and(
-                Expr::eq(Expr::var("emit"), Expr::u32(0)),
-                Expr::eq(Expr::var("ch"), ascii(b':')),
-            ),
-            vec![
-                Node::assign("emit", Expr::u32(1)),
-                Node::assign("token_type", Expr::u32(TOK_COLON)),
-                Node::assign("token_len", Expr::u32(1)),
-            ],
-        ),
-        Node::if_then(
-            Expr::and(
-                Expr::eq(Expr::var("emit"), Expr::u32(0)),
-                Expr::eq(Expr::var("ch"), ascii(b',')),
-            ),
-            vec![
-                Node::assign("emit", Expr::u32(1)),
-                Node::assign("token_type", Expr::u32(TOK_COMMA)),
-                Node::assign("token_len", Expr::u32(1)),
-            ],
-        ),
-        Node::if_then(
-            Expr::and(
-                Expr::eq(Expr::var("emit"), Expr::u32(0)),
-                Expr::eq(Expr::var("ch"), ascii(b'.')),
-            ),
-            vec![
-                Node::assign("emit", Expr::u32(1)),
-                Node::assign("token_type", Expr::u32(TOK_DOT)),
-                Node::assign("token_len", Expr::u32(1)),
-            ],
-        ),
-        Node::if_then(
-            Expr::and(
-                Expr::eq(Expr::var("emit"), Expr::u32(0)),
-                Expr::eq(Expr::var("ch"), ascii(b'=')),
-            ),
-            vec![
-                Node::assign("emit", Expr::u32(1)),
-                Node::assign("token_type", Expr::u32(TOK_EQ)),
-                Node::assign("token_len", Expr::u32(1)),
-            ],
-        ),
-        Node::if_then(
-            Expr::and(
-                Expr::eq(Expr::var("emit"), Expr::u32(0)),
-                Expr::eq(Expr::var("ch"), ascii(b'@')),
-            ),
-            vec![
-                Node::assign("emit", Expr::u32(1)),
-                Node::assign("token_type", Expr::u32(TOK_AT)),
-                Node::assign("token_len", Expr::u32(1)),
-            ],
-        ),
-        Node::if_then(
-            Expr::and(
-                Expr::eq(Expr::var("emit"), Expr::u32(0)),
-                Expr::eq(Expr::var("ch"), ascii(b'*')),
-            ),
-            vec![
-                Node::assign("emit", Expr::u32(1)),
-                Node::assign("token_type", Expr::u32(TOK_STAR)),
-                Node::assign("token_len", Expr::u32(1)),
-            ],
-        ),
+        ));
+    }
+    body.extend([
         Node::if_then(
             Expr::and(
                 Expr::eq(Expr::var("in_comment_tail"), Expr::u32(1)),
@@ -529,9 +385,9 @@ pub fn python312_lexer(
         Node::if_then(
             Expr::eq(Expr::var("emit"), Expr::u32(1)),
             vec![
-                Node::store(out_tok_types, t.clone(), Expr::var("token_type")),
-                Node::store(out_tok_starts, t.clone(), t.clone()),
-                Node::store(out_tok_lens, t.clone(), Expr::var("token_len")),
+                Node::store(out_tok_types, T, Expr::var("token_type")),
+                Node::store(out_tok_starts, T, T),
+                Node::store(out_tok_lens, T, Expr::var("token_len")),
                 Node::let_bind(
                     "token_slot",
                     Expr::atomic_add(out_counts, Expr::u32(0), Expr::u32(1)),
@@ -539,7 +395,7 @@ pub fn python312_lexer(
                 Node::assign("token_slot", Expr::var("token_slot")),
             ],
         ),
-    ];
+    ]);
 
     Program::wrapped(
         vec![
@@ -560,10 +416,7 @@ pub fn python312_lexer(
             vec![child_phase(
                 "vyre-libs::parsing::python312_lexer",
                 crate::text::LINE_INDEX_OP_ID,
-                vec![Node::if_then(
-                    Expr::lt(t.clone(), Expr::u32(haystack_len)),
-                    body,
-                )],
+                vec![Node::if_then(Expr::lt(T, Expr::u32(haystack_len)), body)],
             )],
         )],
     )

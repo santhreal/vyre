@@ -8,12 +8,9 @@
 use crate::graph::sum_product_circuit::{sum_product_depths, sum_product_evaluate_leveled};
 use crate::math::conformal::{conformal_threshold, try_conformal_rank};
 use crate::plumbing::host::dispatch_buffers::{
-    decode_u32_output_exact, ensure_input_slots, require_exactly_one_output,
-    write_u32_slice_le_bytes, write_zero_bytes,
+    ensure_input_slots, execute_program_sole_u32_into, write_u32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 #[cfg(test)]
 use vyre_reference::composition_witness::{
     conformal_threshold_witness, sum_product_evaluate_witness,
@@ -162,20 +159,13 @@ pub fn predict_runtime_fixed_via_with_scratch(
         n_edges,
         max_depth,
     );
-    let circuit_outputs = execute_single_program(
+    execute_program_sole_u32_into(
         dispatcher,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
         circuit,
         &scratch.inputs[..8],
         policy,
-    )
-    .map(|output| output.outputs)?;
-    let circuit_output =
-        require_exactly_one_output(&circuit_outputs, "predict_runtime_fixed_via sum-product")?;
-    decode_u32_output_exact(
-        circuit_output,
         n_nodes as usize,
-        "predict_runtime_fixed_via sum_product",
+        "predict_runtime_fixed_via sum-product",
         &mut scratch.circuit_out,
     )?;
 
@@ -183,18 +173,11 @@ pub fn predict_runtime_fixed_via_with_scratch(
     write_u32_slice_le_bytes(&mut scratch.inputs[0], historical_residuals_sorted);
     write_zero_bytes(&mut scratch.inputs[1], std::mem::size_of::<u32>());
     let conformal = conformal_threshold("scores_sorted", "q_hat", residual_count, k);
-    let conformal_outputs = execute_single_program(
+    execute_program_sole_u32_into(
         dispatcher,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
         conformal,
         &scratch.inputs[..2],
         policy,
-    )
-    .map(|output| output.outputs)?;
-    let conformal_output =
-        require_exactly_one_output(&conformal_outputs, "predict_runtime_fixed_via conformal")?;
-    decode_u32_output_exact(
-        conformal_output,
         1,
         "predict_runtime_fixed_via conformal",
         &mut scratch.conformal_out,

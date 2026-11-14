@@ -118,25 +118,15 @@ pub fn reachability_closure_into(
     current: &mut Vec<u32>,
     next: &mut Vec<u32>,
 ) {
-    let Some(cells) = square_cells(n) else {
-        current.clear();
-        next.clear();
-        return;
-    };
-    if n == 0 || adj.len() != cells {
-        current.clear();
-        next.clear();
-        return;
-    }
-    current.clear();
-    current.extend_from_slice(adj);
-    next.clear();
-    for _ in 0..max_iters {
-        semiring_gemm_cpu_into(current, current, n, n, n, Semiring::BoolOr, next);
-        if !merge_or_changed(current, next) {
-            return;
-        }
-    }
+    semiring_closure_with_merge_into(
+        adj,
+        n,
+        max_iters,
+        Semiring::BoolOr,
+        merge_or_changed,
+        current,
+        next,
+    );
 }
 
 /// Compute lineage (which-clauses-used) closure under `Semiring::Lineage`.
@@ -157,25 +147,15 @@ pub fn lineage_closure_into(
     current: &mut Vec<u32>,
     next: &mut Vec<u32>,
 ) {
-    let Some(cells) = square_cells(n) else {
-        current.clear();
-        next.clear();
-        return;
-    };
-    if n == 0 || adj.len() != cells {
-        current.clear();
-        next.clear();
-        return;
-    }
-    current.clear();
-    current.extend_from_slice(adj);
-    next.clear();
-    for _ in 0..max_iters {
-        semiring_gemm_cpu_into(current, current, n, n, n, Semiring::Lineage, next);
-        if !merge_or_changed(current, next) {
-            return;
-        }
-    }
+    semiring_closure_with_merge_into(
+        adj,
+        n,
+        max_iters,
+        Semiring::Lineage,
+        merge_or_changed,
+        current,
+        next,
+    );
 }
 
 /// Compute min-cost shortest-path distance matrix under `Semiring::MinPlus`.
@@ -196,6 +176,26 @@ pub fn shortest_path_closure_into(
     current: &mut Vec<u32>,
     next: &mut Vec<u32>,
 ) {
+    semiring_closure_with_merge_into(
+        adj,
+        n,
+        max_iters,
+        Semiring::MinPlus,
+        merge_min_changed,
+        current,
+        next,
+    );
+}
+
+fn semiring_closure_with_merge_into(
+    adj: &[u32],
+    n: u32,
+    max_iters: u32,
+    semiring: Semiring,
+    merge_changed: fn(&mut [u32], &[u32]) -> bool,
+    current: &mut Vec<u32>,
+    next: &mut Vec<u32>,
+) {
     let Some(cells) = square_cells(n) else {
         current.clear();
         next.clear();
@@ -210,8 +210,8 @@ pub fn shortest_path_closure_into(
     current.extend_from_slice(adj);
     next.clear();
     for _ in 0..max_iters {
-        semiring_gemm_cpu_into(current, current, n, n, n, Semiring::MinPlus, next);
-        if !merge_min_changed(current, next) {
+        semiring_gemm_cpu_into(current, current, n, n, n, semiring, next);
+        if !merge_changed(current, next) {
             return;
         }
     }

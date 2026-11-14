@@ -107,35 +107,6 @@ pub struct SafetensorEntry {
     pub file_range: Range<u64>,
 }
 
-/// Typed transfer descriptor mapping container entry to byte range and element layout.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SafetensorTransferDescriptor {
-    /// Resource or tensor name.
-    pub name: String,
-    /// Element data type representation.
-    pub dtype: SafetensorDtype,
-    /// Ordered dimensions.
-    pub shape: Vec<u64>,
-    /// Byte offset within shard file.
-    pub offset: u64,
-    /// Byte length of payload.
-    pub length: u64,
-}
-
-impl SafetensorEntry {
-    /// Map this entry into a typed transfer descriptor without model conventions.
-    #[must_use]
-    pub fn to_transfer_descriptor(&self) -> SafetensorTransferDescriptor {
-        SafetensorTransferDescriptor {
-            name: self.name.clone(),
-            dtype: self.dtype,
-            shape: self.shape.clone(),
-            offset: self.file_range.start,
-            length: self.file_range.end.saturating_sub(self.file_range.start),
-        }
-    }
-}
-
 /// Metadata-only immutable shard identity.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SafetensorShardIdentity {
@@ -304,49 +275,6 @@ impl SafetensorIndex {
     /// Tensors in canonical name order.
     pub fn tensors(&self) -> impl ExactSizeIterator<Item = &SafetensorEntry> {
         self.tensors.values()
-    }
-
-    /// Read tensor bytes directly from a shard file, verifying bounds and file length.
-    pub fn read_tensor_from_file(
-        &self,
-        name: &str,
-        file: &mut File,
-    ) -> Result<Vec<u8>, SafetensorError> {
-        let entry = self
-            .tensor(name)
-            .ok_or_else(|| SafetensorError::MissingRequiredTensor {
-                name: name.to_string(),
-            })?;
-        let current_len = file
-            .metadata()
-            .map_err(|source| SafetensorError::Io {
-                path: self.path.clone(),
-                detail: source.to_string(),
-            })?
-            .len();
-        if current_len != self.identity.file_len {
-            return Err(SafetensorError::ShardLengthChanged {
-                shard: self.path.clone(),
-                indexed: self.identity.file_len,
-                actual: current_len,
-            });
-        }
-        let byte_len = entry.file_range.end - entry.file_range.start;
-        let byte_len_usize =
-            usize::try_from(byte_len).map_err(|_| SafetensorError::OffsetOverflow)?;
-        let mut buffer = vec![0_u8; byte_len_usize];
-        use std::io::Seek;
-        file.seek(std::io::SeekFrom::Start(entry.file_range.start))
-            .map_err(|source| SafetensorError::Io {
-                path: self.path.clone(),
-                detail: source.to_string(),
-            })?;
-        file.read_exact(&mut buffer)
-            .map_err(|source| SafetensorError::Io {
-                path: self.path.clone(),
-                detail: source.to_string(),
-            })?;
-        Ok(buffer)
     }
 }
 

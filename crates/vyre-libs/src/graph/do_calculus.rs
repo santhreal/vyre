@@ -220,7 +220,7 @@ mod tests {
 /// into an n-element impact mask on device.
 #[cfg(feature = "impact-mask")]
 #[must_use]
-pub fn impact_mask_from_closure(
+pub(crate) fn impact_mask_from_closure(
     intervention_mask: &str,
     closure: &str,
     impact_mask: &str,

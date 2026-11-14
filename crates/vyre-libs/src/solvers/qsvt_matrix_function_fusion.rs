@@ -50,7 +50,7 @@
 
 use crate::graph::chebyshev_filter::{chebyshev_filter, MAX_K as CHEBYSHEV_MAX_K};
 use crate::plumbing::host::dispatch_buffers::{
-    checked_square_cells, decode_u32_output_exact, ensure_input_slots, require_named_output,
+    checked_square_cells, dispatch_single_u32_output_from_prepared_into, ensure_input_slots,
     write_u32_slice_le_bytes, write_zero_bytes,
 };
 #[cfg(test)]
@@ -88,9 +88,7 @@ fn reference_qsvt_apply_into(
     )
     .unwrap_or_else(|error| panic!("QSVT witness failed: {error}"));
 }
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 /// Caller-owned dispatch scratch for fixed-point QSVT transport residuals.
 #[derive(Debug, Default)]
 pub struct QsvtTransportGpuScratch {
@@ -275,21 +273,15 @@ pub fn transport_residual_fixed_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[2], coeffs_fixed);
     write_zero_bytes(&mut scratch.inputs[3], out_bytes);
     write_zero_bytes(&mut scratch.inputs[4], scratch_bytes);
-    let outputs = execute_single_program(
+    dispatch_single_u32_output_from_prepared_into(
         dispatcher,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
-        program.clone(),
-        &scratch.inputs[..5],
         policy,
-    )
-    .map(|output| output.outputs)?;
-    let output = require_named_output(
-        &outputs,
-        &program,
+        program,
+        &scratch.inputs[..5],
+        n as usize,
         "transport_residual",
-        "transport_residual_fixed_via",
-    )?;
-    decode_u32_output_exact(output, n as usize, "transport_residual_fixed_via", out)
+        out,
+    )
 }
 
 #[cfg(test)]

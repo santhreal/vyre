@@ -7,12 +7,11 @@
 
 use crate::math::quantized::i4_packed_words;
 use crate::plumbing::host::dispatch_buffers::{
-    decode_f32_output_exact, ensure_input_slots, write_f32_slice_le_bytes, write_u32_slice_le_bytes,
+    ensure_input_slots, execute_program_sole_f32_into, write_f32_slice_le_bytes,
+    write_u32_slice_le_bytes,
 };
 use crate::plumbing::host::program_cache::ProgramCache;
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 use vyre_foundation::ir::Program;
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) struct PackedI4BatchedMatmulShape {
@@ -114,18 +113,6 @@ pub(super) fn validate_batched_packed_matmul_shape(
     Ok(PackedI4BatchedMatmulShape { output_words })
 }
 
-pub(super) fn expect_one_output<'a>(
-    context: &str,
-    outputs: &'a [Vec<u8>],
-) -> Result<&'a [u8], SemanticExecutionError> {
-    if outputs.len() != 1 {
-        return Err(SemanticExecutionError::Backend(format!(
-            "Fix: {context} expected exactly one output buffer, got {}.",
-            outputs.len()
-        )));
-    }
-    Ok(&outputs[0])
-}
 pub(super) fn write_packed_batched_matmul_inputs(
     inputs: &mut Vec<Vec<u8>>,
     operands: &PackedI4BatchedMatmul<'_>,
@@ -159,16 +146,11 @@ where
     let program = program_cache.get_or_insert_with(operands.program_key(), build_program);
     write_packed_batched_matmul_inputs(inputs, operands);
 
-    let outputs = execute_single_program(
+    execute_program_sole_f32_into(
         dispatcher,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
         program.clone(),
         &inputs[..4],
         policy,
-    )?
-    .outputs;
-    decode_f32_output_exact(
-        expect_one_output(context, &outputs)?,
         output_words,
         context,
         out,

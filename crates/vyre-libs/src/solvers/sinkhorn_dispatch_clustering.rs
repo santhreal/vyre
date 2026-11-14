@@ -22,11 +22,10 @@ use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::plumbing::host::dispatch_buffers::{
-    decode_u32_output_exact, ensure_input_slots, write_f32_slice_le_bytes, write_zero_bytes,
+    decode_u32_output_exact, ensure_input_slots, execute_program, write_f32_slice_le_bytes,
+    write_zero_bytes,
 };
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Op id for the Sinkhorn dispatch clustering primitive.
 pub const OP_ID: &str = "vyre-libs::self_substrate::sinkhorn_dispatch_clustering";
@@ -408,14 +407,7 @@ pub fn sinkhorn_clustering_via_with_scratch_into(
     write_f32_slice_le_bytes(&mut scratch.inputs[3], cluster_capacities);
     write_zero_bytes(&mut scratch.inputs[4], byte_count(m as usize, "u")?);
     write_zero_bytes(&mut scratch.inputs[5], byte_count(n as usize, "v")?);
-    let outputs = execute_single_program(
-        dispatcher,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
-        program,
-        &scratch.inputs[..6],
-        policy,
-    )
-    .map(|output| output.outputs)?;
+    let outputs = execute_program(dispatcher, program, &scratch.inputs[..6], policy)?;
     // Real-backend output contract: the backend returns every WRITABLE buffer in binding order
     // the two plain-RW dual-scaling buffers `u` (4) and `v` (5, both role InputOutput → outputs 0,1)
     // then the `out_assignments` output (6 → output 2). The assignment vector is therefore the THIRD

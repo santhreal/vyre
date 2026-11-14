@@ -17,26 +17,10 @@
 
 use crate::math::tensor_train_decompose::tensor_train_decompose_step;
 use crate::plumbing::host::dispatch_buffers::{
-    decode_f32_output_exact, ensure_input_slots, write_f32_slice_le_bytes, write_zero_bytes,
+    decode_f32_output_exact, ensure_input_slots, execute_program, write_f32_slice_le_bytes,
+    write_zero_bytes,
 };
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
-
-/// Compressed cost tensor in tensor-train form.
-///
-/// `cores[k]` is the k-th TT core; the original cost tensor is
-/// reconstructed by chained matrix-vector contraction
-/// `T(i_1, ..., i_d) = ∏ cores[k][r_k, i_k, r_{k+1}]`.
-#[derive(Debug, Clone)]
-pub struct CompressedCostTensor {
-    /// TT cores in dispatch-graph mode order.
-    pub cores: Vec<Vec<f64>>,
-    /// Per-mode dimensions (e.g. [n_regions, n_buffers, n_configs]).
-    pub dims: Vec<u32>,
-    /// TT-ranks (length `dims.len() + 1`, with `ranks[0] = ranks[d] = 1`).
-    pub ranks: Vec<u32>,
-}
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// f32 compressed cost tensor produced by the dispatchable TT-SVD step primitive.
 #[derive(Debug, Clone, PartialEq)]
@@ -188,14 +172,7 @@ pub fn compress_cost_tensor_f32_via_with_scratch_into(
         write_zero_bytes(&mut scratch.inputs[3], bytes(gram_words));
         write_zero_bytes(&mut scratch.inputs[4], bytes(gram_words));
         write_zero_bytes(&mut scratch.inputs[5], bytes(rem_usize));
-        let outputs = execute_single_program(
-            dispatcher,
-            crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
-            program,
-            &scratch.inputs[..6],
-            policy,
-        )
-        .map(|output| output.outputs)?;
+        let outputs = execute_program(dispatcher, program, &scratch.inputs[..6], policy)?;
         // The kernel's writable buffers in binding order are u_out (core), rem_out (S·Vᵀ), then the
         // internal scratch; a faithful backend returns at least the first two, which are what we
         // decode. Trailing scratch outputs are ignored.
@@ -324,88 +301,4 @@ fn checked_product3_usize(
                 "Fix: compress_cost_tensor_f32_via {context} word count overflows usize."
             ))
         })
-}
-
-/// Approximate the original cost tensor's compression ratio:
-/// `(1 - tt_size / original_size)`  -  a value in `[0, 1]` where 0
-/// means no compression and 1 means full elimination.
-#[must_use]
-pub fn compression_ratio(compressed: &CompressedCostTensor) -> f64 {
-    let original_size: usize = if compressed.dims.is_empty() {
-        0
-    } else {
-        compressed.dims.iter().map(|d| *d as usize).product()
-    };
-    if original_size == 0 {
-        return 0.0;
-    }
-    let tt_size: usize = compressed.cores.iter().map(Vec::len).sum();
-    1.0 - (tt_size as f64) / (original_size as f64)
-}
-
-/// Total entries the TT representation stores. Useful for
-/// observability  -  emit alongside cache size metrics so operators
-/// can verify TT compression is actually shrinking memory.
-#[must_use]
-pub fn tt_storage_size(compressed: &CompressedCostTensor) -> usize {
-    compressed.cores.iter().map(Vec::len).sum()
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    // The dispatchable f32 TT-SVD path is validated end-to-end (through a real reference-eval
-    // dispatch, reconstructing the tensor) in
-    // `tests/tensor_train_compress_via_reference_parity.rs`: not by a mock dispatcher here.
-
-    #[test]
-    fn compresses_3_mode_tensor() {
-        // 2×3×2 cost tensor flattened row-major = 12 entries.
-        let dims = vec![2u32, 3, 2];
-        let target_ranks = vec![1u32, 2, 2, 1];
-        let compressed = CompressedCostTensor {
-            cores: vec![vec![1.0; 4], vec![1.0; 12], vec![1.0; 4]],
-            dims: dims.clone(),
-            ranks: target_ranks,
-        };
-        assert_eq!(compressed.cores.len(), 3); // d cores
-        assert_eq!(compressed.dims, dims);
-    }
-
-    #[test]
-    fn compression_ratio_is_in_unit_interval() {
-        let dims = vec![4u32, 4];
-        let target_ranks = vec![1u32, 2, 1];
-        let compressed = CompressedCostTensor {
-            cores: vec![vec![1.0; 8], vec![1.0; 8]],
-            dims,
-            ranks: target_ranks,
-        };
-        let ratio = compression_ratio(&compressed);
-        assert!(
-            (-1.0..=1.0).contains(&ratio),
-            "ratio out of expected range: {ratio}"
-        );
-    }
-
-    #[test]
-    fn tt_storage_size_returns_sum() {
-        let compressed = CompressedCostTensor {
-            cores: vec![vec![1.0; 4], vec![1.0; 8], vec![1.0; 4]],
-            dims: vec![2, 4, 2],
-            ranks: vec![1, 2, 2, 1],
-        };
-        assert_eq!(tt_storage_size(&compressed), 16);
-    }
-
-    #[test]
-    fn empty_dims_handled() {
-        let compressed = CompressedCostTensor {
-            cores: Vec::new(),
-            dims: Vec::new(),
-            ranks: vec![1],
-        };
-        assert_eq!(tt_storage_size(&compressed), 0);
-        assert_eq!(compression_ratio(&compressed), 0.0);
-    }
 }

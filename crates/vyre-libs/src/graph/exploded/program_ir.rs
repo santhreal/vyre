@@ -17,7 +17,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 /// what holds the launch to one block for the serial region.
 #[must_use]
 #[allow(clippy::too_many_arguments)]
-pub fn build_ifds_csr_program(
+pub(crate) fn build_ifds_csr_program(
     num_procs: u32,
     blocks_per_proc: u32,
     facts_per_proc: u32,

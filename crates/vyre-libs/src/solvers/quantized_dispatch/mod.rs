@@ -11,12 +11,12 @@ use crate::math::quantized::{
     i4x8_batched_matvec_f32_scaled, i4x8_dot_f32_scaled, i4x8_matvec_f32_scaled, unpack_i4x8,
 };
 use crate::plumbing::host::dispatch_buffers::{
-    decode_f32_output_exact, decode_i32_output_exact, ensure_input_slots, write_f32_slice_le_bytes,
-    write_u32_slice_le_bytes, write_zero_bytes,
+    ensure_input_slots, execute_program_sole_f32_into, execute_program_sole_i32_into,
+    write_f32_slice_le_bytes, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::plumbing::host::program_cache::ProgramCache;
+use shapes::dispatch_packed_batched_matmul;
 pub use shapes::PackedI4BatchedMatmul;
-use shapes::{dispatch_packed_batched_matmul, expect_one_output};
 use vyre_foundation::ir::Program;
 
 /// Caller-owned dispatch scratch for quantized INT4 unpacking.

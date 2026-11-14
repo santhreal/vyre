@@ -22,8 +22,7 @@
 //! This file ships the **Markovian projection step**  -  given the full
 //! dynamics output `F` and the projector matrix `P` (constructed from
 //! e.g. randomized SVD over slow-mode trajectories), emit the
-//! resolved-subspace forcing `P · F`. Memory-kernel evaluators compose
-//! this projection with `ode_step`.
+//! resolved-subspace forcing `P · F`.
 //!
 //! # Why this primitive is dual-use
 //!

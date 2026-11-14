@@ -31,7 +31,6 @@ pub(crate) mod regex_dfa;
 #[cfg(all(feature = "pattern-regex", feature = "pattern-dfa"))]
 pub(crate) mod regex_region_admission;
 
-pub(crate) mod anchor_dfa;
 pub(crate) mod bracket_match;
 pub(crate) mod dfa_compile;
 pub(crate) mod nfa_to_dfa;
@@ -40,10 +39,6 @@ mod region_programs;
 #[cfg(all(test, feature = "math-kernels"))]
 mod region_tests;
 
-pub use anchor_dfa::{
-    build_anchor_dfa_plan, AnchorDfaCandidate, AnchorDfaLiteral, AnchorDfaPlan, AnchorDfaPlanError,
-    ANCHOR_DFA_PLAN_SCHEMA_VERSION,
-};
 pub use bracket_match::BRACKET_MATCH_OP_ID;
 pub use bracket_match::{
     bracket_match, BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN, BRACKET_KIND_OTHER, BRACKET_MATCH_NONE,

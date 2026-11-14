@@ -23,12 +23,10 @@ use crate::math::sheaf_laplacian_eigenvalue::sheaf_laplacian_eigenvalue;
 #[cfg(test)]
 use crate::plumbing::host::dispatch_buffers::u32_slice_to_le_bytes;
 use crate::plumbing::host::dispatch_buffers::{
-    checked_product_count, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
-    write_zero_bytes,
+    checked_product_count, decode_u32_output_exact, ensure_input_slots, execute_program,
+    write_u32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Default value for the retained (interface-stability) `iterations` parameter.
 ///
@@ -226,14 +224,7 @@ pub fn dominant_spectrum_fixed_via_with_scratch_into(
     write_zero_bytes(&mut scratch.inputs[2], std::mem::size_of::<u32>());
     scratch.inputs[3].clear();
     scratch.inputs[3].extend_from_slice(&(1u32 << 16).to_le_bytes());
-    let outputs = execute_single_program(
-        dispatcher,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
-        program,
-        &scratch.inputs[..4],
-        policy,
-    )
-    .map(|output| output.outputs)?;
+    let outputs = execute_program(dispatcher, program, &scratch.inputs[..4], policy)?;
     // The kernel's writable buffers, in binding order, are exactly `v` (the eigenvector) then
     // `lambda`; the running max/arg-max are loop-carried locals, not storage buffers, so a faithful
     let [eigenvector_out_buf, lambda_out_buf] = match outputs.as_slice() {

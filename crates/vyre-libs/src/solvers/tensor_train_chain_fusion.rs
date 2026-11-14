@@ -12,12 +12,10 @@
 
 use crate::math::tensor_train::tt_contract_step;
 use crate::plumbing::host::dispatch_buffers::{
-    decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
+    ensure_input_slots, execute_program_first_u32_into, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::plumbing::host::scratch::reserve_vec_capacity;
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 #[cfg(test)]
 use vyre_reference::composition_witness::{
     should_fuse_chain_witness,
@@ -176,21 +174,15 @@ fn dispatch_tt_step_with_scratch_into(
     write_u32_slice_le_bytes(&mut inputs[0], acc_in);
     write_u32_slice_le_bytes(&mut inputs[1], core_slice);
     write_zero_bytes(&mut inputs[2], output_len * std::mem::size_of::<u32>());
-    let outputs = execute_single_program(
+    execute_program_first_u32_into(
         dispatcher,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         inputs,
         policy,
+        output_len,
+        "fusion_pressure_via TT",
+        out,
     )
-    .map(|output| output.outputs)?;
-    if outputs.is_empty() {
-        return Err(SemanticExecutionError::Backend(format!(
-            "Fix: fusion_pressure_via TT expected at least one output buffer, got {}.",
-            outputs.len()
-        )));
-    }
-    decode_u32_output_exact(&outputs[0], output_len, "fusion_pressure_via TT", out)
 }
 
 fn bounded_core_cells(left: u32, right: u32, label: &str) -> Result<usize, SemanticExecutionError> {

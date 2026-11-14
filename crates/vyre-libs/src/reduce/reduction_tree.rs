@@ -1,14 +1,28 @@
 //! Reduction programs whose scratch fold is a `reduce` child.
 
+#[cfg(any(
+    feature = "math-dialect",
+    feature = "nn-attention",
+    feature = "math-linalg"
+))]
+use super::workgroup_tree::{self, WorkgroupReductionScope};
+#[cfg(any(
+    feature = "math-dialect",
+    feature = "nn-attention",
+    feature = "math-linalg"
+))]
 use crate::builder::reduction::{ReductionComposer, ReductionPhase};
 use vyre_foundation::ir::Program;
+#[cfg(any(
+    feature = "math-dialect",
+    feature = "nn-attention",
+    feature = "math-linalg"
+))]
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node};
-
-use super::workgroup_tree::{self, WorkgroupReductionScope};
-
 /// Build a tiled mean reduction program.
+#[cfg(feature = "math-dialect")]
 #[must_use]
-pub fn tiled_mean(
+pub(crate) fn tiled_mean(
     generator: &'static str,
     input: &str,
     output: &str,
@@ -57,8 +71,9 @@ pub fn tiled_mean(
 }
 
 /// Build a 2-phase tiled Softmax program (Max -> SumExp -> Writeback).
+#[cfg(feature = "nn-attention")]
 #[must_use]
-pub fn tiled_softmax(
+pub(crate) fn tiled_softmax(
     generator: &'static str,
     input: &str,
     output: &str,
@@ -172,8 +187,9 @@ pub fn tiled_softmax(
 }
 
 /// Build a tiled dot product reduction program.
+#[cfg(feature = "math-linalg")]
 #[must_use]
-pub fn tiled_dot(
+pub(crate) fn tiled_dot(
     generator: &'static str,
     lhs: &str,
     rhs: &str,

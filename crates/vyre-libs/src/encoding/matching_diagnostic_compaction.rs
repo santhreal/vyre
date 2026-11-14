@@ -10,12 +10,11 @@ use crate::pattern::{
     BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN, BRACKET_KIND_OTHER,
 };
 use crate::plumbing::host::dispatch_buffers::{
-    decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
+    decode_u32_output_exact, ensure_input_slots, execute_program, execute_program_first_u32_into,
+    write_u32_slice_le_bytes, write_zero_bytes,
 };
 use crate::plumbing::host::scratch::reserve_vec_capacity;
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Caller-owned dispatch scratch for matching diagnostic compaction.
 #[derive(Debug, Default)]
@@ -89,14 +88,7 @@ pub fn bracket_pairs_via_with_scratch_into(
         &mut scratch.inputs[1],
         max_depth_usize * std::mem::size_of::<u32>(),
     );
-    let outputs = execute_single_program(
-        dispatcher,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
-        program,
-        &scratch.inputs[..2],
-        policy,
-    )
-    .map(|output| output.outputs)?;
+    let outputs = execute_program(dispatcher, program, &scratch.inputs[..2], policy)?;
     // Writable buffers are returned in binding order `[stack(1), match_pairs(2)]`, so the match-pairs
     // result is outputs[1]. NOT outputs[0], which is the `stack` scratch.
     decode_output_at(&outputs, 1, kinds.len(), "bracket_pairs_via", out)
@@ -162,12 +154,7 @@ pub fn sort_regions_via_with_scratch_into(
             regions.len() * std::mem::size_of::<u32>(),
         );
     }
-    let outputs = crate::plumbing::host::dispatch_buffers::execute_program(
-        dispatcher,
-        program,
-        &scratch.inputs,
-        policy,
-    )?;
+    let outputs = execute_program(dispatcher, program, &scratch.inputs, policy)?;
     decode_region_outputs_into(&outputs, regions.len(), "sort_regions_via", scratch, out)
 }
 
@@ -229,16 +216,11 @@ pub fn dedup_region_survivor_flags_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[0], &scratch.pids);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], &scratch.starts);
     write_u32_slice_le_bytes(&mut scratch.inputs[2], &scratch.ends);
-    let outputs = execute_single_program(
+    execute_program_first_u32_into(
         dispatcher,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &scratch.inputs[..3],
         policy,
-    )
-    .map(|output| output.outputs)?;
-    decode_first_output(
-        &outputs,
         sorted_regions.len(),
         "dedup_region_survivor_flags_via",
         out,
@@ -333,15 +315,6 @@ fn decode_region_outputs_into(
     out.clear();
     out.extend_from_slice(&scratch.decoded_regions);
     Ok(())
-}
-
-fn decode_first_output(
-    outputs: &[Vec<u8>],
-    words: usize,
-    context: &'static str,
-    out: &mut Vec<u32>,
-) -> Result<(), SemanticExecutionError> {
-    decode_output_at(outputs, 0, words, context, out)
 }
 
 /// Decode the writable buffer at `index` in the backend's canonical (binding-order) output list.

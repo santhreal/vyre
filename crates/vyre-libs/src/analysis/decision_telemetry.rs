@@ -136,26 +136,6 @@ pub fn record_fusion_rate(rate: f64) {
     );
 }
 
-/// Record one provenance-closure decision. `nonempty_fraction` is
-/// the fraction in `[0, 1]` of output cells that ended up with
-/// non-empty lineage bitsets.
-pub fn record_provenance(nonempty_fraction: f64) {
-    let f = nonempty_fraction.clamp(0.0, 1.0);
-    let bucket = if f == 0.0 {
-        &PROVENANCE_EMPTY
-    } else if f >= 1.0 {
-        &PROVENANCE_FULL
-    } else {
-        &PROVENANCE_PARTIAL
-    };
-    bucket.fetch_add(1, Ordering::Relaxed);
-    tracing::trace!(
-        target: "vyre.substrate.provenance",
-        nonempty_fraction = f,
-        "scallop provenance decision",
-    );
-}
-
 /// Snapshot of every decision histogram bucket, formatted for
 /// dashboard scrape.
 #[must_use]

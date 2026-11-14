@@ -1,9 +1,7 @@
 //! The node-parallel form over several frontiers at once, one convergence flag
 //! per query.
 //!
-//! A caller that needs to know which query moved reads its own flag; a caller
-//! that only needs to know whether anything moved uses the global-flag form in
-//! [`super::program_parallel_batch_global`] and saves the per-query traffic.
+//! Each query reads its own convergence flag in `changed[query]`.
 
 use vyre_foundation::ir::{Expr, Program};
 

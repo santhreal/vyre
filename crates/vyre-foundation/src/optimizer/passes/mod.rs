@@ -10,7 +10,7 @@
 //! - `memory/` (Phase 4C)  -  `const_buffer_fold`, `dead_buffer_elim`,
 //!   `read_only_load_hoist`, `vectorization`, `decode_scan_fuse`
 //! - `sync/` (Phase 4D)  -  `barrier_coalesce`
-//! - `fusion_cse/`  -  fusion, `fuse_cse`, cse, dce
+//! - `fusion_cse/`  -  fusion, cse, dce
 //! - `cleanup/`  -  `empty_block_collapse`, `region_inline`,
 //!   `if_constant_branch_eliminate`, `noop_assign_eliminate`,
 //!   `region_promote_singleton_block`, `buffer_decl_sort`

@@ -6,6 +6,6 @@
 mod dispatch;
 
 pub use dispatch::{
-    union_find_alias_program, union_find_alias_via, union_find_alias_via_into,
-    union_find_alias_via_with_scratch_into, UnionFindGpuScratch,
+    union_find_alias_via, union_find_alias_via_into, union_find_alias_via_with_scratch_into,
+    UnionFindGpuScratch,
 };

@@ -43,14 +43,12 @@
 //! count by orders of magnitude with provably-correct disjointness
 //! (the greedy schedule never picks two overlapping rewrites).
 
-use super::{checked_product_count, decode_u32_output_exact};
+use super::checked_product_count;
 use crate::parsing::planar_rewrite::planar_rewrite_schedule;
 use crate::plumbing::host::dispatch_buffers::{
-    ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
+    ensure_input_slots, execute_program_first_u32_into, write_u32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Caller-owned semantic execution scratch for planar rewrite scheduling.
 #[derive(Debug, Default)]
@@ -154,21 +152,15 @@ pub fn schedule_disjoint_rewrites_via_with_scratch_into(
     ensure_input_slots(&mut scratch.inputs, 2);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], candidates);
     write_zero_bytes(&mut scratch.inputs[1], output_bytes);
-    let outputs = execute_single_program(
+    execute_program_first_u32_into(
         executor,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &scratch.inputs,
         policy,
+        cells,
+        "schedule_disjoint_rewrites_via",
+        out,
     )
-    .map(|output| output.outputs)?;
-    if outputs.is_empty() {
-        return Err(SemanticExecutionError::Backend(format!(
-            "Fix: schedule_disjoint_rewrites_via expected at least one output buffer, got {}.",
-            outputs.len()
-        )));
-    }
-    decode_u32_output_exact(&outputs[0], cells, "schedule_disjoint_rewrites_via", out)
 }
 
 #[cfg(test)]

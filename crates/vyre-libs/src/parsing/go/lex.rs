@@ -20,36 +20,40 @@ fn byte_eq(expr: Expr, byte: u8) -> Expr {
     Expr::eq(expr, Expr::u32(u32::from(byte)))
 }
 
-fn byte_between(expr: Expr, low: u8, high: u8) -> Expr {
+const T: Expr = Expr::LogicalIndex { axis: 0 };
+
+const GO_PUNCTUATION: &[(u8, u32)] = &[
+    (b'(', TOK_LPAREN),
+    (b')', TOK_RPAREN),
+    (b'{', TOK_LBRACE),
+    (b'}', TOK_RBRACE),
+    (b'[', TOK_LBRACKET),
+    (b']', TOK_RBRACKET),
+    (b',', TOK_COMMA),
+    (b'.', TOK_DOT),
+    (b';', TOK_SEMICOLON),
+    (b':', TOK_COLON),
+    (b'=', TOK_ASSIGN),
+    (b'*', TOK_STAR),
+    (b'\n', TOK_NEWLINE),
+];
+
+fn byte_between(var: &str, low: u8, high: u8) -> Expr {
     Expr::and(
-        Expr::ge(expr.clone(), Expr::u32(u32::from(low))),
-        Expr::le(expr, Expr::u32(u32::from(high))),
+        Expr::ge(Expr::var(var), Expr::u32(u32::from(low))),
+        Expr::le(Expr::var(var), Expr::u32(u32::from(high))),
     )
 }
 
-fn ident_start(expr: Expr) -> Expr {
+fn ident_start(var: &str) -> Expr {
     Expr::or(
-        Expr::or(
-            byte_between(expr.clone(), b'a', b'z'),
-            byte_between(expr.clone(), b'A', b'Z'),
-        ),
-        byte_eq(expr, b'_'),
+        Expr::or(byte_between(var, b'a', b'z'), byte_between(var, b'A', b'Z')),
+        byte_eq(Expr::var(var), b'_'),
     )
 }
 
-fn ident_continue(expr: Expr) -> Expr {
-    Expr::or(ident_start(expr.clone()), byte_between(expr, b'0', b'9'))
-}
-
-fn punctuation_token(byte: Expr, token: u32, chr: u8) -> Vec<Node> {
-    vec![Node::if_then(
-        byte_eq(byte, chr),
-        vec![
-            Node::assign("emit", Expr::u32(1)),
-            Node::assign("tok_type", Expr::u32(token)),
-            Node::assign("tok_len", Expr::u32(1)),
-        ],
-    )]
+fn ident_continue(var: &str) -> Expr {
+    Expr::or(ident_start(var), byte_between(var, b'0', b'9'))
 }
 
 /// Byte-oriented Go lexer over a `u32`-encoded byte stream.
@@ -98,20 +102,20 @@ pub fn go_lexer(
     out_emit_flags: &str,
     haystack_len: u32,
 ) -> Program {
-    let t = Expr::logical_index(0);
+    // Lane index on axis 0.
 
     // Both neighbours are read on every lane: a select evaluates both arms, so the
     // guard picks the value and not the access. Lane 0 subtracts past zero and the
     // last lane adds past the end, so each neighbour index is folded inside the
     // haystack before the read.
-    let previous = bounded_index(Expr::sub(t.clone(), Expr::u32(1)), Expr::u32(haystack_len));
-    let next = bounded_index(Expr::add(t.clone(), Expr::u32(1)), Expr::u32(haystack_len));
+    let previous = bounded_index(Expr::sub(T, Expr::u32(1)), Expr::u32(haystack_len));
+    let next = bounded_index(Expr::add(T, Expr::u32(1)), Expr::u32(haystack_len));
     let mut body = vec![
-        Node::let_bind("byte", byte_load(haystack, t.clone())),
+        Node::let_bind("byte", byte_load(haystack, T)),
         Node::let_bind(
             "prev_byte",
             Expr::select(
-                Expr::gt(t.clone(), Expr::u32(0)),
+                Expr::gt(T, Expr::u32(0)),
                 byte_load(haystack, previous),
                 Expr::u32(0),
             ),
@@ -119,7 +123,7 @@ pub fn go_lexer(
         Node::let_bind(
             "next_byte",
             Expr::select(
-                Expr::lt(Expr::add(t.clone(), Expr::u32(1)), Expr::u32(haystack_len)),
+                Expr::lt(Expr::add(T, Expr::u32(1)), Expr::u32(haystack_len)),
                 byte_load(haystack, next),
                 Expr::u32(0),
             ),
@@ -130,10 +134,7 @@ pub fn go_lexer(
     ];
 
     body.push(Node::if_then(
-        Expr::and(
-            ident_start(Expr::var("byte")),
-            Expr::not(ident_continue(Expr::var("prev_byte"))),
-        ),
+        Expr::and(ident_start("byte"), Expr::not(ident_continue("prev_byte"))),
         vec![
             Node::assign("emit", Expr::u32(1)),
             Node::assign("tok_type", Expr::u32(TOK_IDENTIFIER)),
@@ -141,14 +142,14 @@ pub fn go_lexer(
             Node::let_bind("still_ident", Expr::u32(1)),
             Node::loop_for(
                 "scan",
-                Expr::add(t.clone(), Expr::u32(1)),
+                Expr::add(T, Expr::u32(1)),
                 Expr::u32(haystack_len),
                 vec![Node::if_then(
                     Expr::eq(Expr::var("still_ident"), Expr::u32(1)),
                     vec![
                         Node::let_bind("scan_byte", byte_load(haystack, Expr::var("scan"))),
                         Node::if_then_else(
-                            ident_continue(Expr::var("scan_byte")),
+                            ident_continue("scan_byte"),
                             vec![Node::assign(
                                 "tok_len",
                                 Expr::add(Expr::var("tok_len"), Expr::u32(1)),
@@ -177,7 +178,7 @@ pub fn go_lexer(
         Expr::and(
             byte_eq(Expr::var("byte"), b'"'),
             Expr::eq(
-                Expr::rem(Expr::load(quote_ranks, t.clone()), Expr::u32(2)),
+                Expr::rem(Expr::load(quote_ranks, T), Expr::u32(2)),
                 Expr::u32(0),
             ),
         ),
@@ -188,7 +189,7 @@ pub fn go_lexer(
             Node::let_bind("string_done", Expr::u32(0)),
             Node::loop_for(
                 "scan",
-                Expr::add(t.clone(), Expr::u32(1)),
+                Expr::add(T, Expr::u32(1)),
                 Expr::u32(haystack_len),
                 vec![Node::if_then(
                     Expr::eq(Expr::var("string_done"), Expr::u32(0)),
@@ -245,21 +246,16 @@ pub fn go_lexer(
         ],
     ));
 
-    body.extend(punctuation_token(Expr::var("byte"), TOK_LPAREN, b'('));
-    body.extend(punctuation_token(Expr::var("byte"), TOK_RPAREN, b')'));
-    body.extend(punctuation_token(Expr::var("byte"), TOK_LBRACE, b'{'));
-    body.extend(punctuation_token(Expr::var("byte"), TOK_RBRACE, b'}'));
-    body.extend(punctuation_token(Expr::var("byte"), TOK_LBRACKET, b'['));
-    body.extend(punctuation_token(Expr::var("byte"), TOK_RBRACKET, b']'));
-    body.extend(punctuation_token(Expr::var("byte"), TOK_COMMA, b','));
-    body.extend(punctuation_token(Expr::var("byte"), TOK_DOT, b'.'));
-    body.extend(punctuation_token(Expr::var("byte"), TOK_SEMICOLON, b';'));
-    body.extend(punctuation_token(Expr::var("byte"), TOK_COLON, b':'));
-    body.extend(punctuation_token(Expr::var("byte"), TOK_ASSIGN, b'='));
-    body.extend(punctuation_token(Expr::var("byte"), TOK_STAR, b'*'));
-    // Go's implicit semicolon. See TOK_NEWLINE for why the statement boundary
-    // has to be in the token stream at all.
-    body.extend(punctuation_token(Expr::var("byte"), TOK_NEWLINE, b'\n'));
+    for &(chr, token) in GO_PUNCTUATION {
+        body.push(Node::if_then(
+            byte_eq(Expr::var("byte"), chr),
+            vec![
+                Node::assign("emit", Expr::u32(1)),
+                Node::assign("tok_type", Expr::u32(token)),
+                Node::assign("tok_len", Expr::u32(1)),
+            ],
+        ));
+    }
 
     // Nothing inside a string literal is a token.
     //
@@ -274,7 +270,7 @@ pub fn go_lexer(
     // string token survives; its contents and its closing quote do not.
     body.push(Node::if_then(
         Expr::eq(
-            Expr::rem(Expr::load(quote_ranks, t.clone()), Expr::u32(2)),
+            Expr::rem(Expr::load(quote_ranks, T), Expr::u32(2)),
             Expr::u32(1),
         ),
         vec![
@@ -287,18 +283,14 @@ pub fn go_lexer(
     // Write at the SOURCE index, never at an atomically allocated slot. Every
     // position writes all four words so a stale buffer cannot leave a token
     // behind: a non-emitting position stores a zero flag and zeroed fields.
-    body.push(Node::store(out_emit_flags, t.clone(), Expr::var("emit")));
-    body.push(Node::store(out_tok_types, t.clone(), Expr::var("tok_type")));
+    body.push(Node::store(out_emit_flags, T, Expr::var("emit")));
+    body.push(Node::store(out_tok_types, T, Expr::var("tok_type")));
     body.push(Node::store(
         out_tok_starts,
-        t.clone(),
-        Expr::select(
-            Expr::eq(Expr::var("emit"), Expr::u32(1)),
-            t.clone(),
-            Expr::u32(0),
-        ),
+        T,
+        Expr::select(Expr::eq(Expr::var("emit"), Expr::u32(1)), T, Expr::u32(0)),
     ));
-    body.push(Node::store(out_tok_lens, t.clone(), Expr::var("tok_len")));
+    body.push(Node::store(out_tok_lens, T, Expr::var("tok_len")));
 
     Program::wrapped(
         vec![
@@ -318,7 +310,7 @@ pub fn go_lexer(
         [256, 1, 1],
         vec![wrap_anonymous_region(
             "vyre-libs::parsing::go_lexer",
-            vec![Node::if_then(Expr::lt(t, Expr::u32(haystack_len)), body)],
+            vec![Node::if_then(Expr::lt(T, Expr::u32(haystack_len)), body)],
         )],
     )
     .with_entry_op_id("vyre-libs::parsing::go_lexer")
@@ -343,7 +335,7 @@ pub fn go_lexer(
 /// other.
 #[must_use]
 pub fn go_quote_flags(haystack: &str, out_quote_flags: &str, haystack_len: u32) -> Program {
-    let t = Expr::logical_index(0);
+    // Count the run of backslashes ending at `t - 1`.
     // Count the run of backslashes ending at `t - 1`. The lane walks the whole
     // prefix because the IR has no backward loop; the string scan in `go_lexer`
     // already has the same per-lane cost profile.
@@ -352,7 +344,7 @@ pub fn go_quote_flags(haystack: &str, out_quote_flags: &str, haystack_len: u32) 
         Node::loop_for(
             "back",
             Expr::u32(0),
-            t.clone(),
+            T,
             vec![Node::if_then_else(
                 byte_eq(byte_load(haystack, Expr::var("back")), b'\\'),
                 vec![Node::assign(
@@ -366,10 +358,10 @@ pub fn go_quote_flags(haystack: &str, out_quote_flags: &str, haystack_len: u32) 
     let mut body = backslash_run;
     body.push(Node::store(
         out_quote_flags,
-        t.clone(),
+        T,
         Expr::select(
             Expr::and(
-                byte_eq(byte_load(haystack, t.clone()), b'"'),
+                byte_eq(byte_load(haystack, T), b'"'),
                 Expr::eq(Expr::rem(Expr::var("run"), Expr::u32(2)), Expr::u32(0)),
             ),
             Expr::u32(1),
@@ -386,10 +378,7 @@ pub fn go_quote_flags(haystack: &str, out_quote_flags: &str, haystack_len: u32) 
         [256, 1, 1],
         vec![wrap_anonymous_region(
             "vyre-libs::parsing::go_quote_flags",
-            vec![Node::if_then(
-                Expr::lt(t.clone(), Expr::u32(haystack_len)),
-                body,
-            )],
+            vec![Node::if_then(Expr::lt(T, Expr::u32(haystack_len)), body)],
         )],
     )
     .with_entry_op_id("vyre-libs::parsing::go_quote_flags")
@@ -451,37 +440,32 @@ pub fn go_compact_tokens(
     out_counts: &str,
     haystack_len: u32,
 ) -> Program {
-    let t = Expr::logical_index(0);
     let last = haystack_len.saturating_sub(1);
 
     let body = vec![
-        Node::let_bind("flag", Expr::load(emit_flags, t.clone())),
-        Node::let_bind("slot", Expr::load(emit_offsets, t.clone())),
+        Node::let_bind("flag", Expr::load(emit_flags, T)),
+        Node::let_bind("slot", Expr::load(emit_offsets, T)),
         Node::if_then(
             Expr::eq(Expr::var("flag"), Expr::u32(1)),
             vec![
                 Node::store(
                     out_tok_types,
                     Expr::var("slot"),
-                    Expr::load(sparse_types, t.clone()),
+                    Expr::load(sparse_types, T),
                 ),
                 Node::store(
                     out_tok_starts,
                     Expr::var("slot"),
-                    Expr::load(sparse_starts, t.clone()),
+                    Expr::load(sparse_starts, T),
                 ),
-                Node::store(
-                    out_tok_lens,
-                    Expr::var("slot"),
-                    Expr::load(sparse_lens, t.clone()),
-                ),
+                Node::store(out_tok_lens, Expr::var("slot"), Expr::load(sparse_lens, T)),
             ],
         ),
         // The last source position knows the total: every token starts at or
         // before it, so its exclusive offset plus its own flag is the count.
         // One lane writes it, so no atomic and no ordering question.
         Node::if_then(
-            Expr::eq(t.clone(), Expr::u32(last)),
+            Expr::eq(T, Expr::u32(last)),
             vec![Node::store(
                 out_counts,
                 Expr::u32(0),
@@ -514,7 +498,7 @@ pub fn go_compact_tokens(
         [256, 1, 1],
         vec![wrap_anonymous_region(
             "vyre-libs::parsing::go_compact_tokens",
-            vec![Node::if_then(Expr::lt(t, Expr::u32(haystack_len)), body)],
+            vec![Node::if_then(Expr::lt(T, Expr::u32(haystack_len)), body)],
         )],
     )
     .with_entry_op_id("vyre-libs::parsing::go_compact_tokens")

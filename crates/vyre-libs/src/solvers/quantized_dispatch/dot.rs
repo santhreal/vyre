@@ -4,9 +4,7 @@
 //! scales, which is what makes the oracle usable as a parity reference.
 
 use super::*;
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Compute a packed signed INT4 scaled dot product through the dispatch backend.
 ///
@@ -91,16 +89,11 @@ pub fn i4x8_dot_f32_scaled_via_with_scratch_into(
     write_f32_slice_le_bytes(&mut inputs[2], &[lhs_scale]);
     write_f32_slice_le_bytes(&mut inputs[3], &[rhs_scale]);
 
-    let outputs = execute_single_program(
+    execute_program_sole_f32_into(
         dispatcher,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
         program.clone(),
         &inputs[..4],
         policy,
-    )
-    .map(|output| output.outputs)?;
-    decode_f32_output_exact(
-        expect_one_output("i4x8_dot_f32_scaled_via", &outputs)?,
         1,
         "i4x8_dot_f32_scaled_via",
         out,

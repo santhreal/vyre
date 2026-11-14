@@ -7,12 +7,11 @@
 //! dialect declare a dependency on the math broadcast surface to reach one
 //! helper, and left the quantization ops with no way to reach it at all.
 
-use std::ops::Range;
 use std::sync::Arc;
 
-use crate::builder::{build_indexed_map, check_tensors, BuildOptions};
+use crate::builder::{check_tensors, BuildOptions};
 use crate::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
-use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
+use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 
 /// Canonical builder and composer for elementwise / pointwise operations.
@@ -26,7 +25,6 @@ pub struct ElementwiseComposer {
     workgroup_size: [u32; 3],
     buffers: Vec<BufferDecl>,
     anonymous: bool,
-    child_op_id: Option<&'static str>,
 }
 
 impl ElementwiseComposer {
@@ -39,7 +37,6 @@ impl ElementwiseComposer {
             workgroup_size: [64, 1, 1],
             buffers: Vec::new(),
             anonymous: true,
-            child_op_id: None,
         }
     }
 
@@ -63,13 +60,6 @@ impl ElementwiseComposer {
     #[must_use]
     pub fn with_anonymous(mut self, anonymous: bool) -> Self {
         self.anonymous = anonymous;
-        self
-    }
-
-    /// Set a child region op_id if wrapping a nested child region.
-    #[must_use]
-    pub fn with_child_op_id(mut self, child_op_id: &'static str) -> Self {
-        self.child_op_id = Some(child_op_id);
         self
     }
 
@@ -117,23 +107,6 @@ impl ElementwiseComposer {
         )
     }
 
-    /// Add an output buffer with custom output byte range.
-    #[must_use]
-    pub fn add_output_with_byte_range(
-        self,
-        name: &str,
-        dtype: DataType,
-        count: u32,
-        range: Range<u64>,
-    ) -> Self {
-        let idx = self.buffers.len() as u32;
-        self.add_buffer(
-            BufferDecl::output(name, idx, dtype)
-                .with_count(count)
-                .with_output_byte_range(range),
-        )
-    }
-
     /// Add an output buffer configured as storage with custom access (e.g. WriteOnly, ReadWrite).
     #[must_use]
     pub fn add_output_storage(
@@ -166,18 +139,7 @@ impl ElementwiseComposer {
             inner_nodes,
         )];
         let region = if self.anonymous {
-            if let Some(child_op) = self.child_op_id {
-                wrap_anonymous_region(
-                    self.op_id,
-                    vec![wrap_child_region(
-                        child_op,
-                        Ident::from(self.op_id),
-                        loop_body,
-                    )],
-                )
-            } else {
-                wrap_anonymous_region(self.op_id, loop_body)
-            }
+            wrap_anonymous_region(self.op_id, loop_body)
         } else {
             Node::Region {
                 generator: Ident::from(self.op_id),
@@ -195,8 +157,7 @@ impl ElementwiseComposer {
     where
         F: FnOnce(Expr) -> Expr,
     {
-        let out_buf = output.to_string();
-        self.build_custom(|i| vec![Node::store(&out_buf, i.clone(), f(i))])
+        self.build_custom(|i| vec![Node::store(output, i.clone(), f(i))])
     }
 
     /// Build a multi-output pointwise loop where `compute(i)` returns values stored in `outputs[0][i]`, `outputs[1][i]`, ...
@@ -205,18 +166,17 @@ impl ElementwiseComposer {
     where
         F: FnOnce(Expr) -> Vec<Expr>,
     {
-        let out_bufs: Vec<String> = outputs.iter().map(|s| s.to_string()).collect();
         self.build_custom(|i| {
             let values = f(i.clone());
             assert_eq!(
-                out_bufs.len(),
+                outputs.len(),
                 values.len(),
                 "Output buffer count must match values count"
             );
-            out_bufs
-                .into_iter()
+            outputs
+                .iter()
                 .zip(values)
-                .map(|(buf, val)| Node::store(&buf, i.clone(), val))
+                .map(|(&buf, val)| Node::store(buf, i.clone(), val))
                 .collect()
         })
     }
@@ -573,8 +533,9 @@ pub enum F32MulRhs<'a> {
 }
 
 /// Build `output[i] = input[i] * rhs[i]` over F32 lanes.
+#[cfg(any(feature = "math-dialect", feature = "nn-norm"))]
 #[must_use]
-pub fn f32_elementwise_mul(
+pub(crate) fn f32_elementwise_mul(
     op_id: &'static str,
     input: &str,
     rhs: F32MulRhs<'_>,
@@ -592,7 +553,7 @@ pub fn f32_elementwise_mul(
         buffers.push(BufferDecl::output(output, 1, DataType::F32).with_count(n));
     }
 
-    build_indexed_map(op_id, buffers, output, n, [64, 1, 1], |i| {
+    crate::builder::build_indexed_map(op_id, buffers, output, n, [64, 1, 1], |i| {
         let lhs_value = Expr::load(input, i.clone());
         let rhs_value = match rhs {
             F32MulRhs::SameInput => lhs_value.clone(),

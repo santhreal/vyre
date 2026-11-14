@@ -181,9 +181,6 @@ pub mod exploded;
 /// based on frontier density.
 #[cfg(feature = "graph")]
 pub mod adaptive_traverse;
-/// Shared state/index frontier headers for graph and automata worklists.
-#[cfg(feature = "graph")]
-pub mod state_index_frontier;
 
 /// Persistent BFS  -  multi-step frontier expansion in a single dispatch.
 #[cfg(feature = "graph")]

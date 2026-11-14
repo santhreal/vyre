@@ -140,7 +140,7 @@ pub(crate) fn atomic_reduce_u32(
 /// order from zero, with `out` bound after them. `value` receives the element
 /// index and closes over whichever inputs it reads, so a relation over two
 /// buffers and a reduction over one share this one shape.
-pub fn atomic_grid_stride_u32<V, A>(
+pub(crate) fn atomic_grid_stride_u32<V, A>(
     inputs: &[&str],
     out: &str,
     count: u32,

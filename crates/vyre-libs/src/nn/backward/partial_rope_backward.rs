@@ -37,86 +37,100 @@ pub fn partial_rope_backward(
     let half_rope = rope_dims / 2;
     let per_head = seq_len * head_dim;
 
-    let i = Expr::var("i");
-    let head = Expr::BinOp {
+    let div_u32 = |lhs: Expr, rhs: u32| Expr::BinOp {
         op: BinOp::Div,
-        left: Box::new(i.clone()),
-        right: Box::new(Expr::u32(per_head)),
+        left: Box::new(lhs),
+        right: Box::new(Expr::u32(rhs)),
     };
-    let pos_in_head = Expr::sub(i.clone(), Expr::mul(head.clone(), Expr::u32(per_head)));
-    let pos = Expr::BinOp {
-        op: BinOp::Div,
-        left: Box::new(pos_in_head.clone()),
-        right: Box::new(Expr::u32(head_dim)),
-    };
-    let dim = Expr::sub(pos_in_head, Expr::mul(pos.clone(), Expr::u32(head_dim)));
-    let pair_idx = Expr::BinOp {
-        op: BinOp::Div,
-        left: Box::new(dim.clone()),
-        right: Box::new(Expr::u32(2)),
-    };
-    let is_odd = Expr::sub(dim.clone(), Expr::mul(pair_idx.clone(), Expr::u32(2)));
-    let table_idx = Expr::add(
-        Expr::mul(pos.clone(), Expr::u32(half_rope)),
-        pair_idx.clone(),
-    );
-    let head_base = Expr::mul(head, Expr::u32(per_head));
-    let row_base = Expr::add(head_base, Expr::mul(pos, Expr::u32(head_dim)));
-    let even_idx = Expr::add(row_base.clone(), Expr::mul(pair_idx.clone(), Expr::u32(2)));
-    let odd_idx = Expr::add(even_idx.clone(), Expr::u32(1));
-
-    let dy_even = Expr::load(grad_out, even_idx);
-    let dy_odd = Expr::load(grad_out, odd_idx);
-    let cos_val = Expr::load(cos_table, table_idx.clone());
-    let sin_val = Expr::load(sin_table, table_idx);
-
-    // Backward rotation (transpose):
-    // grad_even = dy_even*cos + dy_odd*sin
-    let grad_even = Expr::add(
-        Expr::mul(dy_even.clone(), cos_val.clone()),
-        Expr::mul(dy_odd.clone(), sin_val.clone()),
-    );
-    // grad_odd = -dy_even*sin + dy_odd*cos
-    let grad_odd = Expr::add(
-        Expr::mul(
-            Expr::UnOp {
-                op: vyre_foundation::ir::UnOp::Negate,
-                operand: Box::new(dy_even),
-            },
-            sin_val,
-        ),
-        Expr::mul(dy_odd, cos_val),
-    );
-
-    let is_odd_f32 = Expr::cast(DataType::F32, is_odd);
-    let one_minus = Expr::sub(Expr::f32(1.0), is_odd_f32.clone());
     let rotated_grad = Expr::add(
-        Expr::mul(grad_even, one_minus),
-        Expr::mul(grad_odd, is_odd_f32),
+        Expr::mul(
+            Expr::add(
+                Expr::mul(Expr::var("dy_even"), Expr::var("cos_val")),
+                Expr::mul(Expr::var("dy_odd"), Expr::var("sin_val")),
+            ),
+            Expr::sub(Expr::f32(1.0), Expr::var("is_odd_f32")),
+        ),
+        Expr::mul(
+            Expr::add(
+                Expr::mul(
+                    Expr::UnOp {
+                        op: vyre_foundation::ir::UnOp::Negate,
+                        operand: Box::new(Expr::var("dy_even")),
+                    },
+                    Expr::var("sin_val"),
+                ),
+                Expr::mul(Expr::var("dy_odd"), Expr::var("cos_val")),
+            ),
+            Expr::var("is_odd_f32"),
+        ),
     );
-
-    let passthrough = Expr::load(grad_out, i.clone());
 
     let body = vec![
         Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
-            Expr::lt(i.clone(), Expr::u32(total)),
+            Expr::lt(Expr::var("i"), Expr::u32(total)),
             vec![
-                Node::if_then(
-                    Expr::lt(dim.clone(), Expr::u32(rope_dims)),
-                    vec![Node::Store {
-                        buffer: grad_in.into(),
-                        index: i.clone(),
-                        value: rotated_grad,
-                    }],
+                Node::let_bind("head", div_u32(Expr::var("i"), per_head)),
+                Node::let_bind(
+                    "pos_in_head",
+                    Expr::sub(
+                        Expr::var("i"),
+                        Expr::mul(Expr::var("head"), Expr::u32(per_head)),
+                    ),
                 ),
-                Node::if_then(
-                    Expr::ge(dim, Expr::u32(rope_dims)),
-                    vec![Node::Store {
-                        buffer: grad_in.into(),
-                        index: i,
-                        value: passthrough,
-                    }],
+                Node::let_bind("pos", div_u32(Expr::var("pos_in_head"), head_dim)),
+                Node::let_bind(
+                    "dim",
+                    Expr::sub(
+                        Expr::var("pos_in_head"),
+                        Expr::mul(Expr::var("pos"), Expr::u32(head_dim)),
+                    ),
+                ),
+                Node::if_then_else(
+                    Expr::lt(Expr::var("dim"), Expr::u32(rope_dims)),
+                    vec![
+                        Node::let_bind("pair_idx", div_u32(Expr::var("dim"), 2)),
+                        Node::let_bind(
+                            "is_odd_f32",
+                            Expr::cast(
+                                DataType::F32,
+                                Expr::sub(
+                                    Expr::var("dim"),
+                                    Expr::mul(Expr::var("pair_idx"), Expr::u32(2)),
+                                ),
+                            ),
+                        ),
+                        Node::let_bind(
+                            "table_idx",
+                            Expr::add(
+                                Expr::mul(Expr::var("pos"), Expr::u32(half_rope)),
+                                Expr::var("pair_idx"),
+                            ),
+                        ),
+                        Node::let_bind(
+                            "even_idx",
+                            Expr::add(
+                                Expr::add(
+                                    Expr::mul(Expr::var("head"), Expr::u32(per_head)),
+                                    Expr::mul(Expr::var("pos"), Expr::u32(head_dim)),
+                                ),
+                                Expr::mul(Expr::var("pair_idx"), Expr::u32(2)),
+                            ),
+                        ),
+                        Node::let_bind("dy_even", Expr::load(grad_out, Expr::var("even_idx"))),
+                        Node::let_bind(
+                            "dy_odd",
+                            Expr::load(grad_out, Expr::add(Expr::var("even_idx"), Expr::u32(1))),
+                        ),
+                        Node::let_bind("cos_val", Expr::load(cos_table, Expr::var("table_idx"))),
+                        Node::let_bind("sin_val", Expr::load(sin_table, Expr::var("table_idx"))),
+                        Node::store(grad_in, Expr::var("i"), rotated_grad),
+                    ],
+                    vec![Node::store(
+                        grad_in,
+                        Expr::var("i"),
+                        Expr::load(grad_out, Expr::var("i")),
+                    )],
                 ),
             ],
         ),
@@ -137,10 +151,6 @@ pub fn partial_rope_backward(
     )
 }
 
-const EXPECTED_PARTIAL_ROPE_BACKWARD_OUTPUT_BYTES: [u8; 16] = [
-    0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, 0x40, 0x00, 0x00, 0xC0, 0x40,
-];
-
 inventory::submit! {
     vyre_foundation::operation::OperationRegistration::library_unconstrained(
         OP_ID,
@@ -154,7 +164,10 @@ inventory::submit! {
             ]]
         }),
         Some(|| {
-            vec![vec![EXPECTED_PARTIAL_ROPE_BACKWARD_OUTPUT_BYTES.to_vec()]]
+            vec![vec![vec![
+                0x00, 0x00, 0x80, 0x3F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, 0x40, 0x00, 0x00,
+                0xC0, 0x40,
+            ]]]
         }),
     )
     .with_category("nn")

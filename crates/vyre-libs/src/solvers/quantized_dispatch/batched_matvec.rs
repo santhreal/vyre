@@ -4,9 +4,7 @@
 //! uploaded once and only the activations vary per item.
 
 use super::*;
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Compute a batch of packed signed INT4 row-scaled matrix-vector products through the backend.
 ///
@@ -127,16 +125,11 @@ pub fn i4x8_batched_matvec_f32_scaled_via_with_scratch_into(
     write_f32_slice_le_bytes(&mut inputs[1], x_batches);
     write_f32_slice_le_bytes(&mut inputs[2], row_scales);
 
-    let outputs = execute_single_program(
+    execute_program_sole_f32_into(
         dispatcher,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
         program.clone(),
         &inputs[..3],
         policy,
-    )
-    .map(|output| output.outputs)?;
-    decode_f32_output_exact(
-        expect_one_output("i4x8_batched_matvec_f32_scaled_via", &outputs)?,
         out_words,
         "i4x8_batched_matvec_f32_scaled_via",
         out,

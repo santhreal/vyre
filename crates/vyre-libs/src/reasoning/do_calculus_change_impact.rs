@@ -11,12 +11,10 @@ use crate::graph::do_calculus::{
     impact_mask_from_closure, intervention_delete_incoming, rule2_reverse_incoming, rule3_subgraph,
 };
 use crate::plumbing::host::dispatch_buffers::{
-    checked_square_cells, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
-    write_zero_bytes,
+    checked_square_cells, decode_u32_output_exact, ensure_input_slots, execute_program,
+    execute_program_sole_u32_into, write_u32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
@@ -103,25 +101,11 @@ fn dispatch_impact_mask_from_closure_into(
     write_u32_slice_le_bytes(&mut inputs[0], mask);
     write_u32_slice_le_bytes(&mut inputs[1], closure);
     write_zero_bytes(&mut inputs[2], mask_bytes);
-    let outputs = execute_single_program(
+    execute_program_sole_u32_into(
         dispatcher,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &inputs[..3],
         policy,
-    )
-    .map(|output| output.outputs)?;
-    let [impact_out] = match outputs.as_slice() {
-        [impact_out] => [impact_out],
-        _ => {
-            return Err(SemanticExecutionError::Backend(format!(
-            "Fix: dispatch_impact_mask_from_closure expected exactly one output buffer, got {}.",
-            outputs.len()
-        )));
-        }
-    };
-    decode_u32_output_exact(
-        impact_out,
         n as usize,
         "dispatch_impact_mask_from_closure",
         out,
@@ -443,24 +427,15 @@ where
     write_u32_slice_le_bytes(&mut inputs[0], adj);
     write_u32_slice_le_bytes(&mut inputs[1], mask);
     write_zero_bytes(&mut inputs[2], out_bytes);
-    let outputs = execute_single_program(
+    execute_program_sole_u32_into(
         dispatcher,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &inputs[..3],
         policy,
+        cells,
+        op_name,
+        out,
     )
-    .map(|output| output.outputs)?;
-    let [out_buf] = match outputs.as_slice() {
-        [out_buf] => [out_buf],
-        _ => {
-            return Err(SemanticExecutionError::Backend(format!(
-                "Fix: {op_name} expected exactly one output buffer, got {}.",
-                outputs.len()
-            )));
-        }
-    };
-    decode_u32_output_exact(out_buf, cells, op_name, out)
 }
 
 /// Primitive-native dispatcher path for Pearl Rule 3 graph surgery:
@@ -601,14 +576,7 @@ fn rule3_subgraph_via_into_with_inputs(
     write_zero_bytes(&mut inputs[3], kept_bytes);
     write_zero_bytes(&mut inputs[4], std::mem::size_of::<u32>());
     // The kernel is lane-0-serial, so a single workgroup covers it.
-    let outputs = execute_single_program(
-        dispatcher,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
-        program,
-        &inputs[..5],
-        policy,
-    )
-    .map(|output| output.outputs)?;
+    let outputs = execute_program(dispatcher, program, &inputs[..5], policy)?;
     let [reduced_out, kept_out, _kept_len_out] = match outputs.as_slice() {
         [r, k_out, kl] => [r, k_out, kl],
         _ => {
@@ -916,25 +884,11 @@ pub fn project_impacted_lineage_entries_via_into(
         write_u32_slice_le_bytes(&mut scratch.dispatch_inputs[1], closure);
     }
     write_u32_slice_le_bytes(&mut scratch.dispatch_inputs[2], lineage_cells);
-    let outputs = execute_single_program(
+    execute_program_sole_u32_into(
         dispatcher,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &scratch.dispatch_inputs[..3],
         policy,
-    )
-    .map(|output| output.outputs)?;
-    let [impact_out] = match outputs.as_slice() {
-        [impact_out] => [impact_out],
-        _ => {
-            return Err(SemanticExecutionError::Backend(format!(
-                "Fix: project_impacted_lineage_entries expected exactly one output buffer, got {}.",
-                outputs.len()
-            )));
-        }
-    };
-    decode_u32_output_exact(
-        impact_out,
         lineage_cells.len(),
         "project_impacted_lineage_entries",
         out,

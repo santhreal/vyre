@@ -83,40 +83,39 @@ pub(crate) fn direct_attention_program(
     let elements = s
         .checked_mul(d)
         .ok_or_else(|| TensorRefError::ElementCountOverflow {
-            name: out.to_string(),
+            name: String::from(out),
             shape: vec![s, d],
         })?;
     if s > 8 || d > 16 {
         return Ok(None);
     }
-    let scale_expr = Expr::f32(1.0f32 / (d as f32).sqrt());
+    let scale = 1.0f32 / (d as f32).sqrt();
     let mut nodes = Vec::with_capacity((s * (s + d + 2)) as usize);
     for row in 0..s {
         let mut score_vars = Vec::with_capacity(s as usize);
         for col in 0..s {
             let score_var = format!("direct_score_{row}_{col}");
             nodes.push(Node::let_bind(
-                score_var.clone(),
-                direct_score_expr(q, k, row, col, d, scale_expr.clone()),
+                score_var.as_str(),
+                direct_score_expr(q, k, row, col, d, Expr::f32(scale)),
             ));
             score_vars.push(score_var);
         }
         let mut max_val = Expr::f32(f32::MIN);
         for score_var in &score_vars {
-            let score = Expr::var(score_var.clone());
+            let sv = score_var.as_str();
             max_val = Expr::select(
-                Expr::is_nan(score.clone()),
-                score.clone(),
+                Expr::is_nan(Expr::var(sv)),
+                Expr::var(sv),
                 Expr::select(
-                    Expr::gt(score.clone(), max_val.clone()),
-                    score.clone(),
+                    Expr::gt(Expr::var(sv), max_val.clone()),
+                    Expr::var(sv),
                     max_val,
                 ),
             );
         }
         let max_var = format!("direct_max_{row}");
-        nodes.push(Node::let_bind(max_var.clone(), max_val));
-        let max_expr = Expr::var(max_var);
+        nodes.push(Node::let_bind(max_var.as_str(), max_val));
         let mut denom = Expr::f32(0.0);
         for score_var in &score_vars {
             denom = Expr::add(
@@ -124,18 +123,17 @@ pub(crate) fn direct_attention_program(
                 Expr::UnOp {
                     op: UnOp::Exp,
                     operand: Box::new(bounded_exp_arg(Expr::sub(
-                        Expr::var(score_var.clone()),
-                        max_expr.clone(),
+                        Expr::var(score_var.as_str()),
+                        Expr::var(max_var.as_str()),
                     ))),
                 },
             );
         }
         let denom_var = format!("direct_denom_{row}");
         nodes.push(Node::let_bind(
-            denom_var.clone(),
+            denom_var.as_str(),
             positive_denominator(denom),
         ));
-        let denom_expr = Expr::var(denom_var);
         for dim in 0..d {
             let mut accum = Expr::f32(0.0);
             for col in 0..s {
@@ -143,11 +141,11 @@ pub(crate) fn direct_attention_program(
                     Expr::UnOp {
                         op: UnOp::Exp,
                         operand: Box::new(bounded_exp_arg(Expr::sub(
-                            Expr::var(score_vars[col as usize].clone()),
-                            max_expr.clone(),
+                            Expr::var(score_vars[col as usize].as_str()),
+                            Expr::var(max_var.as_str()),
                         ))),
                     },
-                    denom_expr.clone(),
+                    Expr::var(denom_var.as_str()),
                 );
                 accum = Expr::fma(weight, Expr::load(v, Expr::u32(col * d + dim)), accum);
             }
@@ -220,17 +218,17 @@ impl Attention {
         for t in [&self.k, &self.v, &self.out] {
             if t.shape != self.q.shape {
                 return Err(TensorRefError::ShapeMismatch {
-                    name: t.name.as_str().to_string(),
-                    found: t.shape.to_vec(),
-                    expected: self.q.shape.to_vec(),
+                    name: String::from(t.name.as_str()),
+                    found: (&*t.shape).into(),
+                    expected: (&*self.q.shape).into(),
                     op: OP_ID,
                 });
             }
         }
         if self.q.shape.len() != 2 {
             return Err(TensorRefError::ShapeMismatch {
-                name: self.q.name.as_str().to_string(),
-                found: self.q.shape.to_vec(),
+                name: String::from(self.q.name.as_str()),
+                found: (&*self.q.shape).into(),
                 expected: vec![0, 0],
                 op: OP_ID,
             });
@@ -243,8 +241,8 @@ impl Attention {
         // an explicit contract violation).
         if d == 0 || s == 0 {
             return Err(TensorRefError::ShapeMismatch {
-                name: self.q.name.as_str().to_string(),
-                found: self.q.shape.to_vec(),
+                name: String::from(self.q.name.as_str()),
+                found: (&*self.q.shape).into(),
                 expected: vec![1, 1],
                 op: OP_ID,
             });
@@ -252,15 +250,15 @@ impl Attention {
         let _elements = s
             .checked_mul(d)
             .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: self.out.name.as_str().to_string(),
-                shape: self.out.shape.to_vec(),
+                name: String::from(self.out.name.as_str()),
+                shape: (&*self.out.shape).into(),
             })?;
         let tile = self.options.workgroup_size.unwrap_or([256, 1, 1])[0].max(1);
         let blocks_per_row = d.div_ceil(tile);
         s.checked_mul(blocks_per_row)
             .and_then(|groups| groups.checked_mul(tile))
             .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: self.out.name.as_str().to_string(),
+                name: String::from(self.out.name.as_str()),
                 shape: vec![s, blocks_per_row, tile],
             })?;
         let program = attention_program(
@@ -327,7 +325,7 @@ pub fn try_attention_reference(
 ) -> Result<Program, TensorRefError> {
     if s == 0 || d == 0 {
         return Err(TensorRefError::ShapeMismatch {
-            name: q.to_string(),
+            name: String::from(q),
             found: vec![s, d],
             expected: vec![1, 1],
             op: REFERENCE_OP_ID,
@@ -335,7 +333,7 @@ pub fn try_attention_reference(
     }
     s.checked_mul(d)
         .ok_or_else(|| TensorRefError::ElementCountOverflow {
-            name: out.to_string(),
+            name: String::from(out),
             shape: vec![s, d],
         })?;
     attention_reference_program(q, k, v, out, s, d, [1, 1, 1], REFERENCE_OP_ID)
@@ -356,11 +354,10 @@ fn attention_program(
         return Ok(program);
     }
     let scale = 1.0f32 / (d as f32).sqrt();
-    let scale_expr = Expr::f32(scale);
     let elements = s
         .checked_mul(d)
         .ok_or_else(|| TensorRefError::ElementCountOverflow {
-            name: out.to_string(),
+            name: String::from(out),
             shape: vec![s, d],
         })?;
     let tile = workgroup[0].max(1);
@@ -369,14 +366,14 @@ fn attention_program(
     let total_groups =
         s.checked_mul(blocks_per_row)
             .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: out.to_string(),
+                name: String::from(out),
                 shape: vec![s, blocks_per_row],
             })?;
     let padded_output_count =
         total_groups
             .checked_mul(tile)
             .ok_or_else(|| TensorRefError::ElementCountOverflow {
-                name: out.to_string(),
+                name: String::from(out),
                 shape: vec![total_groups, tile],
             })?;
     let mut body = vec![
@@ -399,7 +396,7 @@ fn attention_program(
             {
                 let mut scalar_row = vec![Node::let_bind("max_val", Expr::f32(f32::MIN))];
                 scalar_row.push(Node::loop_for("j", Expr::u32(0), Expr::u32(s), {
-                    let mut score = attention_score_nodes(q, k, d, scale_expr.clone());
+                    let mut score = attention_score_nodes(q, k, d, Expr::f32(scale));
                     score.push(Node::assign(
                         "max_val",
                         Expr::select(
@@ -427,7 +424,7 @@ fn attention_program(
             {
                 let mut scalar_row = vec![Node::let_bind("sum_val", Expr::f32(0.0))];
                 scalar_row.push(Node::loop_for("j", Expr::u32(0), Expr::u32(s), {
-                    let mut score = attention_score_nodes(q, k, d, scale_expr.clone());
+                    let mut score = attention_score_nodes(q, k, d, Expr::f32(scale));
                     score.push(Node::assign(
                         "sum_val",
                         Expr::add(
@@ -467,7 +464,7 @@ fn attention_program(
             {
                 let mut output_lane = vec![Node::let_bind("accum", Expr::f32(0.0))];
                 output_lane.push(Node::loop_for("j", Expr::u32(0), Expr::u32(s), {
-                    let mut score = attention_score_nodes(q, k, d, scale_expr);
+                    let mut score = attention_score_nodes(q, k, d, Expr::f32(scale));
                     score.extend([
                         Node::let_bind(
                             "weight",
@@ -541,8 +538,7 @@ fn attention_reference_program(
     generator: &'static str,
 ) -> Result<Program, TensorRefError> {
     let scale = 1.0f32 / (d as f32).sqrt();
-    let scale_expr = Expr::f32(scale);
-    let parent = Ident::from(generator);
+    // Build per-row passes without cloning Ident or scale_expr.
 
     // Per row i (query token):
     // 1) scores[j] = scale * dot(Q[i,:], K[j,:]) for j in 0..s
@@ -562,14 +558,14 @@ fn attention_reference_program(
         Node::let_bind("max_val", Expr::f32(f32::MIN)),
         wrap_child_region(
             ATTENTION_MAX_PASS_OP_ID,
-            parent.clone(),
-            attention_max_pass(q, k, d, s, scale_expr.clone()),
+            Ident::from(generator),
+            attention_max_pass(q, k, d, s, Expr::f32(scale)),
         ),
         Node::let_bind("sum_val", Expr::f32(0.0)),
         wrap_child_region(
             ATTENTION_SUM_PASS_OP_ID,
-            parent.clone(),
-            attention_sum_pass(q, k, d, s, scale_expr.clone()),
+            Ident::from(generator),
+            attention_sum_pass(q, k, d, s, Expr::f32(scale)),
         ),
         Node::let_bind(
             "denom",
@@ -584,8 +580,8 @@ fn attention_reference_program(
         ),
         wrap_child_region(
             ATTENTION_WRITE_PASS_OP_ID,
-            parent.clone(),
-            attention_write_pass(q, k, v, d, s, scale_expr, out),
+            Ident::from(generator),
+            attention_write_pass(q, k, v, d, s, Expr::f32(scale), out),
         ),
     ];
 
@@ -594,7 +590,7 @@ fn attention_reference_program(
     let elements = s
         .checked_mul(d)
         .ok_or_else(|| TensorRefError::ElementCountOverflow {
-            name: out.to_string(),
+            name: String::from(out),
             shape: vec![s, d],
         })?;
 

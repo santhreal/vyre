@@ -7,15 +7,13 @@
 //! Output: cluster IDs that polyhedral fusion + megakernel
 //! scheduler consume as fusion hints.
 
-use super::{checked_square_cells, decode_u32_output_exact};
+use super::checked_square_cells;
 use crate::graph::chebyshev_filter::{chebyshev_filter, MAX_K as CHEBYSHEV_MAX_K};
 use crate::math::spectral_shape::mp_edge_clip;
 use crate::plumbing::host::dispatch_buffers::{
-    ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
+    ensure_input_slots, execute_program_first_u32_into, write_u32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Caller-owned semantic execution scratch for spectral scheduling primitives.
 #[derive(Debug, Default)]
@@ -167,21 +165,15 @@ pub fn fusion_scores_fixed_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[2], coeffs_fixed);
     write_zero_bytes(&mut scratch.inputs[3], out_bytes);
     write_zero_bytes(&mut scratch.inputs[4], scratch_bytes);
-    let outputs = execute_single_program(
+    execute_program_first_u32_into(
         executor,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &scratch.inputs,
         policy,
+        n as usize,
+        "fusion_scores_fixed_via",
+        out,
     )
-    .map(|output| output.outputs)?;
-    if outputs.is_empty() {
-        return Err(SemanticExecutionError::Backend(format!(
-            "Fix: fusion_scores_fixed_via expected at least one output buffer, got {}.",
-            outputs.len()
-        )));
-    }
-    decode_u32_output_exact(&outputs[0], n as usize, "fusion_scores_fixed_via", out)
 }
 
 /// Fixed-point production path for Marchenko-Pastur edge clipping.
@@ -262,22 +254,11 @@ pub fn shape_spectrum_fixed_via_with_scratch_into(
     ensure_input_slots(&mut scratch.inputs, 2);
     write_u32_slice_le_bytes(&mut scratch.inputs[0], eigenvalues_fixed);
     write_u32_slice_le_bytes(&mut scratch.inputs[1], &scratch.mp_edge);
-    let outputs = execute_single_program(
+    execute_program_first_u32_into(
         executor,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &scratch.inputs,
         policy,
-    )
-    .map(|output| output.outputs)?;
-    if outputs.is_empty() {
-        return Err(SemanticExecutionError::Backend(format!(
-            "Fix: shape_spectrum_fixed_via expected at least one output buffer, got {}.",
-            outputs.len()
-        )));
-    }
-    decode_u32_output_exact(
-        &outputs[0],
         eigenvalues_fixed.len(),
         "shape_spectrum_fixed_via",
         out,

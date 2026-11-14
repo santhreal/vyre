@@ -17,7 +17,7 @@ use vyre_foundation::ir::Program;
 use vyre_libs::graph::csr_backward_traverse::csr_backward_traverse;
 use vyre_libs::graph::csr_bidirectional::csr_bidirectional;
 use vyre_libs::graph::csr_forward_or_changed::{
-    csr_forward_or_changed, csr_forward_or_changed_parallel,
+    csr_forward_or_changed, csr_forward_or_changed_parallel, csr_forward_or_changed_parallel_batch,
 };
 use vyre_libs::graph::csr_forward_traverse::{
     csr_forward_traverse, csr_forward_traverse_excluding,
@@ -786,6 +786,44 @@ fn entry_points_satisfy_semantic_parity_and_clone_family_equivalence() {
         foc_p_chg, foc_s_chg,
         "Fix: csr_forward_or_changed_parallel must produce identical changed flag to serial."
     );
+
+    // Batched per-query parallel expansion: query 0 advances from {1} (changed=1),
+    // query 1 starts at sink {63} with no outgoing edges (changed=0).
+    let batch_prog =
+        csr_forward_or_changed_parallel_batch(shape(), "fout", "changed", ALLOW_MASK, 2);
+    let init_sink = vec![0_u32, 1_u32 << (63 - 32)];
+    let (exp_sink_out, exp_sink_chg) = csr_forward_or_changed_witness(
+        NODE_COUNT,
+        &offsets,
+        &targets,
+        &kind_masks,
+        &init_sink,
+        ALLOW_MASK,
+    );
+    assert_eq!(exp_sink_chg, 0);
+    let mut batch_frontiers = init_foc.clone();
+    batch_frontiers.extend_from_slice(&init_sink);
+    let pg_nodes = vec![0u32; NODE_COUNT as usize];
+    let pg_tags = vec![0u32; NODE_COUNT as usize];
+    let batch_inputs = vec![
+        Value::from(pack_u32s(&pg_nodes)),
+        Value::from(pack_u32s(&offsets)),
+        Value::from(pack_u32s(&targets)),
+        Value::from(pack_u32s(&kind_masks)),
+        Value::from(pack_u32s(&pg_tags)),
+        Value::from(pack_u32s(&batch_frontiers)),
+        Value::from(pack_u32s(&[0, 0])),
+    ];
+    let wg_x = NODE_COUNT.div_ceil(batch_prog.workgroup_size()[0]);
+    let batch_outputs = vyre_reference::ReferenceRequest::standard(&batch_prog, &batch_inputs)
+        .with_grid([wg_x, 2, 1])
+        .outputs()
+        .expect("CSR batched forward_or_changed reference evaluation must succeed");
+    let batch_out = unpack_u32s(&batch_outputs[0].to_bytes());
+    let batch_chg = unpack_u32s(&batch_outputs[1].to_bytes());
+    assert_eq!(&batch_out[..2], exp_foc_out.as_slice());
+    assert_eq!(&batch_out[2..4], exp_sink_out.as_slice());
+    assert_eq!(&batch_chg[..2], &[exp_foc_chg, exp_sink_chg]);
 
     // Both serial and parallel must reach identical transitive closure from node 0
     let mut cur_s = vec![0b0001_u32, 0];

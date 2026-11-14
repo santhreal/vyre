@@ -65,10 +65,7 @@ impl ConstFold {
     pub fn transform(mut program: Program) -> PassResult {
         let mut overall_changed = false;
 
-        let mut lookbehind_changed = false;
-        let new_entry =
-            binop_identities::fold_mod_lookbehind(program.entry(), &mut lookbehind_changed);
-        if lookbehind_changed {
+        if let Some(new_entry) = binop_identities::fold_mod_lookbehind(program.entry()) {
             overall_changed = true;
             program = program.with_rewritten_entry(new_entry);
         }

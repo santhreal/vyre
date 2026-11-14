@@ -4,8 +4,7 @@
 //! public builder and the fused inflate-then-scan builder all live here. The op
 //! id is `vyre-libs::decode::inflate_stored_block`.
 
-use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::Ident;
+use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 use crate::decode::buffers::{scoped_decode_input_buffer, scoped_decoded_output_buffer};
@@ -153,20 +152,6 @@ pub fn inflate_stored_body(input: &str, output: &str, inflated_len_buffer: &str)
     body
 }
 
-/// Wrap the stored-block inflate body as a child of `parent_op_id`.
-#[must_use]
-pub fn inflate_stored_child(
-    parent_op_id: &str,
-    input: &str,
-    output: &str,
-    inflated_len_buffer: &str,
-) -> Node {
-    wrap_child_region(
-        OP_ID,
-        Ident::from(parent_op_id),
-        inflate_stored_body(input, output, inflated_len_buffer),
-    )
-}
 /// Stored-block inflate over explicitly named buffers.
 #[must_use]
 fn inflate_stored_program(

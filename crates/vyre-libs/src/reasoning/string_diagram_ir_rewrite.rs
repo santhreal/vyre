@@ -48,11 +48,10 @@
 
 use crate::graph::string_diagram::monoidal_compose;
 use crate::plumbing::host::dispatch_buffers::{
-    checked_product_count, decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
+    checked_product_count, ensure_input_slots, execute_program_first_u32_into,
+    write_u32_slice_le_bytes,
 };
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Reusable buffers for string-diagram IR rewrites.
 #[derive(Debug, Default)]
@@ -179,21 +178,15 @@ pub fn compose_ir_arrows_fixed_via_with_scratch_into(
     ensure_input_slots(&mut scratch.dispatch_inputs, 2);
     write_u32_slice_le_bytes(&mut scratch.dispatch_inputs[0], f_fixed);
     write_u32_slice_le_bytes(&mut scratch.dispatch_inputs[1], g_fixed);
-    let outputs = execute_single_program(
+    execute_program_first_u32_into(
         dispatcher,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &scratch.dispatch_inputs[..2],
         policy,
+        out_cells,
+        "compose_ir_arrows_fixed_via",
+        out,
     )
-    .map(|output| output.outputs)?;
-    if outputs.is_empty() {
-        return Err(SemanticExecutionError::Backend(format!(
-            "Fix: compose_ir_arrows_fixed_via expected at least one output buffer, got {}.",
-            outputs.len()
-        )));
-    }
-    decode_u32_output_exact(&outputs[0], out_cells, "compose_ir_arrows_fixed_via", out)
 }
 
 #[cfg(test)]

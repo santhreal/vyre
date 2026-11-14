@@ -4,13 +4,10 @@
 //! implemented in [`vyre_libs::topology::vietoris_rips`].
 
 use crate::plumbing::host::dispatch_buffers::{
-    checked_square_cells, decode_u32_output_exact, u32_slice_to_le_bytes,
+    checked_square_cells, execute_program_first_u32_into, u32_slice_to_le_bytes,
 };
-
 use crate::topology::vietoris_rips::vietoris_rips_edge_filter;
-use vyre_compiler::{
-    execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
-};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Compute the Vietoris-Rips 1-skeleton through the dispatcher using
 /// fixed-point 16.16 distances. This is the production path for callers
@@ -77,20 +74,15 @@ pub fn region_loop_skeleton_fixed_via_into(
         u32_slice_to_le_bytes(&[epsilon_fixed]),
         vec![0u8; cells * 4],
     ];
-    let outputs = execute_single_program(
+    execute_program_first_u32_into(
         dispatcher,
-        crate::plumbing::host::dispatch_buffers::HOST_WRAPPER_NODE,
         program,
         &inputs,
         policy,
+        cells,
+        "region_loop_skeleton_fixed_via",
+        out,
     )
-    .map(|output| output.outputs)?;
-    if outputs.is_empty() {
-        return Err(SemanticExecutionError::Backend(
-            "Fix: Vietoris-Rips dispatch returned no output buffers".to_string(),
-        ));
-    }
-    decode_u32_output_exact(&outputs[0], cells, "region_loop_skeleton_fixed_via", out)
 }
 
 #[cfg(test)]

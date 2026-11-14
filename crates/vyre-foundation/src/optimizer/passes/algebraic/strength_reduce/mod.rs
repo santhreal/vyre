@@ -83,6 +83,12 @@ fn recognize_source_shape(expr: &Expr) -> Option<Expr> {
     }
 }
 
+enum ReducePick {
+    Left,
+    Right,
+    Expr(Expr),
+}
+
 #[expect(
     clippy::too_many_lines,
     reason = "strength-reduction table keeps algebraic rewrite precedence auditable"
@@ -95,312 +101,194 @@ fn reduce_expr(expr: &Expr) -> Option<Expr> {
     let Expr::BinOp { op, left, right } = expr else {
         return None;
     };
-    match op {
-        // Integer Mul-by-2^k → Shl by k.
-        BinOp::Mul => {
-            if matches!(right.as_ref(), Expr::LitU32(0)) {
-                return Some(Expr::u32(0));
-            }
-            if matches!(left.as_ref(), Expr::LitU32(0)) {
-                return Some(Expr::u32(0));
-            }
-            if matches!(right.as_ref(), Expr::LitU32(1)) {
-                return Some(left.as_ref().clone());
-            }
-            if matches!(left.as_ref(), Expr::LitU32(1)) {
-                return Some(right.as_ref().clone());
-            }
-            if let Some(shift) = power_of_two_shift(right) {
-                return Some(Expr::shl(left.as_ref().clone(), Expr::u32(shift)));
-            }
-            if let Some(shift) = power_of_two_shift(left) {
-                return Some(Expr::shl(right.as_ref().clone(), Expr::u32(shift)));
-            }
-            // ── Shift-add decomposition for non-power-of-two constants ──
-            // GPU imul is 4-8 cycles; shift+add/sub is 2 cycles.
-            // x * C  →  (x << hi) ± (x << lo)  when C = 2^hi ± 2^lo.
-            // This fires for the most common index/stride multipliers
-            // found in real GPU kernels (3, 5, 6, 7, 9, 10, 12, 15).
-            if let Some(decomposed) = shift_add_decompose(left.as_ref(), right.as_ref()) {
-                return Some(decomposed);
-            }
-            if let Some(decomposed) = shift_add_decompose(right.as_ref(), left.as_ref()) {
-                return Some(decomposed);
-            }
-            // Signed multiply by a negative constant: x * (-C) → Negate(x * C).
-            // The positive product is strength-reduced to shifts on the next
-            // fixpoint iteration. Two's-complement i32 only; -1 is owned by
-            // const-fold and i32::MIN cannot be negated without overflow.
-            if let Expr::LitI32(c) = right.as_ref() {
-                if *c < -1 && *c != i32::MIN {
-                    return Some(Expr::negate(Expr::mul(
-                        left.as_ref().clone(),
-                        Expr::i32(-*c),
-                    )));
-                }
-            }
-            if let Expr::LitI32(c) = left.as_ref() {
-                if *c < -1 && *c != i32::MIN {
-                    return Some(Expr::negate(Expr::mul(
-                        right.as_ref().clone(),
-                        Expr::i32(-*c),
-                    )));
-                }
-            }
-            // Float: x * 2.0 → x + x (saves a mul, uses cheaper add).
-            if matches!(right.as_ref(), Expr::LitF32(v) if lit_f32_eq(*v, 2.0)) {
-                return Some(Expr::add(left.as_ref().clone(), left.as_ref().clone()));
-            }
-            if matches!(left.as_ref(), Expr::LitF32(v) if lit_f32_eq(*v, 2.0)) {
-                return Some(Expr::add(right.as_ref().clone(), right.as_ref().clone()));
-            }
-            // Float: x * 1.0 → x (multiplicative identity).
-            if matches!(right.as_ref(), Expr::LitF32(v) if lit_f32_eq(*v, 1.0)) {
-                return Some(left.as_ref().clone());
-            }
-            if matches!(left.as_ref(), Expr::LitF32(v) if lit_f32_eq(*v, 1.0)) {
-                return Some(right.as_ref().clone());
-            }
+    let (l, r) = (left.as_ref(), right.as_ref());
+    let other_if = |pred: fn(&Expr) -> bool| {
+        if pred(r) {
+            Some(ReducePick::Left)
+        } else if pred(l) {
+            Some(ReducePick::Right)
+        } else {
             None
         }
-        // Unsigned Div-by-2^k → Shr by k. Only fires when rhs is a
-        // LitU32 power of two  -  LitI32 paths avoid signed semantics
-        // mismatch (negative dividend + rounding direction).
+    };
+
+    let pick = match op {
+        // Integer Mul-by-2^k → Shl by k.
+        BinOp::Mul => {
+            if matches!(r, Expr::LitU32(0)) || matches!(l, Expr::LitU32(0)) {
+                return Some(Expr::u32(0));
+            }
+            if let Some(id) = other_if(|e| matches!(e, Expr::LitU32(1))) {
+                Some(id)
+            } else if let Some(shift) = power_of_two_shift(right) {
+                Some(ReducePick::Expr(Expr::shl(l.clone(), Expr::u32(shift))))
+            } else if let Some(shift) = power_of_two_shift(left) {
+                Some(ReducePick::Expr(Expr::shl(r.clone(), Expr::u32(shift))))
+            } else if let Some(decomposed) =
+                shift_add_decompose(l, r).or_else(|| shift_add_decompose(r, l))
+            {
+                Some(ReducePick::Expr(decomposed))
+            } else if let Some(neg_c) = neg_i32_const(r) {
+                Some(ReducePick::Expr(Expr::negate(Expr::mul(
+                    l.clone(),
+                    Expr::i32(neg_c),
+                ))))
+            } else if let Some(neg_c) = neg_i32_const(l) {
+                Some(ReducePick::Expr(Expr::negate(Expr::mul(
+                    r.clone(),
+                    Expr::i32(neg_c),
+                ))))
+            } else if matches!(r, Expr::LitF32(v) if lit_f32_eq(*v, 2.0)) {
+                let x = l.clone();
+                Some(ReducePick::Expr(Expr::add(x.clone(), x)))
+            } else if matches!(l, Expr::LitF32(v) if lit_f32_eq(*v, 2.0)) {
+                let x = r.clone();
+                Some(ReducePick::Expr(Expr::add(x.clone(), x)))
+            } else {
+                other_if(|e| matches!(e, Expr::LitF32(v) if lit_f32_eq(*v, 1.0)))
+            }
+        }
+        // Unsigned Div-by-2^k → Shr by k.
         BinOp::Div => {
-            // 1.0 / constant → compile-time reciprocal literal.
-            if let Some(folded) = reciprocal_constant_fold(left.as_ref(), right.as_ref()) {
+            if let Some(folded) = reciprocal_constant_fold(l, r) {
                 return Some(folded);
             }
-            // 1.0 / x → Reciprocal(x). Keeping reciprocal as
-            // a first-class IR op lets strict backends emit precise rcp and
-            // ULP-budgeted backends emit approximate rcp without re-discovering
-            // the expression shape in every driver.
-            if matches!(left.as_ref(), Expr::LitF32(v) if lit_f32_eq(*v, 1.0))
-                && !matches!(right.as_ref(), Expr::LitF32(_))
+            if matches!(l, Expr::LitF32(v) if lit_f32_eq(*v, 1.0)) && !matches!(r, Expr::LitF32(_))
             {
-                return Some(Expr::reciprocal(right.as_ref().clone()));
+                return Some(Expr::reciprocal(r.clone()));
             }
-            match right.as_ref() {
-                Expr::LitU32(1) => Some(left.as_ref().clone()),
-                Expr::LitU32(value) if value.is_power_of_two() => Some(Expr::shr(
-                    left.as_ref().clone(),
-                    Expr::u32(value.trailing_zeros()),
+            match r {
+                Expr::LitU32(1) => Some(ReducePick::Left),
+                Expr::LitU32(value) if value.is_power_of_two() => Some(ReducePick::Expr(
+                    Expr::shr(l.clone(), Expr::u32(value.trailing_zeros())),
                 )),
-                // Granlund-Montgomery: any non-zero, non-power-of-two u32
-                // constant → mulhi(n, magic) >> shift.
-                // Saves 40-90 GPU cycles per division.
                 Expr::LitU32(d) if *d > 1 && !d.is_power_of_two() => {
-                    granlund_montgomery_div(left.as_ref(), *d)
+                    granlund_montgomery_div(l, *d).map(ReducePick::Expr)
                 }
-                // Float: x / 1.0 → x (identity).
-                Expr::LitF32(v) if lit_f32_eq(*v, 1.0) => Some(left.as_ref().clone()),
-                // Float: x / C → x * (1/C) when the reciprocal is exact, which
-                // is every power of two that reciprocates to a normal. GPU fdiv
-                // is 4-8x slower than fmul, and the pair computes the same
-                // quotient bit for bit: both round one exact mathematical value
-                // once. A divisor whose reciprocal rounds is left as a division
-                // and offered to the emitter, which owns the ULP budget that
-                // would authorize the trade.
-                Expr::LitF32(v) => exact_f32_reciprocal(*v)
-                    .map(|reciprocal| Expr::mul(left.as_ref().clone(), Expr::f32(reciprocal))),
+                Expr::LitF32(v) if lit_f32_eq(*v, 1.0) => Some(ReducePick::Left),
+                Expr::LitF32(v) => exact_f32_reciprocal(*v).map(|reciprocal| {
+                    ReducePick::Expr(Expr::mul(l.clone(), Expr::f32(reciprocal)))
+                }),
                 _ => None,
             }
         }
         // Unsigned Mod-by-constant.
         BinOp::Mod => {
-            let Expr::LitU32(value) = right.as_ref() else {
+            let Expr::LitU32(value) = r else {
                 return None;
             };
-            // x % 1 → 0 for every unsigned x.
             if *value == 1 {
                 return Some(Expr::u32(0));
             }
-            // x % 2^k → x & (2^k - 1).
             if value.is_power_of_two() {
-                return Some(Expr::bitand(left.as_ref().clone(), Expr::u32(value - 1)));
+                return Some(Expr::bitand(l.clone(), Expr::u32(value - 1)));
             }
-            // x % d (non-power-of-two constant) → x - (x / d) * d, reusing the
-            // Granlund-Montgomery exact u32 division. The (x / d) * d multiply
-            // strength-reduces to shift/add on the next fixpoint pass, so a
-            // ~40-90 cycle integer umod becomes mulhi + shift + mul + sub.
-            // d == 0 falls through here (granlund_montgomery_div guards d <= 1),
-            // leaving modulo-by-zero intact for the backend to trap.
-            //
-            // The subtraction reads `x` on top of every read the quotient
-            // makes, so the whole shape has to clear the duplication budget
-            // before the quotient is built.
             if !may_duplicate(left, 1 + div_operand_copies(*value)) {
                 return None;
             }
-            granlund_montgomery_div(left.as_ref(), *value).map(|quotient| {
-                Expr::sub(
-                    left.as_ref().clone(),
-                    Expr::mul(quotient, Expr::u32(*value)),
-                )
+            granlund_montgomery_div(l, *value).map(|quotient| {
+                ReducePick::Expr(Expr::sub(l.clone(), Expr::mul(quotient, Expr::u32(*value))))
             })
         }
-        // Float: x + (-0.0) → x (additive identity).
-        BinOp::Add => {
-            // Only the negative zero is an additive identity under IEEE-754:
-            // `-0.0 + 0.0` is `+0.0`, so folding `x + 0.0` away rewrites the
-            // sign of a negative-zero input. `lit_f32_eq` compares bit patterns
-            // because `-0.0 == 0.0` holds for the value comparison.
-            if matches!(right.as_ref(), Expr::LitF32(v) if lit_f32_eq(*v, -0.0)) {
-                return Some(left.as_ref().clone());
-            }
-            if matches!(left.as_ref(), Expr::LitF32(v) if lit_f32_eq(*v, -0.0)) {
-                return Some(right.as_ref().clone());
-            }
-            // Integer: x + 0 → x.
-            if matches!(right.as_ref(), Expr::LitU32(0)) {
-                return Some(left.as_ref().clone());
-            }
-            if matches!(left.as_ref(), Expr::LitU32(0)) {
-                return Some(right.as_ref().clone());
-            }
-            // ── Negation fusion ──────────────────────────────────
-            // x + (-y) → x - y  (eliminates 1 negate instruction)
+        // Float: x + (-0.0) → x; Integer: x + 0 → x; Negation fusion.
+        BinOp::Add => other_if(|e| {
+            matches!(e, Expr::LitU32(0)) || matches!(e, Expr::LitF32(v) if lit_f32_eq(*v, -0.0))
+        })
+        .or_else(|| {
             if let Expr::UnOp {
                 op: UnOp::Negate,
                 operand: y,
-            } = right.as_ref()
+            } = r
             {
-                return Some(Expr::sub(left.as_ref().clone(), y.as_ref().clone()));
-            }
-            // (-x) + y → y - x
-            if let Expr::UnOp {
+                Some(ReducePick::Expr(Expr::sub(l.clone(), y.as_ref().clone())))
+            } else if let Expr::UnOp {
                 op: UnOp::Negate,
                 operand: x,
-            } = left.as_ref()
+            } = l
             {
-                return Some(Expr::sub(right.as_ref().clone(), x.as_ref().clone()));
+                Some(ReducePick::Expr(Expr::sub(r.clone(), x.as_ref().clone())))
+            } else {
+                None
             }
-            None
-        }
-        // Float: x - (+0.0) → x (subtractive identity).
+        }),
+        // Float: x - (+0.0) → x; Integer: x - 0 → x; x - (-y) → x + y.
         BinOp::Sub => {
-            // The subtractive identity takes the opposite zero: `-0.0 - -0.0`
-            // is `+0.0`, while `x - 0.0` is `x` for every input.
-            if matches!(right.as_ref(), Expr::LitF32(v) if lit_f32_eq(*v, 0.0)) {
-                return Some(left.as_ref().clone());
-            }
-            if matches!(right.as_ref(), Expr::LitU32(0)) {
-                return Some(left.as_ref().clone());
-            }
-            // x - (-y) → x + y  (eliminates 1 negate instruction)
-            if let Expr::UnOp {
+            if matches!(r, Expr::LitU32(0)) || matches!(r, Expr::LitF32(v) if lit_f32_eq(*v, 0.0)) {
+                Some(ReducePick::Left)
+            } else if let Expr::UnOp {
                 op: UnOp::Negate,
                 operand: y,
-            } = right.as_ref()
+            } = r
             {
-                return Some(Expr::add(left.as_ref().clone(), y.as_ref().clone()));
+                Some(ReducePick::Expr(Expr::add(l.clone(), y.as_ref().clone())))
+            } else {
+                None
             }
-            None
         }
-        // Shift identities and chained-shift fusion have one owner.
         BinOp::Shl | BinOp::Shr => {
-            super::shift_fusion::reduce_shift(*op, left.as_ref(), right.as_ref())
+            super::shift_fusion::reduce_shift(*op, l, r).map(ReducePick::Expr)
         }
 
-        // ── BitAnd mask fusion ──────────────────────────────────
-        // (x >> k) & mask  where mask = (1 << n) - 1
-        // → extract n bits starting at position k.
-        // This is a recognition pass; the combined operation is
-        // already optimal but canonicalizing it aids CSE.
+        // BitAnd complement annihilator: x & ~x → 0, ~x & x → 0
+        BinOp::BitAnd if is_bitnot_of(r, l) || is_bitnot_of(l, r) => {
+            Some(ReducePick::Expr(Expr::u32(0)))
+        }
+        // BitOr / BitXor complement → all-ones
+        BinOp::BitOr | BinOp::BitXor if is_bitnot_of(r, l) || is_bitnot_of(l, r) => {
+            Some(ReducePick::Expr(Expr::u32(u32::MAX)))
+        }
 
-        // ── BitAnd complement annihilator ───────────────────────
-        // x & ~x → 0,  ~x & x → 0   (complementary mask cancellation)
-        BinOp::BitAnd => {
-            if let Expr::UnOp {
-                op: UnOp::BitNot,
-                operand: inner,
-            } = right.as_ref()
-            {
-                if inner.as_ref() == left.as_ref() {
-                    return Some(Expr::u32(0));
-                }
+        // Rotate-by-zero or 32 → identity for u32
+        BinOp::RotateLeft | BinOp::RotateRight if matches!(r, Expr::LitU32(0 | 32)) => {
+            Some(ReducePick::Left)
+        }
+
+        // AbsDiff self-identity
+        BinOp::AbsDiff if l == r => Some(ReducePick::Expr(Expr::u32(0))),
+
+        BinOp::Min if matches!(r, Expr::LitU32(0)) || matches!(l, Expr::LitU32(0)) => {
+            Some(ReducePick::Expr(Expr::u32(0)))
+        }
+        BinOp::Max => {
+            if matches!(r, Expr::LitU32(u32::MAX)) || matches!(l, Expr::LitU32(u32::MAX)) {
+                Some(ReducePick::Expr(Expr::u32(u32::MAX)))
+            } else {
+                other_if(|e| matches!(e, Expr::LitU32(0)))
             }
-            if let Expr::UnOp {
-                op: UnOp::BitNot,
-                operand: inner,
-            } = left.as_ref()
-            {
-                if inner.as_ref() == right.as_ref() {
-                    return Some(Expr::u32(0));
-                }
-            }
-            None
         }
+        BinOp::Min => other_if(|e| matches!(e, Expr::LitU32(u32::MAX))),
 
-        // ── BitOr complement → all-ones ─────────────────────────
-        // x | ~x → 0xFFFFFFFF,  ~x | x → 0xFFFFFFFF
-        BinOp::BitOr | BinOp::BitXor => {
-            if let Expr::UnOp {
-                op: UnOp::BitNot,
-                operand: inner,
-            } = right.as_ref()
-            {
-                if inner.as_ref() == left.as_ref() {
-                    return Some(Expr::u32(u32::MAX));
-                }
-            }
-            if let Expr::UnOp {
-                op: UnOp::BitNot,
-                operand: inner,
-            } = left.as_ref()
-            {
-                if inner.as_ref() == right.as_ref() {
-                    return Some(Expr::u32(u32::MAX));
-                }
-            }
-            None
-        }
-
-        // ── Rotate-by-zero → identity ───────────────────────────
-        BinOp::RotateLeft | BinOp::RotateRight if matches!(right.as_ref(), Expr::LitU32(0)) => {
-            Some(left.as_ref().clone())
-        }
-        // Rotate-by-32 (full width) → identity for u32
-        BinOp::RotateLeft | BinOp::RotateRight if matches!(right.as_ref(), Expr::LitU32(32)) => {
-            Some(left.as_ref().clone())
-        }
-
-        // ── AbsDiff self-identity ───────────────────────────────
-        // absdiff(x, x) → 0
-        BinOp::AbsDiff if left.as_ref() == right.as_ref() => Some(Expr::u32(0)),
-
-        // ── Min/Max with literal extremes ───────────────────────
-        // min(x, 0) → 0  for unsigned (u32 cannot be negative)
-        BinOp::Min if matches!(right.as_ref(), Expr::LitU32(0)) => Some(Expr::u32(0)),
-        BinOp::Min if matches!(left.as_ref(), Expr::LitU32(0)) => Some(Expr::u32(0)),
-        // max(x, 0) → x  for unsigned
-        BinOp::Max if matches!(right.as_ref(), Expr::LitU32(0)) => Some(left.as_ref().clone()),
-        BinOp::Max if matches!(left.as_ref(), Expr::LitU32(0)) => Some(right.as_ref().clone()),
-        // min(x, MAX) → x,  max(x, MAX) → MAX
-        BinOp::Min if matches!(right.as_ref(), Expr::LitU32(u32::MAX)) => {
-            Some(left.as_ref().clone())
-        }
-        BinOp::Min if matches!(left.as_ref(), Expr::LitU32(u32::MAX)) => {
-            Some(right.as_ref().clone())
-        }
-        BinOp::Max if matches!(right.as_ref(), Expr::LitU32(u32::MAX)) => Some(Expr::u32(u32::MAX)),
-        BinOp::Max if matches!(left.as_ref(), Expr::LitU32(u32::MAX)) => Some(Expr::u32(u32::MAX)),
-
-        // ── Comparison strength reduction ───────────────────────
-        // x < 0 → false  for unsigned (u32 can never be negative)
-        BinOp::Lt if matches!(right.as_ref(), Expr::LitU32(0)) => Some(Expr::bool(false)),
-        // x >= 0 → true  for unsigned
-        BinOp::Ge if matches!(right.as_ref(), Expr::LitU32(0)) => Some(Expr::bool(true)),
-        // 0 > x → false  for unsigned
-        BinOp::Gt if matches!(left.as_ref(), Expr::LitU32(0)) => {
-            // 0 > x is false for all u32 x
-            Some(Expr::bool(false))
-        }
-        // 0 <= x → true  for unsigned
-        BinOp::Le if matches!(left.as_ref(), Expr::LitU32(0)) => Some(Expr::bool(true)),
+        BinOp::Lt if matches!(r, Expr::LitU32(0)) => Some(ReducePick::Expr(Expr::bool(false))),
+        BinOp::Ge if matches!(r, Expr::LitU32(0)) => Some(ReducePick::Expr(Expr::bool(true))),
+        BinOp::Gt if matches!(l, Expr::LitU32(0)) => Some(ReducePick::Expr(Expr::bool(false))),
+        BinOp::Le if matches!(l, Expr::LitU32(0)) => Some(ReducePick::Expr(Expr::bool(true))),
 
         _ => None,
+    };
+    match pick? {
+        ReducePick::Left => Some(l.clone()),
+        ReducePick::Right => Some(r.clone()),
+        ReducePick::Expr(expr) => Some(expr),
     }
+}
+
+#[inline]
+fn neg_i32_const(expr: &Expr) -> Option<i32> {
+    match expr {
+        Expr::LitI32(c) if *c < -1 && *c != i32::MIN => Some(-*c),
+        _ => None,
+    }
+}
+
+#[inline]
+fn is_bitnot_of(candidate: &Expr, target: &Expr) -> bool {
+    matches!(
+        candidate,
+        Expr::UnOp {
+            op: UnOp::BitNot,
+            operand,
+        } if operand.as_ref() == target
+    )
 }
 
 #[inline]

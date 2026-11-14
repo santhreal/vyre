@@ -70,17 +70,6 @@ impl<'a> TableStateMachineComposer<'a> {
         }
     }
 
-    /// Create a composer with an explicit alphabet size.
-    #[must_use]
-    pub const fn with_alphabet_size(transitions: &'a str, alphabet_size: u32) -> Self {
-        Self {
-            transitions,
-            stride: alphabet_size,
-            state_var: DEFAULT_STATE_VAR,
-            alphabet_size,
-        }
-    }
-
     /// Override the state variable name.
     #[must_use]
     pub const fn state_var(mut self, var: &'a str) -> Self {
@@ -164,15 +153,6 @@ impl<'a> TableStateMachineComposer<'a> {
         } else {
             bounded_index(symbol, Expr::u32(self.alphabet_size))
         }
-    }
-
-    /// Emit a state assignment node targeting an explicitly named state variable.
-    #[must_use]
-    pub fn advance_node_named(&self, state_var: &str, symbol: Expr) -> Node {
-        Node::assign(
-            state_var,
-            self.transition_expr(Expr::var(state_var), symbol),
-        )
     }
 
     /// Advance state from an element loaded from `input` at index `idx`.

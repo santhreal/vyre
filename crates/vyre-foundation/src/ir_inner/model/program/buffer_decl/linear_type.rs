@@ -30,24 +30,6 @@ pub enum LinearType {
     Unrestricted,
 }
 
-impl LinearType {
-    /// Whether this discipline forbids dropping a buffer without
-    /// using it (`Linear` or `Relevant`).
-    #[must_use]
-    #[inline]
-    pub const fn forbids_drop(self) -> bool {
-        matches!(self, Self::Linear | Self::Relevant)
-    }
-
-    /// Whether this discipline forbids using a buffer more than once
-    /// (`Linear` or `Affine`).
-    #[must_use]
-    #[inline]
-    pub const fn forbids_reuse(self) -> bool {
-        matches!(self, Self::Linear | Self::Affine)
-    }
-}
-
 #[cfg(test)]
 mod linear_type_tests {
     use super::*;
@@ -58,26 +40,6 @@ mod linear_type_tests {
     fn default_is_unrestricted() {
         let buf = BufferDecl::read("a", 0, DataType::U32);
         assert_eq!(buf.linear_type(), LinearType::Unrestricted);
-        assert!(!LinearType::Unrestricted.forbids_drop());
-        assert!(!LinearType::Unrestricted.forbids_reuse());
-    }
-
-    #[test]
-    fn linear_forbids_both() {
-        assert!(LinearType::Linear.forbids_drop());
-        assert!(LinearType::Linear.forbids_reuse());
-    }
-
-    #[test]
-    fn affine_forbids_only_reuse() {
-        assert!(!LinearType::Affine.forbids_drop());
-        assert!(LinearType::Affine.forbids_reuse());
-    }
-
-    #[test]
-    fn relevant_forbids_only_drop() {
-        assert!(LinearType::Relevant.forbids_drop());
-        assert!(!LinearType::Relevant.forbids_reuse());
     }
 
     #[test]
