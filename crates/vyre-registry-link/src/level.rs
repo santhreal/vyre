@@ -24,7 +24,7 @@ use vyre_spec::IrLevel;
 ///
 /// This is the list a crate joins when it takes ownership of a level's subject;
 /// `registry_link_rules` reads the tree to prove the list is the whole set.
-pub const DECLARED_SOURCES: &[&str] = &["vyre-foundation", "vyre-compiler", "vyre-compiler"];
+pub const DECLARED_SOURCES: &[&str] = &["vyre-foundation", "vyre-compiler"];
 
 /// One crate linked into this build, with the levels it registers stages for.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -48,11 +48,10 @@ static SOURCES: LazyLock<Vec<LevelStageSource>> = LazyLock::new(|| {
         },
         LevelStageSource {
             crate_name: "vyre-compiler",
-            levels: vec![vyre_compiler::lower::registered_level_stage()],
-        },
-        LevelStageSource {
-            crate_name: "vyre-compiler",
-            levels: vec![vyre_compiler::registered_level_stage()],
+            levels: vec![
+                vyre_compiler::lower::registered_level_stage(),
+                vyre_compiler::registered_level_stage(),
+            ],
         },
     ]
 });

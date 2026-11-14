@@ -330,7 +330,7 @@ fn conflicting_access_pattern_yields_strategy_other_than_no_rewrite() {
 #[test]
 fn every_declared_permutation_block_has_a_test_case() {
     let path = vyre_test_support::monorepo::vyre_workspace_root()
-        .join("crates/vyre-compiler/src/analyses/bank_conflict/strategy.rs");
+        .join("crates/vyre-compiler/src/lower/analyses/bank_conflict/strategy.rs");
     let source = vyre_test_support::read_source_file_bounded(&path).unwrap_or_else(|err| {
         panic!("Fix: cannot read the SharedPermutationBlock declaration at {path:?}: {err}")
     });
@@ -375,7 +375,7 @@ fn every_declared_permutation_block_has_a_test_case() {
 #[test]
 fn every_declared_access_phase_has_a_test_case() {
     let path = vyre_test_support::monorepo::vyre_workspace_root()
-        .join("crates/vyre-compiler/src/analyses/bank_conflict/strategy.rs");
+        .join("crates/vyre-compiler/src/lower/analyses/bank_conflict/strategy.rs");
     let source = vyre_test_support::read_source_file_bounded(&path).unwrap_or_else(|err| {
         panic!("Fix: cannot read the AccessPhase declaration at {path:?}: {err}")
     });

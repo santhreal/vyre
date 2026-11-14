@@ -129,13 +129,6 @@ operations = [
 ]
 
 [[subsystem]]
-id = "label"
-operations = [
-  "vyre-libs::label::nodeset_filter",
-  "vyre-libs::label::resolve_family",
-]
-
-[[subsystem]]
 id = "llm"
 operations = [
   "vyre-libs::llm::logit_adjust",
@@ -351,21 +344,6 @@ operations = [
 ]
 
 [[subsystem]]
-id = "predicate"
-operations = [
-  "vyre-libs::predicate::arg_of",
-  "vyre-libs::predicate::call_to",
-  "vyre-libs::predicate::edge",
-  "vyre-libs::predicate::in_file",
-  "vyre-libs::predicate::in_function",
-  "vyre-libs::predicate::in_package",
-  "vyre-libs::predicate::literal_of",
-  "vyre-libs::predicate::node_kind_eq",
-  "vyre-libs::predicate::return_value_of",
-  "vyre-libs::predicate::size_argument_of",
-]
-
-[[subsystem]]
 id = "quant"
 operations = [
   "vyre-libs::quant::byte_shuffle",
@@ -414,33 +392,6 @@ operations = [
 id = "representation"
 operations = [
   "vyre-libs::representation::unpack_4bit_f32",
-]
-
-[[subsystem]]
-id = "security"
-operations = [
-  "vyre-libs::security::aliases_dataflow",
-  "vyre-libs::security::auth_check_dominates",
-  "vyre-libs::security::bounded_by_comparison",
-  "vyre-libs::security::buffer_size_check",
-  "vyre-libs::security::dominance_predecessors",
-  "vyre-libs::security::flows_to",
-  "vyre-libs::security::flows_to_to_sink",
-  "vyre-libs::security::flows_to_with_sanitizer",
-  "vyre-libs::security::format_string_check",
-  "vyre-libs::security::integer_overflow_arith",
-  "vyre-libs::security::label_by_family",
-  "vyre-libs::security::lock_dominates",
-  "vyre-libs::security::path_canonical",
-  "vyre-libs::security::sanitized_by",
-  "vyre-libs::security::sanitizer_dominates",
-  "vyre-libs::security::sink_intersection",
-  "vyre-libs::security::sql_param_bound",
-  "vyre-libs::security::taint_flow",
-  "vyre-libs::security::taint_kill",
-  "vyre-libs::security::taint_pollution",
-  "vyre-libs::security::unchecked_return",
-  "vyre-libs::security::xss_escape",
 ]
 
 [[subsystem]]

@@ -8,10 +8,10 @@
 //! expression, and hands that in as a closure.
 
 use rustc_hash::FxHashMap;
-use vyre_spec::CpuFn;
 use vyre_foundation::dialect_lookup::{Signature, TypedParam};
 use vyre_foundation::ir::{DataType, Expr};
 use vyre_foundation::operation::{OperationRegistry, SemanticOperation};
+use vyre_spec::CpuFn;
 
 use crate::execution::expr_cast::spec_output_value;
 use crate::value::Value;

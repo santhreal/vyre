@@ -499,7 +499,7 @@ mod tests {
     #[test]
     fn every_declared_mitigation_strategy_has_an_emitter_decision() {
         let path = vyre_test_support::monorepo::vyre_workspace_root()
-            .join("crates/vyre-compiler/src/analyses/bank_conflict/strategy.rs");
+            .join("crates/vyre-compiler/src/lower/analyses/bank_conflict/strategy.rs");
         let source = vyre_test_support::read_source_file_bounded(&path).unwrap_or_else(|err| {
             panic!("Fix: cannot read the BankConflictMitigation declaration at {path:?}: {err}")
         });

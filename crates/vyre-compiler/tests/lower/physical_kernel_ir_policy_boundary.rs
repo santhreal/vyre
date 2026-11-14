@@ -203,12 +203,16 @@ fn backend_names() -> BTreeSet<String> {
 
 #[test]
 fn no_physical_kernel_ir_type_names_a_schedule_owner_type() {
-    let mut semantic = declared_public_types(
-        &vyre_crate_directory("vyre-foundation").join("src/lower/execution_plan"),
+    let mut semantic =
+        declared_public_types(&vyre_crate_directory("vyre-foundation").join("src/execution_plan"));
+    // The schedule owner is every module of this crate outside the lowering
+    // tree that the physical kernel IR belongs to.
+    let lowering = vyre_crate_directory(env!("CARGO_PKG_NAME")).join("src/lower");
+    semantic.extend(
+        declared_public_types(&vyre_crate_directory(env!("CARGO_PKG_NAME")).join("src"))
+            .into_iter()
+            .filter(|(_, path)| !path.starts_with(&lowering)),
     );
-    semantic.extend(declared_public_types(
-        &vyre_crate_directory("vyre-compiler").join("src/lower"),
-    ));
     assert!(
         semantic.len() >= 50,
         "derived only {} schedule-owner type(s), which cannot be the whole set",

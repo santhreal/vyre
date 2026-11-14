@@ -260,7 +260,7 @@ fn every_nested_body_control() -> Vec<NestedBodyControl> {
         .map(|control| format!("{control:?}"))
         .collect();
     let declared = parse_enum_variants(
-        &vyre_workspace_root().join("crates/vyre-compiler/src/op_facts.rs"),
+        &vyre_workspace_root().join("crates/vyre-compiler/src/lower/op_facts.rs"),
         "NestedBodyControl",
     );
     assert_eq!(
