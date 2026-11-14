@@ -2,15 +2,15 @@
 //!
 //! Ordered overwrite fusion is backend-neutral. This module preserves the CUDA
 //! domain names used by resident IO/dispatch while delegating the actual fusion
-//! algorithm to `vyre-driver`.
+//! algorithm to `vyre-runtime`.
 
 use smallvec::SmallVec;
-use vyre_driver::resident_transfer_fusion::{
+use vyre_runtime::resident_transfer_fusion::{
     fuse_resident_upload_copies as driver_fuse_resident_upload_copies,
     push_resident_upload_copy as driver_push_resident_upload_copy,
     ResidentUploadCopy as DriverResidentUploadCopy,
 };
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 /// One validated host-to-device upload request.
 pub(crate) type ResidentUploadCopy<'a> = DriverResidentUploadCopy<'a>;
@@ -39,8 +39,8 @@ pub(crate) fn fuse_resident_upload_copies<'a>(
 #[cfg(test)]
 mod tests {
     use smallvec::SmallVec;
-    use vyre_driver::resident_transfer_fixtures::assert_upload_fusion_preserves_ordered_writes;
-    use vyre_driver::resident_transfer_fusion::ResidentUploadBytes;
+    use vyre_runtime::resident_transfer_fixtures::assert_upload_fusion_preserves_ordered_writes;
+    use vyre_runtime::resident_transfer_fusion::ResidentUploadBytes;
 
     use super::{fuse_resident_upload_copies, push_resident_upload_copy, ResidentUploadCopy};
 

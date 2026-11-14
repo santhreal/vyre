@@ -26,7 +26,7 @@ use std::time::Instant;
 
 use crate::harness;
 use harness::no_op_program;
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BinOp, BufferDecl, DataType, Expr, Node, Program};
 use vyre_lower::analyses::derive_shared_access_profiles;

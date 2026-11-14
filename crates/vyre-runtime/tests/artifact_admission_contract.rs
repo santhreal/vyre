@@ -4,9 +4,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::atomic::{AtomicU32, AtomicU64, Ordering};
 
 use crate::artifact_session_fixtures::{fixture_backend_factory, fixture_supported_ops};
-use vyre_driver::materialize::{DeviceSpec, MaterializerDevice};
-use vyre_driver::BackendRegistration;
-use vyre_driver::{
+use vyre_runtime::materialize::{DeviceSpec, MaterializerDevice};
+use vyre_runtime::BackendRegistration;
+use vyre_runtime::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, BoundResource, Completion,
     Device, ResidentOwner, Resource,
 };

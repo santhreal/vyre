@@ -1,7 +1,7 @@
 //! Host and device copies for CUDA-resident buffers.
 
-use vyre_driver::transfer_accounting::TransferAccountingPolicy;
-use vyre_driver::BackendError;
+use vyre_runtime::transfer_accounting::TransferAccountingPolicy;
+use vyre_runtime::BackendError;
 
 use super::dispatch::CudaBackend;
 use super::pinned_allocations::HostTransferAllocations;
@@ -435,7 +435,7 @@ fn checked_resident_dst(
     dst_offset_bytes: usize,
     byte_count: usize,
 ) -> Result<u64, BackendError> {
-    let _end = vyre_driver::accounting::checked_usize_byte_range_end_lazy(
+    let _end = vyre_runtime::accounting::checked_usize_byte_range_end_lazy(
         dst_offset_bytes,
         byte_count,
         buffer_len,
@@ -456,7 +456,7 @@ fn checked_resident_dst(
         }
         },
     )?;
-    vyre_driver::accounting::checked_add_u64_usize_offset_lazy(
+    vyre_runtime::accounting::checked_add_u64_usize_offset_lazy(
         base_ptr,
         dst_offset_bytes,
         || {

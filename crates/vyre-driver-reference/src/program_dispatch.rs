@@ -2,7 +2,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use vyre_driver::target_dialect::{EmittedDialectModule, TargetDialect};
+use vyre_runtime::target_dialect::{EmittedDialectModule, TargetDialect};
 use vyre_foundation::ir::GraphValueId;
 use vyre_megakernel::{
     ObjectiveMetric, SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionRequest,
@@ -45,12 +45,12 @@ fn emit_reference_module(
     })
 }
 
-pub(crate) fn target_compiler_factory() -> Result<Box<dyn TargetCompiler>, vyre_driver::BackendError>
+pub(crate) fn target_compiler_factory() -> Result<Box<dyn TargetCompiler>, vyre_runtime::BackendError>
 {
     REFERENCE_DIALECT.compiler()
 }
 /// Compilation profile of the reference target.
-pub fn target_profile() -> Result<TargetProfile, vyre_driver::BackendError> {
+pub fn target_profile() -> Result<TargetProfile, vyre_runtime::BackendError> {
     REFERENCE_DIALECT.profile()
 }
 

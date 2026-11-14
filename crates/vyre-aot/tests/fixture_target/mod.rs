@@ -5,7 +5,7 @@ use vyre_aot::{
     ArtifactEnvelope, TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetProfile,
     TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
 };
-use vyre_driver::Device;
+use vyre_runtime::Device;
 use vyre_foundation::ir::{Program, ProgramGraph};
 use vyre_megakernel::{
     compile_selected_modules, EmittedTargetModule, TargetModuleBundle, TargetModuleImage,
@@ -21,8 +21,8 @@ pub(crate) fn fixture_target() -> vyre_aot::TargetId {
     FIXTURE_TARGET_ID.clone()
 }
 
-fn unavailable_backend() -> Result<Box<dyn vyre_driver::VyreBackend>, vyre_driver::BackendError> {
-    Err(vyre_driver::BackendError::new(
+fn unavailable_backend() -> Result<Box<dyn vyre_runtime::VyreBackend>, vyre_runtime::BackendError> {
+    Err(vyre_runtime::BackendError::new(
         "fixture target has no dispatch device. Fix: use it only for AOT package tests.",
     ))
 }
@@ -65,26 +65,26 @@ impl TargetCompiler for FixtureTargetCompiler {
     }
 }
 
-fn fixture_target_compiler() -> Result<Box<dyn TargetCompiler>, vyre_driver::BackendError> {
+fn fixture_target_compiler() -> Result<Box<dyn TargetCompiler>, vyre_runtime::BackendError> {
     let format = TargetPayloadFormat::new("fixture-target-format", 1).map_err(|error| {
-        vyre_driver::BackendError::new(format!(
+        vyre_runtime::BackendError::new(format!(
             "fixture target format is invalid: {error}. Fix: repair the fixture format."
         ))
     })?;
     let profile = TargetProfile::new("fixture-target-format", 1, [64, 1, 1], 64, 0, 0)
-        .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+        .map_err(|error| vyre_runtime::BackendError::new(error.to_string()))?;
     Ok(Box::new(FixtureTargetCompiler { format, profile }))
 }
 struct FixtureMaterializer {
-    device: vyre_driver::materialize::MaterializerDevice,
+    device: vyre_runtime::materialize::MaterializerDevice,
 }
 
 impl FixtureMaterializer {
-    fn new() -> Result<Self, vyre_driver::BackendError> {
+    fn new() -> Result<Self, vyre_runtime::BackendError> {
         let profile = TargetProfile::new("fixture-target-format", 1, [64, 1, 1], 64, 1_024, 0)
-            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
-        let device = vyre_driver::materialize::MaterializerDevice::acquire(
-            vyre_driver::materialize::DeviceSpec {
+            .map_err(|error| vyre_runtime::BackendError::new(error.to_string()))?;
+        let device = vyre_runtime::materialize::MaterializerDevice::acquire(
+            vyre_runtime::materialize::DeviceSpec {
                 backend: "fixture-target",
                 device: "fixture-device".to_string(),
                 format_extension: "fixture-target-format",
@@ -96,8 +96,8 @@ impl FixtureMaterializer {
     }
 }
 
-impl vyre_driver::ArtifactMaterializer for FixtureMaterializer {
-    fn device(&self) -> &dyn vyre_driver::Device {
+impl vyre_runtime::ArtifactMaterializer for FixtureMaterializer {
+    fn device(&self) -> &dyn vyre_runtime::Device {
         &self.device
     }
 
@@ -105,7 +105,7 @@ impl vyre_driver::ArtifactMaterializer for FixtureMaterializer {
         &self,
         artifact: &vyre_megakernel::Artifact,
         payload: &TargetPayload,
-    ) -> Result<Box<dyn vyre_driver::ArtifactInstance>, vyre_driver::BackendError> {
+    ) -> Result<Box<dyn vyre_runtime::ArtifactInstance>, vyre_runtime::BackendError> {
         Ok(
             vyre_test_support::fixture_instance::FixtureInstance::neutral(
                 artifact,
@@ -118,44 +118,44 @@ impl vyre_driver::ArtifactMaterializer for FixtureMaterializer {
     fn allocate_resident(
         &self,
         _byte_len: usize,
-    ) -> Result<vyre_driver::Resource, vyre_driver::BackendError> {
-        Err(vyre_driver::BackendError::new(
+    ) -> Result<vyre_runtime::Resource, vyre_runtime::BackendError> {
+        Err(vyre_runtime::BackendError::new(
             "not implemented on fixture device",
         ))
     }
 
     fn free_resident(
         &self,
-        _resource: vyre_driver::Resource,
-    ) -> Result<(), vyre_driver::BackendError> {
+        _resource: vyre_runtime::Resource,
+    ) -> Result<(), vyre_runtime::BackendError> {
         Ok(())
     }
 
     fn upload_resident(
         &self,
-        _resource: &vyre_driver::Resource,
+        _resource: &vyre_runtime::Resource,
         _bytes: &[u8],
-    ) -> Result<(), vyre_driver::BackendError> {
+    ) -> Result<(), vyre_runtime::BackendError> {
         Ok(())
     }
 
     fn upload_resident_at(
         &self,
-        _resource: &vyre_driver::Resource,
+        _resource: &vyre_runtime::Resource,
         _offset_bytes: usize,
         _bytes: &[u8],
-    ) -> Result<(), vyre_driver::BackendError> {
+    ) -> Result<(), vyre_runtime::BackendError> {
         Ok(())
     }
 }
 
 fn fixture_target_materializer(
-) -> Result<Box<dyn vyre_driver::ArtifactMaterializer>, vyre_driver::BackendError> {
+) -> Result<Box<dyn vyre_runtime::ArtifactMaterializer>, vyre_runtime::BackendError> {
     Ok(Box::new(FixtureMaterializer::new()?))
 }
 
 inventory::submit! {
-    vyre_driver::BackendRegistration {
+    vyre_runtime::BackendRegistration {
         id: "fixture-target",
         target_id: FIXTURE_TARGET_ID,
         payload_format: Some("fixture-target-format"),
@@ -190,20 +190,20 @@ pub(crate) fn launcher_fixture_target() -> vyre_aot::TargetId {
     LAUNCHER_FIXTURE_TARGET_ID.clone()
 }
 
-fn launcher_fixture_compiler() -> Result<Box<dyn TargetCompiler>, vyre_driver::BackendError> {
+fn launcher_fixture_compiler() -> Result<Box<dyn TargetCompiler>, vyre_runtime::BackendError> {
     let format = TargetPayloadFormat::new(LAUNCHER_FIXTURE_FORMAT, 1).map_err(|error| {
-        vyre_driver::BackendError::new(format!(
+        vyre_runtime::BackendError::new(format!(
             "launcher fixture format is invalid: {error}. Fix: repair the fixture format."
         ))
     })?;
     let profile = TargetProfile::new(LAUNCHER_FIXTURE_FORMAT, 1, [64, 1, 1], 64, 0, 0)
-        .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+        .map_err(|error| vyre_runtime::BackendError::new(error.to_string()))?;
     Ok(Box::new(FixtureTargetCompiler { format, profile }))
 }
 
 fn emit_launcher_fixture(
-    request: &vyre_driver::AotLauncherRequest<'_>,
-) -> Result<vyre_driver::AotLauncherFiles, String> {
+    request: &vyre_runtime::AotLauncherRequest<'_>,
+) -> Result<vyre_runtime::AotLauncherFiles, String> {
     let mut files = std::collections::BTreeMap::new();
     files.insert(
         std::path::PathBuf::from("src/main.rs"),
@@ -212,14 +212,14 @@ fn emit_launcher_fixture(
             request.crate_name
         ),
     );
-    Ok(vyre_driver::AotLauncherFiles {
+    Ok(vyre_runtime::AotLauncherFiles {
         dependencies: vec![],
         files,
     })
 }
 
 inventory::submit! {
-    vyre_driver::BackendRegistration {
+    vyre_runtime::BackendRegistration {
         id: "fixture-launcher-target",
         target_id: LAUNCHER_FIXTURE_TARGET_ID,
         payload_format: Some(LAUNCHER_FIXTURE_FORMAT),
@@ -233,7 +233,7 @@ inventory::submit! {
 }
 
 inventory::submit! {
-    vyre_driver::AotLauncherEmitter {
+    vyre_runtime::AotLauncherEmitter {
         target: LAUNCHER_FIXTURE_TARGET_ID,
         emit: emit_launcher_fixture,
     }

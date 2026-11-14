@@ -18,7 +18,7 @@ use crate::harness;
 use harness::f32_to_ordered;
 use std::collections::BTreeMap;
 use tempfile::TempDir;
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::fp_parity;
 use vyre_foundation::ir::ProgramGraph;
@@ -82,7 +82,7 @@ fn compile_case(case: &SemanticOperation) -> (PersistedLookups, Vec<Vec<u8>>) {
     )
     .validate()
     .expect("Fix: persistence regression compile request must validate");
-    let registration = vyre_driver::backend_registration(vyre_driver_wgpu::WGPU_BACKEND_ID)
+    let registration = vyre_runtime::backend_registration(vyre_driver_wgpu::WGPU_BACKEND_ID)
         .expect("Fix: WGPU backend registration must be linked");
     let _session =
         vyre_runtime::artifact_admission::ArtifactSession::compile(registration, &request)

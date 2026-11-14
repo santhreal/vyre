@@ -5,10 +5,10 @@ use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Weak};
 
 use crossbeam_queue::ArrayQueue;
-use vyre_driver::accounting::{
+use vyre_runtime::accounting::{
     pinning_atomic_add_usize_with_order, repair_atomic_sub_usize_fetch_with_order,
 };
-use vyre_driver::{BackendError, DispatchConfig};
+use vyre_runtime::{BackendError, DispatchConfig};
 
 use super::handle::{next_allocation_serial, GpuBufferHandle};
 use super::tiering::PoolTiering;

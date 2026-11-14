@@ -22,7 +22,7 @@ use std::time::{Duration, Instant};
 use vyre_alloc_probe::{Region, ThreadAlloc};
 
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_driver::{CompiledPipeline, DispatchConfig, VyreBackend};
+use vyre_runtime::{CompiledPipeline, DispatchConfig, VyreBackend};
 
 #[global_allocator]
 static GLOBAL: ThreadAlloc = ThreadAlloc;

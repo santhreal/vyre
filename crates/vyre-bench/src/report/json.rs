@@ -118,7 +118,7 @@ pub fn validate_scan_benchmark_metric_evidence(
 
 impl ReportBackendProfile {
     #[must_use]
-    pub fn from_device_profile(profile: vyre_driver::DeviceProfile) -> Self {
+    pub fn from_device_profile(profile: vyre_runtime::DeviceProfile) -> Self {
         Self {
             backend: profile.backend.to_string(),
             timing_quality: profile.timing_quality.as_str().to_string(),
@@ -146,7 +146,7 @@ impl ReportBackendProfile {
 }
 
 #[must_use]
-pub fn benchmark_device_signature(profile: vyre_driver::DeviceProfile) -> String {
+pub fn benchmark_device_signature(profile: vyre_runtime::DeviceProfile) -> String {
     let mut hasher = blake3::Hasher::new();
     hasher.update(b"vyre-bench.device-profile.v1");
     update_signature_str(&mut hasher, "backend", profile.backend);
@@ -700,8 +700,8 @@ mod tests {
 
     #[test]
     fn benchmark_device_signature_changes_with_profile_facts() {
-        let baseline = benchmark_device_signature(vyre_driver::DeviceProfile::conservative("test"));
-        let mut tensor = vyre_driver::DeviceProfile::conservative("test");
+        let baseline = benchmark_device_signature(vyre_runtime::DeviceProfile::conservative("test"));
+        let mut tensor = vyre_runtime::DeviceProfile::conservative("test");
         tensor.supports_tensor_cores = true;
         assert_ne!(
             baseline,
@@ -712,8 +712,8 @@ mod tests {
 
     #[test]
     fn backend_profile_projects_timing_quality_for_reports() {
-        let mut profile = vyre_driver::DeviceProfile::conservative("metal");
-        profile.timing_quality = vyre_driver::DeviceTimingQuality::HostEnqueueWait;
+        let mut profile = vyre_runtime::DeviceProfile::conservative("metal");
+        profile.timing_quality = vyre_runtime::DeviceTimingQuality::HostEnqueueWait;
         profile.supports_device_timestamps = false;
         profile.supports_hardware_counters = false;
         profile.supports_subgroup_ops = true;

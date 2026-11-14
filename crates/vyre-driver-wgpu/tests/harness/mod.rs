@@ -7,8 +7,8 @@ pub(crate) mod self_optimizer;
 
 use std::time::{Duration, Instant};
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_driver::PendingDispatch;
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::PendingDispatch;
+use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_emit::naga::program::emit_module;
 
@@ -240,7 +240,7 @@ pub(crate) fn assert_non_cpu_backend(backend: &WgpuBackend) {
 
 /// Assert that an error result contains an actionable `Fix:` message.
 pub(crate) fn assert_actionable_error<T: std::fmt::Debug>(
-    result: &Result<T, vyre_driver::BackendError>,
+    result: &Result<T, vyre_runtime::BackendError>,
     msg: &str,
 ) {
     let err = result.as_ref().unwrap_err();

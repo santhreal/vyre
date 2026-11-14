@@ -13,7 +13,7 @@ use std::sync::LazyLock;
 
 use proptest::test_runner::{Config, TestRunner};
 use vyre::ir::Program;
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::fp_parity;
 use vyre_libs::operation_catalog::fixture_entries;

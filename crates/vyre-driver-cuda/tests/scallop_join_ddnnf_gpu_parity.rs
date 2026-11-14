@@ -6,7 +6,7 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_libs::graph::knowledge_compile::{
     ddnnf_evaluate, DDNNF_EVALUATE_WORKGROUP_SIZE, LITERAL_FALSE, LITERAL_TRUE,

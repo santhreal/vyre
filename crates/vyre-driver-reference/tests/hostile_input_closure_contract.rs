@@ -1,13 +1,13 @@
 //! Adversarial closure contract for the cpu-ref backend.
 //!
-//! The obligations themselves live in `vyre_driver::hostile_input_closure`,
+//! The obligations themselves live in `vyre_runtime::hostile_input_closure`,
 //! because they are the same obligations for every backend: a hostile byte
 //! slice either dispatches or fails with an actionable message, and extra
 //! trailing input buffers are rejected rather than ignored. This target says
 //! which backend owes them.
 
 #![forbid(unsafe_code)]
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_driver_reference::CpuRefEvaluator;
 use vyre_test_support::pass_programs::single_input_copy_program;
 

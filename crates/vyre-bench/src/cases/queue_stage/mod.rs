@@ -5,7 +5,7 @@ use std::time::Instant;
 
 use crate::api::case::{BenchContext, BenchError};
 use crate::api::resident::{stated_launch, ResidentInputSet};
-use vyre_driver::{ResidentDispatchStep, ResidentReadRange, TimedDispatchResult};
+use vyre_runtime::{ResidentDispatchStep, ResidentReadRange, TimedDispatchResult};
 use vyre_foundation::ir::Program;
 
 mod closure;

@@ -1,10 +1,10 @@
 use std::sync::Arc;
 
-use vyre_driver::materialize::{
+use vyre_runtime::materialize::{
     self, DeviceSpec, ExecutableModule, InstanceCore, MaterializedInstance, MaterializerDevice,
     ResidentInstance,
 };
-use vyre_driver::{
+use vyre_runtime::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, CompiledPipeline, Completion,
     DispatchConfig, Submission, TimedDispatchResult,
 };
@@ -22,7 +22,7 @@ pub(crate) struct CudaMaterializer {
 }
 
 impl ArtifactMaterializer for CudaMaterializer {
-    vyre_driver::materializer_passthrough!(resident);
+    vyre_runtime::materializer_passthrough!(resident);
 
     fn device_state(&self) -> vyre_megakernel::measure::DeviceState {
         crate::device_state::device_state(self.backend.caps.ordinal)
@@ -85,7 +85,7 @@ struct CudaExecutableModule {
     program: Arc<Program>,
     pipeline: Arc<CudaCompiledPipeline>,
     config: DispatchConfig,
-    plan: vyre_driver::BindingPlan,
+    plan: vyre_runtime::BindingPlan,
 }
 
 struct CudaArtifactInstance {
@@ -94,11 +94,11 @@ struct CudaArtifactInstance {
 }
 
 impl ExecutableModule for CudaExecutableModule {
-    vyre_driver::executable_module!();
+    vyre_runtime::executable_module!();
 }
 
 impl ArtifactInstance for CudaArtifactInstance {
-    vyre_driver::artifact_instance_identity!();
+    vyre_runtime::artifact_instance_identity!();
 
     fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
         self.submit_routed(bindings, || {
@@ -171,7 +171,7 @@ impl MaterializedInstance for CudaArtifactInstance {
 }
 
 impl ResidentInstance for CudaArtifactInstance {
-    vyre_driver::resident_pipeline_launch!();
+    vyre_runtime::resident_pipeline_launch!();
 
     fn resident_module_label(&self) -> &'static str {
         "CUDA resident target module"

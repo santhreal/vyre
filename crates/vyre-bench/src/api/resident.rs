@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_driver::DispatchConfig;
-use vyre_driver::{ArtifactMaterializer, BackendError, Resource, TimedDispatchResult};
+use vyre_runtime::DispatchConfig;
+use vyre_runtime::{ArtifactMaterializer, BackendError, Resource, TimedDispatchResult};
 
 pub use super::resident_pool::*;
 use crate::api::case::{BenchContext, BenchError};
@@ -61,8 +61,8 @@ pub fn input_bytes_total(inputs: &[Vec<u8>]) -> u64 {
 pub(crate) fn stated_launch(
     program: &Program,
     grid: [u32; 3],
-) -> Result<vyre_driver::LaunchDirective, BenchError> {
-    vyre_driver::LaunchDirective::stated_for(program, grid)
+) -> Result<vyre_runtime::LaunchDirective, BenchError> {
+    vyre_runtime::LaunchDirective::stated_for(program, grid)
         .map_err(|error| BenchError::BackendFailed(error.to_string()))
 }
 
@@ -811,7 +811,7 @@ mod tests {
         let inputs = vec![vec![0u8; 32], vec![0u8; 32]]; // keys, queries (8 u32 each)
 
         // Driver-side requirement: one resident handle per non-shared binding.
-        let plan = vyre_driver::BindingPlan::build(&program)
+        let plan = vyre_runtime::BindingPlan::build(&program)
             .expect("binding plan for a well-formed program must build");
         let required_handles = plan.bindings.len() - plan.shared_indices.len();
         assert_eq!(

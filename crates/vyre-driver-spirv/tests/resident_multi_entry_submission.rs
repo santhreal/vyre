@@ -8,7 +8,7 @@
 //! that replaced it submits every entry, in the recorded order, over each
 //! entry's own resources.
 //!
-//! This exercises the neutral loop in `vyre_driver::materialize` through the
+//! This exercises the neutral loop in `vyre_runtime::materialize` through the
 //! SPIR-V backend, which can produce a genuine two-entry payload; nothing here
 //! is SPIR-V specific. The launch itself is recorded rather than executed, so no
 //! device is required.
@@ -17,11 +17,11 @@ use std::cell::RefCell;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
-use vyre_driver::materialize::{
+use vyre_runtime::materialize::{
     self, ExecutableModule, InstanceCore, MaterializedInstance, MaterializerTarget,
     ResidentInstance, NEUTRAL_MESSAGES,
 };
-use vyre_driver::{
+use vyre_runtime::{
     BackendError, DeviceIdentity, DispatchConfig, LaunchDirective, ResidentOwner, Resource,
     TimedDispatchResult,
 };
@@ -36,11 +36,11 @@ struct RecordedModule {
     index: usize,
     program: Arc<Program>,
     config: DispatchConfig,
-    plan: vyre_driver::BindingPlan,
+    plan: vyre_runtime::BindingPlan,
 }
 
 impl ExecutableModule for RecordedModule {
-    vyre_driver::executable_module!();
+    vyre_runtime::executable_module!();
 }
 
 /// What one resident launch was handed.

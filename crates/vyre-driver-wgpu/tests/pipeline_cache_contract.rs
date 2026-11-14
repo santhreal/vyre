@@ -15,8 +15,8 @@ use crate::harness;
 use harness::acquire_live_backend as live_backend;
 
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_driver::DEFAULT_PIPELINE_CACHE_ENTRIES;
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::DEFAULT_PIPELINE_CACHE_ENTRIES;
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 fn tiny_unique_program(salt: u32) -> Program {
     Program::wrapped(

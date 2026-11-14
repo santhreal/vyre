@@ -12,7 +12,7 @@
 
 use crate::harness;
 use harness::no_op_program;
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 
 #[test]

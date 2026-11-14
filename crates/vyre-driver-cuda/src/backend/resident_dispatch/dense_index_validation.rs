@@ -3,7 +3,7 @@
 //! the message the resident path needs.
 
 use smallvec::SmallVec;
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use crate::backend::ordering::{classify_dense_permutation, DensePermutationDefect};
 use crate::backend::staging_reserve::reserve_smallvec;

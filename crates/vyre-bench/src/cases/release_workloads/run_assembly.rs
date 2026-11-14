@@ -23,7 +23,7 @@ pub(super) fn resident_reset_transfer_accounting(
 }
 
 pub(super) fn bench_run_from_timed_with_accounting(
-    timed: vyre_driver::TimedDispatchResult,
+    timed: vyre_runtime::TimedDispatchResult,
     input_bytes: u64,
     baseline_outputs: Vec<Vec<u8>>,
     baseline_wall: u64,

@@ -36,7 +36,7 @@ pub use backend::SpirvBackend;
 
 use std::sync::Arc;
 
-use vyre_driver::{BackendError, DispatchConfig, VyreBackend};
+use vyre_runtime::{BackendError, DispatchConfig, VyreBackend};
 use vyre_foundation::ir::Program;
 
 /// Stable backend identifier for conform certificates.
@@ -71,13 +71,13 @@ impl SpirvBackendRegistration {
     }
 }
 
-impl vyre_driver::sealed::Sealed for SpirvBackendRegistration {}
+impl vyre_runtime::sealed::Sealed for SpirvBackendRegistration {}
 
 fn spirv_device_buffer_unsupported() -> BackendError {
     BackendError::UnsupportedFeature {
         name: format!(
             "{} requires native Vulkan-resident buffers; HostShimBuffer dispatch is forbidden",
-            vyre_driver::DEVICE_BUFFER_FEATURE
+            vyre_runtime::DEVICE_BUFFER_FEATURE
         ),
         backend: SPIRV_BACKEND_ID.to_string(),
     }
@@ -124,13 +124,13 @@ impl VyreBackend for SpirvBackendRegistration {
     fn allocate_device_buffer(
         &self,
         _byte_len: usize,
-    ) -> Result<Box<dyn vyre_driver::DeviceBuffer>, BackendError> {
+    ) -> Result<Box<dyn vyre_runtime::DeviceBuffer>, BackendError> {
         Err(spirv_device_buffer_unsupported())
     }
 
     fn upload_device_buffer(
         &self,
-        _buffer: &mut dyn vyre_driver::DeviceBuffer,
+        _buffer: &mut dyn vyre_runtime::DeviceBuffer,
         _bytes: &[u8],
     ) -> Result<(), BackendError> {
         Err(spirv_device_buffer_unsupported())
@@ -138,14 +138,14 @@ impl VyreBackend for SpirvBackendRegistration {
 
     fn download_device_buffer(
         &self,
-        _buffer: &dyn vyre_driver::DeviceBuffer,
+        _buffer: &dyn vyre_runtime::DeviceBuffer,
     ) -> Result<Vec<u8>, BackendError> {
         Err(spirv_device_buffer_unsupported())
     }
 
     fn free_device_buffer(
         &self,
-        _buffer: Box<dyn vyre_driver::DeviceBuffer>,
+        _buffer: Box<dyn vyre_runtime::DeviceBuffer>,
     ) -> Result<(), BackendError> {
         // The SPIRV backend never allocates DeviceBuffers (allocate_device_buffer
         // always returns Err). Reaching this function means the caller obtained a
@@ -164,11 +164,11 @@ impl VyreBackend for SpirvBackendRegistration {
     fn dispatch_with_device_buffers(
         &self,
         program: &Program,
-        inputs: &[&dyn vyre_driver::DeviceBuffer],
-        outputs: &mut [&mut dyn vyre_driver::DeviceBuffer],
+        inputs: &[&dyn vyre_runtime::DeviceBuffer],
+        outputs: &mut [&mut dyn vyre_runtime::DeviceBuffer],
         config: &DispatchConfig,
     ) -> Result<(), BackendError> {
-        vyre_driver::default_dispatch_with_device_buffers(self, program, inputs, outputs, config)
+        vyre_runtime::default_dispatch_with_device_buffers(self, program, inputs, outputs, config)
     }
 
     fn max_workgroup_size(&self) -> [u32; 3] {
@@ -237,7 +237,7 @@ pub fn spirv_factory() -> Result<Box<dyn VyreBackend>, BackendError> {
 /// all SPIRV dispatch even when the op is supported, silently degrading to a
 /// lower-precedence backend.
 pub fn spirv_supported_ops() -> &'static std::collections::HashSet<vyre_foundation::ir::OpId> {
-    vyre_driver::core_supported_ops()
+    vyre_runtime::core_supported_ops()
 }
 
 /// Backend id submitted into the registry by the SPIR-V driver.
@@ -246,7 +246,7 @@ pub fn registered_backend_id() -> Option<&'static str> {
     Some(SPIRV_BACKEND_ID)
 }
 
-vyre_driver::register_backend! {
+vyre_runtime::register_backend! {
     id: SPIRV_BACKEND_ID,
     target_id: SPIRV_TARGET_ID,
     payload_format: Some(target_compiler::SPIRV_TARGET_FORMAT),

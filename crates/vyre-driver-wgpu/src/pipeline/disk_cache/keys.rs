@@ -1,4 +1,4 @@
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_foundation::ir::Program;
 use vyre_foundation::serial::wire::framing::WIRE_FORMAT_VERSION;
 
@@ -29,7 +29,7 @@ pub(crate) fn early_pipeline_cache_key(
     hasher.update(NAGA_VERSION.as_bytes());
     update_wgsl_lowering_contract(&mut hasher);
     hasher.update(b"\0policy\0");
-    vyre_driver::update_dispatch_policy_cache_hash(&mut hasher, config);
+    vyre_runtime::update_dispatch_policy_cache_hash(&mut hasher, config);
     hasher.update(b"\0workgroup_override\0");
     if let Some(wg) = config.launch_workgroup() {
         for axis in wg {
@@ -80,7 +80,7 @@ pub(crate) fn wgsl_cache_key(
     hasher.update(NAGA_VERSION.as_bytes());
     update_wgsl_lowering_contract(&mut hasher);
     hasher.update(b"\0policy\0");
-    vyre_driver::update_dispatch_policy_cache_hash(&mut hasher, config);
+    vyre_runtime::update_dispatch_policy_cache_hash(&mut hasher, config);
     *hasher.finalize().as_bytes()
 }
 

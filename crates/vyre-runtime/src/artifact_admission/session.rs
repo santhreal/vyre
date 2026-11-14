@@ -3,10 +3,6 @@ use std::path::Path;
 use std::sync::{Arc, RwLock};
 
 use thiserror::Error;
-use vyre_driver::{
-    ArtifactInstance, ArtifactMaterializer, BackendError, BackendRegistration, BindingSet,
-    BoundResource, Completion, DeviceIdentity, Resource, Submission,
-};
 use vyre_foundation::failure_domain::{
     govern_rwlock_read, govern_rwlock_write, RecoveryClass, TypedRecoveryError,
 };
@@ -14,6 +10,10 @@ use vyre_foundation::ir::Program;
 use vyre_megakernel::{
     ArtifactEnvelope, ArtifactValueId, CompileError, Digest, ResourceLifetime, TargetCompileError,
     TargetEntryPoint, ValidatedCompileRequest,
+};
+use vyre_runtime::{
+    ArtifactInstance, ArtifactMaterializer, BackendError, BackendRegistration, BindingSet,
+    BoundResource, Completion, DeviceIdentity, Resource, Submission,
 };
 
 use super::finalist::{host_input_resources, validate_instance, DeviceFinalists};

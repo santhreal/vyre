@@ -4,8 +4,8 @@
 
 use vyre_conform::lens::backend_parity;
 use vyre_conform::lens::outcome::LensOutcome;
-fn backend() -> &'static vyre_driver::BackendRegistration {
-    vyre_driver::backend_registration(vyre_driver_wgpu::WGPU_BACKEND_ID)
+fn backend() -> &'static vyre_runtime::BackendRegistration {
+    vyre_runtime::backend_registration(vyre_driver_wgpu::WGPU_BACKEND_ID)
         .expect("Fix: WGPU driver crate must register its authenticated artifact target.")
 }
 
@@ -48,7 +48,7 @@ fn security_grid_sync_lens_matches_reference_for_every_registered_operation() {
         .filter(|entry| {
             entry
                 .program()
-                .is_some_and(|program| vyre_driver::grid_sync::contains_grid_sync(&program))
+                .is_some_and(|program| vyre_runtime::grid_sync::contains_grid_sync(&program))
         })
         .collect::<Vec<_>>();
     assert!(

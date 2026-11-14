@@ -4,7 +4,7 @@ use std::sync::{Arc, LazyLock, Mutex, MutexGuard, PoisonError};
 use std::task::{Context, Poll, Wake, Waker};
 use std::thread::{self, Thread};
 use std::time::{Duration, Instant};
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 type Result<T, E = BackendError> = std::result::Result<T, E>;
 
@@ -102,11 +102,11 @@ const ACQUISITION_TIMEOUT: Duration = Duration::from_secs(120);
 /// caller gets is the SIGSEGV the comment above describes, in an ICD frame that
 /// names no vyre code. Loader state is also not this process's to rebuild.
 fn loader_startup() -> MutexGuard<'static, ()> {
-    match vyre_driver::lock_policy::govern_mutex(
+    match vyre_runtime::lock_policy::govern_mutex(
         &LOADER_STARTUP,
         "the wgpu device factory",
         "the graphics loader dispatch table",
-        vyre_driver::lock_policy::RecoveryClass::ProcessFatal,
+        vyre_runtime::lock_policy::RecoveryClass::ProcessFatal,
     ) {
         Ok(guard) => guard,
         Err(_) => unreachable!(),
@@ -167,9 +167,9 @@ pub(crate) fn shared_instance() -> &'static wgpu::Instance {
 
 pub(crate) fn poll_device_once(
     device: &wgpu::Device,
-) -> std::result::Result<wgpu::PollStatus, vyre_driver::BackendError> {
+) -> std::result::Result<wgpu::PollStatus, vyre_runtime::BackendError> {
     device.poll(wgpu::PollType::Poll).map_err(|error| {
-        vyre_driver::BackendError::new(format!(
+        vyre_runtime::BackendError::new(format!(
             "wgpu device poll failed: {error}. Fix: inspect device loss and driver health before reusing this backend."
         ))
     })
@@ -178,11 +178,11 @@ pub(crate) fn poll_device_once(
 pub(crate) fn poll_device_wait_for(
     device: &wgpu::Device,
     submission: wgpu::SubmissionIndex,
-) -> std::result::Result<wgpu::PollStatus, vyre_driver::BackendError> {
+) -> std::result::Result<wgpu::PollStatus, vyre_runtime::BackendError> {
     device
         .poll(wgpu::PollType::wait_for(submission))
         .map_err(|error| {
-            vyre_driver::BackendError::new(format!(
+            vyre_runtime::BackendError::new(format!(
                 "wgpu device wait-for-submission poll failed: {error}. Fix: inspect device loss, driver health, and submission lifetime before reusing this backend."
             ))
         })

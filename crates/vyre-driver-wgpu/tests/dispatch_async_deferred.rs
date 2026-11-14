@@ -10,7 +10,7 @@ use crate::harness;
 use harness::acquire_live_backend as live_backend;
 
 use vyre::ir::{BufferDecl, DataType, Node, Program};
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 #[test]
 fn validation_errors_propagate_immediately_from_dispatch_async() {

@@ -13,7 +13,7 @@
 use std::collections::HashSet;
 
 #[cfg(feature = "driver-contracts")]
-use vyre_driver::BackendRegistration;
+use vyre_runtime::BackendRegistration;
 use vyre_foundation::ir::{node_op_id, Node, Program};
 #[cfg(feature = "driver-contracts")]
 use vyre_foundation::operation::OperationRegistry;
@@ -65,7 +65,7 @@ pub fn facet_disagreement(target: &str, declared: bool, operation: &str) -> Stri
 #[cfg(feature = "driver-contracts")]
 #[must_use]
 pub fn published_facet_pairs() -> HashSet<(&'static str, String)> {
-    vyre_driver::registered_target_operation_facets()
+    vyre_runtime::registered_target_operation_facets()
         .expect("Fix: the target facet registry must start")
         .iter()
         .map(|facet| (facet.operation_id, facet.target_id.as_str().to_string()))

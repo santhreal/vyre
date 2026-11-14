@@ -6,7 +6,7 @@ use crate::harness;
 use harness::long_running_program;
 
 use std::time::{Duration, Instant};
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 #[test]
 fn dispatch_cancels_within_deadline() {

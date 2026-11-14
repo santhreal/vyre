@@ -1,7 +1,7 @@
 //! WGSL-specific dispatch helpers for the wgpu backend.
 //!
 //! Raw WGSL is a property of the wgpu implementation, not the substrate-neutral
-//! [`vyre_driver::VyreBackend`] contract.
+//! [`vyre_runtime::VyreBackend`] contract.
 
 use std::sync::Arc;
 
@@ -82,7 +82,7 @@ impl WgpuBackend {
         })?;
         let params = [input_len_u32, output_len_u32, 0u32, 0u32];
         let params_bytes = bytemuck::try_cast_slice(&params).map_err(|error| {
-            vyre_driver::BackendError::new(format!(
+            vyre_runtime::BackendError::new(format!(
                 "WGSL dispatch params could not be viewed as bytes: {error}. Fix: keep dispatch parameter buffers aligned to u32."
             ))
             .into_message()

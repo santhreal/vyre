@@ -13,7 +13,7 @@
 //! - The same substring check in `vyre-registry-link` read the real registry
 //!   and admitted the same ids.
 //! - Neither could observe a registration at all from a binary that links no
-//!   driver crate, which is what `vyre-driver-reference` and `vyre-driver` are.
+//!   driver crate, which is what `vyre-driver-reference` and `vyre-runtime` are.
 //!
 //! So this suite links `vyre-registry-link` with every declared driver and
 //! reads the registry those crates submit into. `live_backend_registry` asserts
@@ -29,7 +29,7 @@
 
 use std::collections::BTreeSet;
 
-use vyre_driver::{acquire, registered_backends, registered_backends_by_precedence_slice};
+use vyre_runtime::{acquire, registered_backends, registered_backends_by_precedence_slice};
 use vyre_registry_link::backend::{live_backend_registry, DECLARED_SOURCES};
 use vyre_test_support::backend_execution_domain::{
     assert_dispatch_leaves_the_host, decision_for, ExecutionDomain, ProductionBackend,
@@ -98,7 +98,7 @@ fn no_backend_in_the_production_registry_executes_on_the_host() {
     }
 }
 
-/// A registry read taken through `vyre-driver` rather than the linkage owner
+/// A registry read taken through `vyre-runtime` rather than the linkage owner
 /// reports the same set, so the closure is not a property of one accessor.
 #[test]
 fn the_precedence_order_and_the_driver_accessor_report_the_decided_set() {

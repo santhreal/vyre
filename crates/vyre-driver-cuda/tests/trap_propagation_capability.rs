@@ -27,7 +27,7 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_driver::VyreBackend;
+use vyre_runtime::VyreBackend;
 use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration};
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};

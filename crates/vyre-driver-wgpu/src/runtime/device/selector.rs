@@ -24,7 +24,7 @@
 //! multi-GPU now select an adapter by index before constructing a
 //! device/queue pair.
 
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 type Result<T, E = BackendError> = std::result::Result<T, E>;
 

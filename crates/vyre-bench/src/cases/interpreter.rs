@@ -260,7 +260,7 @@ mod tests {
     #[cfg(feature = "device-tests")]
     use std::sync::Mutex;
     #[cfg(feature = "device-tests")]
-    use vyre_driver::{DispatchConfig, VyreBackend};
+    use vyre_runtime::{DispatchConfig, VyreBackend};
 
     /// Both device tests dispatch on the one physical adapter, so they take
     /// turns rather than racing for it.

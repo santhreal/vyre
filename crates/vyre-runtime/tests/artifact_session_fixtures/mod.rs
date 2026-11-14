@@ -7,8 +7,8 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex};
 
-use vyre_driver::materialize::{DeviceSpec, MaterializerDevice};
-use vyre_driver::{
+use vyre_runtime::materialize::{DeviceSpec, MaterializerDevice};
+use vyre_runtime::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BackendRegistration, Device,
     ResidentOwner, Resource, VyreBackend,
 };

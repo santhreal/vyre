@@ -11,7 +11,7 @@ use std::sync::{
     Arc,
 };
 use std::time::{Duration, Instant};
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 use vyre_emit::naga::program::TrapTag;
 
 pub(super) type PendingMap = (Option<usize>, PendingReadback);
@@ -264,7 +264,7 @@ impl PendingReadback {
 pub(crate) struct WgpuPendingReadback {
     pub(super) device_queue: Arc<(wgpu::Device, wgpu::Queue)>,
     pub(super) pending: SmallVec<[PendingMap; 4]>,
-    pub(super) outputs: vyre_driver::OutputBuffers,
+    pub(super) outputs: vyre_runtime::OutputBuffers,
     pub(super) output_count: usize,
     pub(super) output_bindings: Arc<[OutputBindingLayout]>,
     pub(super) trap_tags: Arc<[TrapTag]>,
@@ -288,7 +288,7 @@ impl WgpuPendingReadback {
     }
 
     /// Wait for the GPU submission and collect trimmed output buffers.
-    pub(crate) fn await_result(mut self) -> Result<vyre_driver::OutputBuffers, BackendError> {
+    pub(crate) fn await_result(mut self) -> Result<vyre_runtime::OutputBuffers, BackendError> {
         let mut outputs = std::mem::take(&mut self.outputs);
         self.await_into(&mut outputs)?;
         Ok(outputs)
@@ -298,7 +298,7 @@ impl WgpuPendingReadback {
     pub(crate) fn await_result_until(
         mut self,
         deadline: Instant,
-    ) -> Result<vyre_driver::OutputBuffers, BackendError> {
+    ) -> Result<vyre_runtime::OutputBuffers, BackendError> {
         let mut outputs = std::mem::take(&mut self.outputs);
         self.await_into_until(&mut outputs, deadline)?;
         Ok(outputs)
@@ -308,7 +308,7 @@ impl WgpuPendingReadback {
     /// caller-owned storage.
     pub(crate) fn await_into(
         self,
-        outputs: &mut vyre_driver::OutputBuffers,
+        outputs: &mut vyre_runtime::OutputBuffers,
     ) -> Result<(), BackendError> {
         let deadline = Instant::now() + Duration::from_secs(30);
         self.await_into_until(outputs, deadline)
@@ -316,7 +316,7 @@ impl WgpuPendingReadback {
 
     pub(crate) fn await_timed_result(
         mut self,
-    ) -> Result<(vyre_driver::OutputBuffers, Option<u64>), BackendError> {
+    ) -> Result<(vyre_runtime::OutputBuffers, Option<u64>), BackendError> {
         let mut outputs = std::mem::take(&mut self.outputs);
         let device_ns = self.await_timed_into(&mut outputs)?;
         Ok((outputs, device_ns))
@@ -325,7 +325,7 @@ impl WgpuPendingReadback {
     pub(crate) fn await_timed_result_until(
         mut self,
         deadline: Instant,
-    ) -> Result<(vyre_driver::OutputBuffers, Option<u64>), BackendError> {
+    ) -> Result<(vyre_runtime::OutputBuffers, Option<u64>), BackendError> {
         let mut outputs = std::mem::take(&mut self.outputs);
         let device_ns = self.await_timed_into_until(&mut outputs, deadline)?;
         Ok((outputs, device_ns))
@@ -333,7 +333,7 @@ impl WgpuPendingReadback {
 
     pub(crate) fn await_timed_into(
         self,
-        outputs: &mut vyre_driver::OutputBuffers,
+        outputs: &mut vyre_runtime::OutputBuffers,
     ) -> Result<Option<u64>, BackendError> {
         let deadline = Instant::now() + Duration::from_secs(30);
         self.await_timed_into_until(outputs, deadline)
@@ -341,7 +341,7 @@ impl WgpuPendingReadback {
 
     pub(crate) fn await_timed_into_until(
         self,
-        outputs: &mut vyre_driver::OutputBuffers,
+        outputs: &mut vyre_runtime::OutputBuffers,
         deadline: Instant,
     ) -> Result<Option<u64>, BackendError> {
         self.poll_until_ready(deadline)?;
@@ -351,7 +351,7 @@ impl WgpuPendingReadback {
     /// Wait until `deadline` for the GPU submission and collect into caller-owned storage.
     pub(crate) fn await_into_until(
         self,
-        outputs: &mut vyre_driver::OutputBuffers,
+        outputs: &mut vyre_runtime::OutputBuffers,
         deadline: Instant,
     ) -> Result<(), BackendError> {
         self.poll_until_ready(deadline)?;
@@ -383,11 +383,11 @@ impl WgpuPendingReadback {
 
     pub(crate) fn await_many_owned(
         pending: Vec<Self>,
-    ) -> Vec<Result<vyre_driver::OutputBuffers, BackendError>> {
+    ) -> Vec<Result<vyre_runtime::OutputBuffers, BackendError>> {
         let deadline = Self::wait_for_many(&pending);
         let mut results = Vec::new();
         if let Err(source) =
-            vyre_driver::allocation::try_reserve_vec_to_capacity(&mut results, pending.len())
+            vyre_runtime::allocation::try_reserve_vec_to_capacity(&mut results, pending.len())
         {
             return vec![Err(BackendError::new(format!(
                 "batched WGPU readback could not reserve {} result slot(s): {source}. Fix: split the dispatch batch before awaiting readbacks.",
@@ -472,7 +472,7 @@ impl WgpuPendingReadback {
 
     pub(crate) fn collect_after_submission_wait(
         self,
-        outputs: &mut vyre_driver::OutputBuffers,
+        outputs: &mut vyre_runtime::OutputBuffers,
         deadline: Instant,
     ) -> Result<(), BackendError> {
         self.collect_after_submission_wait_timed(outputs, deadline)
@@ -481,7 +481,7 @@ impl WgpuPendingReadback {
 
     pub(crate) fn collect_after_submission_wait_timed(
         self,
-        outputs: &mut vyre_driver::OutputBuffers,
+        outputs: &mut vyre_runtime::OutputBuffers,
         deadline: Instant,
     ) -> Result<Option<u64>, BackendError> {
         let (device, _) = &*self.device_queue;
@@ -489,7 +489,7 @@ impl WgpuPendingReadback {
         let trap_tags = self.trap_tags;
         let timestamp_profile = self.timestamp_profile;
         if outputs.len() < output_count {
-            vyre_driver::allocation::try_reserve_vec_to_capacity(outputs, output_count).map_err(
+            vyre_runtime::allocation::try_reserve_vec_to_capacity(outputs, output_count).map_err(
                 |source| {
                     BackendError::new(format!(
                         "readback output slot vector could not reserve {output_count} slots exactly: {source}. Fix: split the dispatch output set before collection."
@@ -515,7 +515,7 @@ impl WgpuPendingReadback {
                     if out.len() == read_len {
                         out.copy_from_slice(bytes);
                     } else {
-                        vyre_driver::allocation::try_reserve_vec_to_capacity(out, read_len)
+                        vyre_runtime::allocation::try_reserve_vec_to_capacity(out, read_len)
                             .map_err(|source| {
                                 BackendError::new(format!(
                                     "readback output `{}` could not reserve {read_len} bytes exactly: {source}. Fix: lower max_output_bytes or split the output buffer.",

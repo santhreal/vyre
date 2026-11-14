@@ -1,6 +1,6 @@
 //! Resident task queue ABI for pause, resume, requeue, and priority aging.
 
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use super::planner::ResidentWorkItem;
 use super::policy::ResidentLaunchRequest;

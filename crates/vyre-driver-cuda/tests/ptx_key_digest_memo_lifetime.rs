@@ -57,7 +57,7 @@ fn wide_program(statements: u32) -> Program {
 }
 
 fn digest_of(program: &Program) -> [u8; 32] {
-    vyre_driver::try_normalized_program_cache_digest(program)
+    vyre_runtime::try_normalized_program_cache_digest(program)
         .expect("Fix: fixture program must produce a normalized cache digest")
 }
 

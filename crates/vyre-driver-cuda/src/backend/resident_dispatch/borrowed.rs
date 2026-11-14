@@ -1,8 +1,8 @@
 use std::ffi::c_void;
 
 use smallvec::SmallVec;
-use vyre_driver::BindingRole;
-use vyre_driver::{BackendError, BindingPlan, DispatchConfig};
+use vyre_runtime::BindingRole;
+use vyre_runtime::{BackendError, BindingPlan, DispatchConfig};
 use vyre_foundation::ir::Program;
 
 use crate::backend::allocations::DispatchAllocations;
@@ -171,7 +171,7 @@ impl CudaBackend {
         }
         self.upload_resident_many(&output_uploads)?;
         drop(output_uploads);
-        vyre_driver::replace_output_buffers_preserving_slots(dispatch_outputs, outputs);
+        vyre_runtime::replace_output_buffers_preserving_slots(dispatch_outputs, outputs);
         Ok(())
     }
 

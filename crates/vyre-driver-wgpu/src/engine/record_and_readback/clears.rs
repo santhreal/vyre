@@ -1,6 +1,6 @@
 use super::binding_lookup::BindingLookup;
 use super::{GpuBuffers, RecordAndReadback};
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 pub(super) fn record_buffer_clears(
     encoder: &mut wgpu::CommandEncoder,

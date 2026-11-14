@@ -11,7 +11,7 @@
 //! registers a language-level operation set for dispatch that is smaller than
 //! the catalog, and admission refuses a program naming an operation outside it.
 //!
-//! `vyre-driver`'s own suite proves the join against fixture registrations.
+//! `vyre-runtime`'s own suite proves the join against fixture registrations.
 //! This one runs the same question against the linked concrete drivers and the
 //! whole shipped catalog, which is where the uniform claim was produced.
 //!
@@ -32,7 +32,7 @@ use vyre_test_support::target_facet_join::{assert_facets_agree, facet_pairs, Fac
 
 /// Every `(operation, target)` row over the linked compiler-capable drivers.
 fn pairs() -> Vec<FacetPair> {
-    let backends = vyre_driver::registered_backends()
+    let backends = vyre_runtime::registered_backends()
         .expect("Fix: the linked backend registry must start before target facets are read");
     facet_pairs(
         backends
@@ -79,7 +79,7 @@ fn the_published_facets_are_narrower_than_the_declared_catalog() {
 #[test]
 fn every_linked_target_declares_the_whole_catalog() {
     let backends =
-        vyre_driver::registered_backends().expect("Fix: the backend registry must start");
+        vyre_runtime::registered_backends().expect("Fix: the backend registry must start");
     let registry_size = OperationRegistry::global().iter().len();
 
     let mut compiling = 0usize;
@@ -114,7 +114,7 @@ fn every_linked_target_declares_the_whole_catalog() {
 /// lowering, and this is what makes the assertion cost something.
 #[test]
 fn every_published_facet_lowers_through_the_program_to_descriptor_boundary() {
-    let facets = vyre_driver::registered_target_operation_facets()
+    let facets = vyre_runtime::registered_target_operation_facets()
         .expect("Fix: the target facet registry must start");
     assert!(
         !facets.is_empty(),

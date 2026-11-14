@@ -2,7 +2,7 @@ use std::sync::atomic::Ordering;
 use std::time::Instant;
 
 use metal::Device;
-use vyre_driver::{
+use vyre_runtime::{
     output_binding_layouts, BackendError, BindingPlan, DispatchConfig, PipelineCacheIdentity,
     PipelineCacheMissReason, TimedDispatchResult,
 };
@@ -43,7 +43,7 @@ pub(super) fn metal_pipeline_cache_key(
         device_name
     );
     let fingerprint =
-        vyre_driver::PipelineDeviceFingerprint::from_parts(0x106b, 0, "metal", &revision_extra);
+        vyre_runtime::PipelineDeviceFingerprint::from_parts(0x106b, 0, "metal", &revision_extra);
     PipelineCacheIdentity::try_from_program(program, config, fingerprint).map_err(|error| {
         BackendError::InvalidProgram {
             fix: format!(

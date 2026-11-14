@@ -1,6 +1,6 @@
 //! Shared binding validation and output-clear helpers for wgpu pipelines.
 
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use crate::buffer::GpuBufferHandle;
 use crate::numeric::WGPU_NUMERIC;

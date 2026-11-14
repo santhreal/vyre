@@ -6,7 +6,7 @@ use crate::harness;
 use harness::{selected_adapter, shared_live_backend as live_backend, SUBGROUP_PROBE_WGSL};
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Node, Program};
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::validate::{BackendValidationCapabilities, ValidationOptions};
 
@@ -141,7 +141,7 @@ fn the_adapter_level_projection_reports_no_device_timing() {
     );
     assert_eq!(
         profile.timing_quality,
-        vyre_driver::DeviceTimingQuality::HostEnqueueWait,
+        vyre_runtime::DeviceTimingQuality::HostEnqueueWait,
         "Fix: an unproven timestamp capability must not report device-timestamp timing quality"
     );
 }
@@ -200,7 +200,7 @@ fn cooperative_dispatch_is_rejected_until_grid_sync_is_supported() {
         .dispatch(&program, &[], &config)
         .expect_err("Fix: wgpu must reject cooperative dispatch with UnsupportedFeature");
     match error {
-        vyre_driver::BackendError::UnsupportedFeature { name, backend } => {
+        vyre_runtime::BackendError::UnsupportedFeature { name, backend } => {
             assert!(name.contains("cooperative"), "got {name}");
             assert_eq!(backend, "wgpu");
         }

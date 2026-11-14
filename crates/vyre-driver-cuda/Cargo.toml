@@ -33,7 +33,7 @@ device-tests = []
 cuda = []
 
 [dependencies]
-vyre-driver = { workspace = true }
+vyre-runtime = { workspace = true }
 vyre-foundation = { workspace = true }
 vyre-megakernel = { workspace = true }
 vyre-lower.workspace = true
@@ -50,7 +50,7 @@ dashmap.workspace = true
 libc.workspace = true
 
 [dev-dependencies]
-vyre-runtime.workspace = true
+vyre-runtime = { workspace = true, features = ["test-fixtures"] }
 # `ir-fixtures` carries the shared u32 binop parity tables the live-GPU parity
 # suites read their operands and pinned oracle answers from, and the
 # strict-float witness program the float-lowering refusal contract runs.
@@ -67,14 +67,13 @@ vyre-test-support = { workspace = true, features = [
 vyre-lower = { workspace = true, features = ["test-fixtures"] }
 # Elementwise parity-gate scaffolding, so the live-device parity tests state
 # their case tables and references and nothing else.
-vyre-driver = { workspace = true, features = ["test-fixtures"] }
 # Integration tests and benchmarks assert against the lower-layer libraries they
 # exercise. `full` owns every domain this facade publishes, including the
 # compiler-owned analysis, encoding, solver, and graph-dispatch domains the live
 # parity tests drive directly.
 vyre-libs = { workspace = true, features = ["full"] }
 tempfile.workspace = true
-# Required by tests/common/mod.rs (`vyre::ir`, `vyre_driver::DispatchConfig`) and by
+# Required by tests/common/mod.rs (`vyre::ir`, `vyre_runtime::DispatchConfig`) and by
 # many live CUDA integration tests. `vyre` optionally depends on
 # vyre-driver-cuda behind `features = ["cuda"]`; adding it here as a dev-dep
 # without that feature flag does not create a cycle. Cargo dev-deps are only

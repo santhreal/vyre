@@ -7,7 +7,7 @@
 
 use super::*;
 
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Acquire the WGPU backend on this Apple device.
@@ -15,13 +15,13 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 /// WHY: the registration `vyre-driver-wgpu` submits lives in that crate's
 /// object file, and a linker keeps the object only where a symbol inside it is
 /// referenced. Naming the crate in the manifest references nothing, so the
-/// harness that only called `vyre_driver::acquire("wgpu")` asked the registry
+/// harness that only called `vyre_runtime::acquire("wgpu")` asked the registry
 /// for a backend no object had submitted. `registered_backend_id` is the
 /// reference the driver crate publishes for exactly this, and calling it is
 /// what puts the registration in this binary.
 fn acquire_wgpu() -> Box<dyn VyreBackend> {
     let _ = vyre_driver_wgpu::registered_backend_id();
-    vyre_driver::acquire("wgpu")
+    vyre_runtime::acquire("wgpu")
         .expect("Fix: WGPU-on-Metal must acquire on the Apple GPU differential lane.")
 }
 

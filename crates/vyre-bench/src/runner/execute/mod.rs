@@ -145,7 +145,7 @@ pub fn execute_suite(
             continue;
         }
 
-        let preferred_backend: Arc<dyn vyre_driver::VyreBackend> =
+        let preferred_backend: Arc<dyn vyre_runtime::VyreBackend> =
             match acquire_backend(config.backend_id.as_deref()) {
                 Ok(backend) => backend,
                 Err(error) => {
@@ -158,7 +158,7 @@ pub fn execute_suite(
                     continue;
                 }
             };
-        let preferred_registration = match vyre_driver::backend_registration(preferred_backend.id())
+        let preferred_registration = match vyre_runtime::backend_registration(preferred_backend.id())
         {
             Ok(registration) => registration,
             Err(error) => {
@@ -330,8 +330,8 @@ fn target_samples(suite: &SuiteKind) -> usize {
     }
 }
 
-fn dispatch_config(config: &RunConfig) -> vyre_driver::DispatchConfig {
-    let mut dispatch = vyre_driver::DispatchConfig::default();
+fn dispatch_config(config: &RunConfig) -> vyre_runtime::DispatchConfig {
+    let mut dispatch = vyre_runtime::DispatchConfig::default();
     dispatch.workgroup_override = config.workgroup_override;
     dispatch
 }
@@ -359,12 +359,12 @@ fn validate_requirements(
 
 fn acquire_backend(
     backend_id: Option<&str>,
-) -> Result<std::sync::Arc<dyn vyre_driver::VyreBackend>, BenchError> {
+) -> Result<std::sync::Arc<dyn vyre_runtime::VyreBackend>, BenchError> {
     use std::collections::HashMap;
     use std::sync::{Arc, LazyLock, Mutex};
 
     #[allow(clippy::type_complexity)]
-    static CACHE: LazyLock<Mutex<HashMap<Option<String>, Arc<dyn vyre_driver::VyreBackend>>>> =
+    static CACHE: LazyLock<Mutex<HashMap<Option<String>, Arc<dyn vyre_runtime::VyreBackend>>>> =
         LazyLock::new(|| Mutex::new(HashMap::new()));
 
     let mut cache = CACHE
@@ -378,10 +378,10 @@ fn acquire_backend(
         return Ok(Arc::clone(backend));
     }
 
-    let backend: Arc<dyn vyre_driver::VyreBackend> = match backend_id {
-        Some(id) => vyre_driver::acquire(id)
+    let backend: Arc<dyn vyre_runtime::VyreBackend> = match backend_id {
+        Some(id) => vyre_runtime::acquire(id)
             .map_err(|error| BenchError::BackendFailed(error.to_string()))?,
-        None => vyre_driver::acquire_preferred_dispatch_backend()
+        None => vyre_runtime::acquire_preferred_dispatch_backend()
             .map_err(|error| BenchError::BackendFailed(error.to_string()))?,
     }
     .into();
@@ -445,10 +445,10 @@ pub fn evaluate_candidate_headless(
     validate_requirements(&environment, &requirements)
         .map_err(|e| format!("Environment error: {}", e))?;
 
-    let preferred_backend: Arc<dyn vyre_driver::VyreBackend> =
+    let preferred_backend: Arc<dyn vyre_runtime::VyreBackend> =
         acquire_backend(config.backend_id.as_deref())
             .map_err(|error| format!("Backend error: {}", error))?;
-    let preferred_registration = vyre_driver::backend_registration(preferred_backend.id())
+    let preferred_registration = vyre_runtime::backend_registration(preferred_backend.id())
         .map_err(|error| format!("Backend registration error: {error}"))?;
     let materializer = Arc::from(
         preferred_registration
@@ -465,7 +465,7 @@ pub fn evaluate_candidate_headless(
         optimizer: crate::api::case::OptimizerPipeline {},
         scratch: crate::api::case::ScratchPool { buffer: vec![] },
         rng: rand::SeedableRng::seed_from_u64(42),
-        dispatch_config: vyre_driver::DispatchConfig::default(),
+        dispatch_config: vyre_runtime::DispatchConfig::default(),
         evolve_candidate: Some(candidate),
         include_baseline_outputs: false,
     };

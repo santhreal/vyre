@@ -5,7 +5,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use thiserror::Error;
 use vyre_conform_spec::protocol::ulp_distance_f32;
-use vyre_driver::{BackendRegistration, BindingPlan};
+use vyre_runtime::{BackendRegistration, BindingPlan};
 use vyre_foundation::ir::{BufferDecl, GraphValueId, Program, ProgramGraph};
 use vyre_foundation::logical::LogicalProgramGraph;
 use vyre_megakernel::{

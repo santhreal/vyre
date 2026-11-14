@@ -21,7 +21,7 @@
 use crate::harness;
 use harness::u32_bytes;
 
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_libs::hash::fnv1a::fnv1a64_program_n;
 use vyre_reference::composition_witness::fnv1a64_witness as fnv1a64;

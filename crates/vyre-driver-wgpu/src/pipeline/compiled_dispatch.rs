@@ -8,8 +8,8 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use smallvec::SmallVec;
-use vyre_driver::enforce_actual_output_budget;
-use vyre_driver::{
+use vyre_runtime::enforce_actual_output_budget;
+use vyre_runtime::{
     resolve_fixpoint_iterations_usize, BackendError, CompiledPipeline, DispatchConfig,
     OutputBuffers, TimedDispatchResult,
 };
@@ -69,7 +69,7 @@ pub(crate) struct WgpuPendingPersistentDispatch {
     config: DispatchConfig,
 }
 
-impl vyre_driver::sealed::Sealed for WgpuPendingPersistentDispatch {}
+impl vyre_runtime::sealed::Sealed for WgpuPendingPersistentDispatch {}
 
 impl WgpuPendingPersistentDispatch {
     fn retire(self) -> Result<TimedDispatchResult, BackendError> {
@@ -90,7 +90,7 @@ impl WgpuPendingPersistentDispatch {
     }
 }
 
-impl vyre_driver::PendingDispatch for WgpuPendingPersistentDispatch {
+impl vyre_runtime::PendingDispatch for WgpuPendingPersistentDispatch {
     fn is_ready(&self) -> bool {
         self.enqueued.is_ready(&self.pipeline.device_queue.0)
     }
@@ -107,7 +107,7 @@ impl vyre_driver::PendingDispatch for WgpuPendingPersistentDispatch {
 impl WgpuPipeline {
     pub(crate) fn dispatch_persistent_handles_async(
         self: &Arc<Self>,
-        resources: &[vyre_driver::Resource],
+        resources: &[vyre_runtime::Resource],
         config: &DispatchConfig,
         started: Instant,
     ) -> Result<WgpuPendingPersistentDispatch, BackendError> {
@@ -130,7 +130,7 @@ impl WgpuPipeline {
     /// The timeout in `config` counts from `started`.
     fn enqueue_persistent(
         &self,
-        resources: &[vyre_driver::Resource],
+        resources: &[vyre_runtime::Resource],
         config: &DispatchConfig,
         started: Instant,
     ) -> Result<EnqueuedPersistentDispatch, BackendError> {
@@ -329,7 +329,7 @@ impl WgpuPipeline {
     /// trap sidecar is checked before returning.
     pub(crate) fn dispatch_persistent_handles_without_readback(
         &self,
-        inputs: &[vyre_driver::Resource],
+        inputs: &[vyre_runtime::Resource],
         config: &DispatchConfig,
     ) -> Result<(), BackendError> {
         self.enforce_static_output_budget(config)?;
@@ -424,7 +424,7 @@ impl CompiledPipeline for WgpuPipeline {
 
     fn dispatch_persistent_handles_timed(
         &self,
-        inputs: &[vyre_driver::Resource],
+        inputs: &[vyre_runtime::Resource],
         config: &DispatchConfig,
     ) -> Result<TimedDispatchResult, BackendError> {
         let started = Instant::now();
@@ -453,7 +453,7 @@ impl CompiledPipeline for WgpuPipeline {
     /// submission.
     fn dispatch_persistent_handles_batched_timed(
         &self,
-        batches: &[&[vyre_driver::Resource]],
+        batches: &[&[vyre_runtime::Resource]],
         config: &DispatchConfig,
         outputs: &mut Vec<OutputBuffers>,
         device_ns_by_item: &mut Vec<Option<u64>>,
@@ -503,7 +503,7 @@ impl CompiledPipeline for WgpuPipeline {
 // can reach what this suite exercises.
 #[cfg(test)]
 mod tests {
-    use vyre_driver::{resolve_fixpoint_iterations_usize, DispatchConfig};
+    use vyre_runtime::{resolve_fixpoint_iterations_usize, DispatchConfig};
 
     #[test]
     fn generated_fixpoint_iteration_count_uses_driver_policy() {

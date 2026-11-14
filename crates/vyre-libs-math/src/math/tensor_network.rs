@@ -13,7 +13,7 @@
 //! |---|---|
 //! | future `vyre-libs::ml::tensor_compress` | TT/MERA-compressed weights |
 //! | future `vyre-libs::sci::quantum_chem` | quantum chemistry contraction |
-//! | `vyre-driver` megakernel scheduling | each Region in vyre's IR is a tensor; wires are buffer dependencies; optimal fusion = optimal contraction order |
+//! | `vyre-runtime` megakernel scheduling | each Region in vyre's IR is a tensor; wires are buffer dependencies; optimal fusion = optimal contraction order |
 
 use vyre_foundation::composition::trap_program;
 use vyre_foundation::ir::{DataType, Program};

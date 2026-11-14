@@ -19,7 +19,7 @@ use vyre_libs_fixpoint::fixpoint::persistent_fixpoint::{
 ///
 /// The launch spans `m * n` lanes, not `m`:
 /// `dispatch_element_count_for_program`
-/// (`crates/vyre-driver/src/program_walks/dispatch_params.rs:19`) sizes an
+/// (`crates/vyre-runtime/src/program_walks/dispatch_params.rs:19`) sizes an
 /// atomic-carrying program's launch from its WIDEST declared buffer, this
 /// program carries the harness's `atomic_or`, and the widest buffers are the
 /// `m * n` kernel matrices `k` and `k_t`. So the cell count, not the scaling

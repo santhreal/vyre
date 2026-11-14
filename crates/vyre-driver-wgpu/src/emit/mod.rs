@@ -65,7 +65,7 @@ pub struct WgpuProgram {
 /// validation fails, or the final writer fails.
 #[inline]
 pub fn lower(program: &vyre_foundation::ir::Program) -> Result<String, LoweringError> {
-    lower_with_config(program, &vyre_driver::DispatchConfig::default())
+    lower_with_config(program, &vyre_runtime::DispatchConfig::default())
 }
 
 /// Lower a program to WGSL with explicit dispatch policy.
@@ -76,7 +76,7 @@ pub fn lower(program: &vyre_foundation::ir::Program) -> Result<String, LoweringE
 /// WGSL writing.
 pub fn lower_with_config(
     program: &vyre_foundation::ir::Program,
-    config: &vyre_driver::DispatchConfig,
+    config: &vyre_runtime::DispatchConfig,
 ) -> Result<String, LoweringError> {
     let default_features = crate::runtime::device::EnabledFeatures::default();
     lower_with_features(program, config, &default_features)
@@ -90,7 +90,7 @@ pub fn lower_with_config(
 /// WGSL writing.
 pub(crate) fn lower_with_features(
     program: &vyre_foundation::ir::Program,
-    config: &vyre_driver::DispatchConfig,
+    config: &vyre_runtime::DispatchConfig,
     enabled_features: &crate::runtime::device::EnabledFeatures,
 ) -> Result<String, LoweringError> {
     let bir = WgpuProgram::from_program(program, config, enabled_features)?;
@@ -149,7 +149,7 @@ pub(crate) fn launch_element_count(
     if program.output_buffer_indices().is_empty() {
         return Ok(0);
     }
-    let layouts = vyre_driver::output_binding_layouts(program)
+    let layouts = vyre_runtime::output_binding_layouts(program)
         .map_err(|error| LoweringError::invalid(format!("{error}")))?;
     let words = layouts
         .iter()
@@ -179,7 +179,7 @@ pub(crate) fn launch_element_count(
 pub(crate) fn launch_grid_index(
     descriptor: &vyre_lower::KernelDescriptor,
     program: &vyre_foundation::ir::Program,
-    config: &vyre_driver::DispatchConfig,
+    config: &vyre_runtime::DispatchConfig,
     workgroup_size: [u32; 3],
 ) -> Result<vyre_lower::GridIndexSpace, LoweringError> {
     let Some(max_per_axis) = config.max_workgroups_per_axis else {
@@ -189,7 +189,7 @@ pub(crate) fn launch_grid_index(
         return Ok(vyre_lower::GridIndexSpace::PerAxis);
     }
     let element_count = launch_element_count(program)?;
-    let single_axis = vyre_driver::infer_dispatch_grid_for_count(element_count, workgroup_size)
+    let single_axis = vyre_runtime::infer_dispatch_grid_for_count(element_count, workgroup_size)
         .map_err(|error| LoweringError::invalid(format!("{error}")))?;
     let fits = single_axis
         .iter()
@@ -210,7 +210,7 @@ impl WgpuProgram {
     /// wgpu/Naga IR.
     pub fn from_program(
         program: &vyre_foundation::ir::Program,
-        config: &vyre_driver::DispatchConfig,
+        config: &vyre_runtime::DispatchConfig,
         enabled_features: &crate::runtime::device::EnabledFeatures,
     ) -> Result<Self, LoweringError> {
         let expanded = strict_expanded(program, config)?;
@@ -268,7 +268,7 @@ impl WgpuProgram {
 /// the descriptor would exist only on this side.
 fn strict_expanded(
     program: &vyre_foundation::ir::Program,
-    config: &vyre_driver::DispatchConfig,
+    config: &vyre_runtime::DispatchConfig,
 ) -> Result<Option<vyre_foundation::ir::Program>, LoweringError> {
     if !config.float_lowering.blocks_contraction() {
         return Ok(None);
@@ -365,7 +365,7 @@ impl WgpuBackend {
     ) -> Result<WgpuProgram, LoweringError> {
         WgpuProgram::from_program(
             program,
-            &vyre_driver::DispatchConfig::default(),
+            &vyre_runtime::DispatchConfig::default(),
             &self.enabled_features,
         )
     }
@@ -506,7 +506,7 @@ mod tests {
             [1, 1, 1],
             vec![Node::store("out", Expr::u32(0), Expr::u32(7))],
         );
-        let mut config = vyre_driver::DispatchConfig::default();
+        let mut config = vyre_runtime::DispatchConfig::default();
         config.workgroup_override = Some([32, 1, 1]);
         let lowered = WgpuProgram::from_program(
             &program,

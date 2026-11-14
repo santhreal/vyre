@@ -1,10 +1,10 @@
 //! WGPU-local names for shared fallible allocation reservation helpers.
 
-pub(crate) use vyre_driver::allocation::{
+pub(crate) use vyre_runtime::allocation::{
     reserve_hash_map_to_capacity, reserve_smallvec_to_capacity, reserve_vec_to_capacity,
 };
 
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 pub(crate) fn padded_wgpu_u64(
     size: u64,

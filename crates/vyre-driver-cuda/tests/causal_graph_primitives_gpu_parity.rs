@@ -6,7 +6,7 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_libs::graph::adjustment_set::backdoor_descendants_check;
 use vyre_libs::graph::do_calculus::intervention_delete_incoming;
 use vyre_reference::composition_witness::{

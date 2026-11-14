@@ -19,7 +19,7 @@
 //! that gains or loses an expansion moves between these two cases without
 //! either being edited.
 
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_driver_reference::CpuRefEvaluator;
 use vyre_foundation::fp_expansion::{
     expand_strict_transcendentals, is_strict_expandable, strict_unexpandable_unary_ops,

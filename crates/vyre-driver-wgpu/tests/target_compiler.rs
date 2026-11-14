@@ -43,7 +43,7 @@ fn registered_target_compiler_emits_selected_wgsl_bundle() {
 /// second backend-owned operation catalog.
 #[test]
 fn registered_target_facets_resolve_canonical_operations() {
-    let facets = vyre_driver::registered_target_operation_facets()
+    let facets = vyre_runtime::registered_target_operation_facets()
         .expect("valid target facet registry")
         .iter()
         .filter(|facet| facet.target_id == vyre_driver_wgpu::WGPU_BACKEND_ID)

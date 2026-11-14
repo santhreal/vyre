@@ -13,14 +13,14 @@ use std::sync::{
 };
 
 use metal::Device;
-use vyre_driver::resident_transfer_fusion::fuse_resident_transfer_intervals;
-use vyre_driver::resident_transfer_fusion::ResidentTransferInterval;
-use vyre_driver::{
+use vyre_runtime::resident_transfer_fusion::fuse_resident_transfer_intervals;
+use vyre_runtime::resident_transfer_fusion::ResidentTransferInterval;
+use vyre_runtime::{
     output_binding_layouts, BindingPlan, DeviceProfile, DeviceTimingQuality, DispatchConfig,
     PipelineCacheSnapshot, ResidentHandle, ResidentOwner, Resource, TimedDispatchResult,
     VyreBackend,
 };
-use vyre_driver::{sealed, BackendError, PendingDispatch};
+use vyre_runtime::{sealed, BackendError, PendingDispatch};
 use vyre_foundation::ir::Program;
 
 use self::buffer_plan::{

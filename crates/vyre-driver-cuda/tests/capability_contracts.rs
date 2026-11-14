@@ -2,8 +2,8 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_driver::DispatchConfig;
-use vyre_driver::PipelineFeatureFlags;
+use vyre_runtime::DispatchConfig;
+use vyre_runtime::PipelineFeatureFlags;
 use vyre_driver_cuda::{cuda_factory, CudaBackend, CudaDeviceCaps};
 use vyre_foundation::fp_parity::FloatLoweringMode;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
@@ -166,11 +166,11 @@ fn cuda_backend_caps_match_driver_attributes() {
 #[test]
 fn cuda_is_canonical_dispatch_backend_when_linked() {
     assert!(
-        vyre_driver::backend_precedence("cuda").expect("valid backend registry") < 10,
+        vyre_runtime::backend_precedence("cuda").expect("valid backend registry") < 10,
         "Fix: CUDA must outrank wgpu for this release when both live dispatch backends are linked."
     );
     assert!(
-        vyre_driver::backend_dispatches("cuda").expect("valid backend registry"),
+        vyre_runtime::backend_dispatches("cuda").expect("valid backend registry"),
         "Fix: CUDA must advertise live dispatch capability for release routing."
     );
 }
@@ -213,7 +213,7 @@ fn vyre_backend_trait_reports_live_cuda_capabilities() {
 
 #[test]
 fn preferred_dispatch_backend_is_cuda_not_cpu_or_wgpu_fallback() {
-    let backend = vyre_driver::acquire_preferred_dispatch_backend()
+    let backend = vyre_runtime::acquire_preferred_dispatch_backend()
         .expect("Fix: CUDA must be usable as the preferred dispatch backend on the GPU fleet.");
     assert_eq!(
         backend.id(),

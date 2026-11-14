@@ -46,7 +46,7 @@ pub(super) fn descriptor_grid_sync_barrier_count(desc: &KernelDescriptor) -> u32
 /// The other half of the promise is enforced where it can be broken: a store
 /// to one of these slots is refused at emission, and a dispatch that binds one
 /// allocation to a read-only slot and to a writable slot is refused by
-/// `vyre_driver::ReadOnlyAliasCheck`.
+/// `vyre_runtime::ReadOnlyAliasCheck`.
 pub(super) fn read_only_cache_slots(desc: &KernelDescriptor) -> FxHashSet<u32> {
     desc.bindings
         .slots

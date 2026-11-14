@@ -7,7 +7,7 @@ use harness::cat_a_dispatch_config;
 
 use std::sync::LazyLock;
 
-use vyre_driver::VyreBackend;
+use vyre_runtime::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::fp_parity;
 use vyre_foundation::operation::SemanticOperation;

@@ -21,8 +21,8 @@
 
 use std::env;
 
-use vyre_driver::{backend_dispatches, registered_backends_by_precedence_slice};
-use vyre_driver::{BackendError, BackendRegistration};
+use vyre_runtime::{backend_dispatches, registered_backends_by_precedence_slice};
+use vyre_runtime::{BackendError, BackendRegistration};
 use vyre_foundation::ir::Program;
 
 /// How to source the forced-backend override.
@@ -100,7 +100,7 @@ impl BackendRouter {
         _program: &Program,
         source: Override<'_>,
     ) -> Result<RouterDecision, BackendError> {
-        let registered = vyre_driver::registered_backends()?;
+        let registered = vyre_runtime::registered_backends()?;
 
         let forced: Option<String> = match source {
             Override::FromEnv => env::var(OVERRIDE_ENV).ok(),

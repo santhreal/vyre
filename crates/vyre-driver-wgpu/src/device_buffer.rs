@@ -7,7 +7,7 @@
 
 use crate::buffer::{write_padded, GpuBufferHandle};
 use crate::WgpuBackend;
-use vyre_driver::{BackendError, DeviceBuffer};
+use vyre_runtime::{BackendError, DeviceBuffer};
 
 /// Backend id string registered for `WgpuDeviceBuffer`. Matches
 /// `WgpuBackend::id()`.
@@ -237,7 +237,7 @@ mod tests {
     #[test]
     fn cross_backend_buffer_rejected() {
         let backend = required_backend();
-        let mut alien = vyre_driver::HostShimBuffer::allocate("not-wgpu", 32);
+        let mut alien = vyre_runtime::HostShimBuffer::allocate("not-wgpu", 32);
         let err = backend
             .upload_wgpu_device_buffer(alien.as_mut(), &[1u8; 4])
             .expect_err("Fix: WgpuBackend must reject buffers owned by other backends.");

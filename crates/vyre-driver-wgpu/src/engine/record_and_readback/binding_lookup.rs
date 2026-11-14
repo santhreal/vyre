@@ -1,7 +1,7 @@
 use crate::allocation::{reserve_hash_map_to_capacity, reserve_smallvec_to_capacity};
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 pub(crate) struct BindingLookup {
     entries: SmallVec<[(u32, usize); 16]>,

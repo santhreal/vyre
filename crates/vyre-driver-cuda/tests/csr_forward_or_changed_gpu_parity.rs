@@ -6,7 +6,7 @@ use crate::harness;
 use vyre_libs::graph::csr_closure_inputs::{CsrClosureInputs, CsrGraphView};
 
 use harness::{bytes_u32, u32_bytes, with_cuda_optimizer_dispatcher, with_live_backend};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_libs::graph::csr_forward_or_changed::{
     csr_forward_or_changed_parallel, csr_forward_or_changed_parallel_batch,
 };

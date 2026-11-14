@@ -528,7 +528,7 @@ mod recommendation_contracts {
             .expect_err("Fix: launch policy must reject plans that exceed explicit device budget");
 
         match err {
-            vyre_driver::BackendError::DeviceOutOfMemory {
+            vyre_runtime::BackendError::DeviceOutOfMemory {
                 requested,
                 available,
             } => {

@@ -6,7 +6,7 @@ use crate::api::case::{
 use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use crate::api::resident::ResidentInputSet;
 use vyre::ir::{BufferAccess, Program};
-use vyre_driver::TimedDispatchResult;
+use vyre_runtime::TimedDispatchResult;
 use vyre_libs::reduce::{grid_stride_tree, sum};
 
 pub struct ReduceSumBench;
@@ -280,7 +280,7 @@ struct MeasuredSize {
 /// probed device: a backend whose target dialect admits fewer invocations than
 /// its adapter advertises rejects a payload sized for the adapter's number,
 /// and WGSL admits the WebGPU spec baseline of 256 where CUDA admits 1024.
-fn tree_tile_ceiling(profile: &vyre_driver::DeviceProfile) -> u32 {
+fn tree_tile_ceiling(profile: &vyre_runtime::DeviceProfile) -> u32 {
     let admitted = profile.max_workgroup_size[0]
         .min(profile.max_invocations_per_workgroup)
         .max(1);
@@ -515,8 +515,8 @@ inventory::submit! {
 mod tests {
     use super::*;
 
-    fn profile_with(max_workgroup_x: u32, max_invocations: u32) -> vyre_driver::DeviceProfile {
-        let mut profile = vyre_driver::DeviceProfile::conservative("test");
+    fn profile_with(max_workgroup_x: u32, max_invocations: u32) -> vyre_runtime::DeviceProfile {
+        let mut profile = vyre_runtime::DeviceProfile::conservative("test");
         profile.max_workgroup_size = [max_workgroup_x, 1, 1];
         profile.max_invocations_per_workgroup = max_invocations;
         profile
@@ -537,7 +537,7 @@ mod tests {
             "Fix: the tree halves its lanes each round, so a tile must be a power of two"
         );
         assert_eq!(
-            tree_tile_ceiling(&vyre_driver::DeviceProfile::conservative("unprobed")),
+            tree_tile_ceiling(&vyre_runtime::DeviceProfile::conservative("unprobed")),
             1,
             "Fix: an unprobed backend admits one invocation, not a baked-in default"
         );

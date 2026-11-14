@@ -4,7 +4,7 @@
 use super::*;
 
 use super::fixtures::stores_word;
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 
 #[test]
 fn apple_dispatch_reuses_pipeline_cache_for_identical_program_and_policy() {

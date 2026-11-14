@@ -18,7 +18,7 @@ use std::collections::HashSet;
 use std::sync::{Arc, LazyLock};
 
 use vyre::ir::{BufferAccess, BufferDecl, Expr, Node, Program};
-use vyre_driver::VyreBackend;
+use vyre_runtime::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::execution_plan::fusion::fuse_programs;
 
@@ -101,7 +101,7 @@ pub(crate) fn missing_capability_reason(program: &Program) -> Option<String> {
     let backend = gpu();
     vyre_foundation::program_caps::check_backend_capabilities(
         backend.id(),
-        &vyre_driver::validation::ProgramValidationCaps::from_backend(backend).support(),
+        &vyre_runtime::validation::ProgramValidationCaps::from_backend(backend).support(),
         &required,
     )
     .err()

@@ -26,7 +26,7 @@
 //! |---|---|
 //! | future `vyre-libs::ml::uncertainty` | calibrated NN intervals without retraining |
 //! | future `vyre-libs::observability::regression` | bounded-error performance regression detection |
-//! | `vyre-driver` dispatch cost model | probabilistic circuits output intervals, not point estimates; conformal intervals on past dispatch latency feed megakernel scheduling as soft constraints |
+//! | `vyre-runtime` dispatch cost model | probabilistic circuits output intervals, not point estimates; conformal intervals on past dispatch latency feed megakernel scheduling as soft constraints |
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 

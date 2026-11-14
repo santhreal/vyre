@@ -17,7 +17,7 @@ fn live_executor() -> (RegisteredSemanticExecutor, DeviceFacts) {
     let facts = backend.device_profile().compile_facts();
     let _ = registered_backend_id();
     let registration =
-        vyre_driver::backend_registration(WGPU_BACKEND_ID).expect("registered WGPU backend");
+        vyre_runtime::backend_registration(WGPU_BACKEND_ID).expect("registered WGPU backend");
     (RegisteredSemanticExecutor::new(registration), facts)
 }
 

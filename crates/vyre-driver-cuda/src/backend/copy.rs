@@ -7,7 +7,7 @@
 use std::ffi::c_void;
 
 use cudarc::driver::sys::CUstream;
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use super::allocations::cuda_check;
 

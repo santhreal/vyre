@@ -35,7 +35,7 @@ pub(crate) const EXPECTED_PUBLISHABLE_PACKAGES: &[&str] = &[
     "vyre",
     "vyre-foundation",
     "vyre-megakernel",
-    "vyre-driver",
+    "vyre-runtime",
     "vyre-driver-metal",
     "vyre-driver-wgpu",
     "vyre-driver-spirv",

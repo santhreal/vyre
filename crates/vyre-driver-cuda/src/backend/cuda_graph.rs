@@ -46,10 +46,10 @@
 use std::sync::Arc;
 
 use smallvec::SmallVec;
-use vyre_driver::graph_capture::plan_graph_capture_bindings;
-use vyre_driver::input_identity::exact_input_key;
-use vyre_driver::BindingRole;
-use vyre_driver::{BackendError, DispatchConfig};
+use vyre_runtime::graph_capture::plan_graph_capture_bindings;
+use vyre_runtime::input_identity::exact_input_key;
+use vyre_runtime::BindingRole;
+use vyre_runtime::{BackendError, DispatchConfig};
 use vyre_foundation::ir::Program;
 
 use super::allocations::alloc_cuda_ptr;
@@ -124,7 +124,7 @@ impl CudaBackend {
         sample_inputs: &[&[u8]],
         config: &DispatchConfig,
     ) -> Result<CachedCudaGraph, BackendError> {
-        if config.cooperative || vyre_driver::grid_sync::contains_grid_sync(program) {
+        if config.cooperative || vyre_runtime::grid_sync::contains_grid_sync(program) {
             return Err(BackendError::UnsupportedFeature {
                 name: "cuda_graph_cooperative_capture (regular CUDA graph capture records cuLaunchKernel, not cuLaunchCooperativeKernel, so a grid-sync kernel would replay non-cooperatively and without the per-launch _vyre_grid_barrier reset)"
                     .to_string(),
@@ -335,7 +335,7 @@ impl CudaBackend {
                         "device readback replay",
                     )?;
                 }
-                let readback_ptr = vyre_driver::accounting::checked_add_u64_usize_offset_lazy(
+                let readback_ptr = vyre_runtime::accounting::checked_add_u64_usize_offset_lazy(
                     device_ptr,
                     readback.device_offset,
                     || {

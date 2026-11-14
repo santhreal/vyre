@@ -1,4 +1,4 @@
-use vyre_driver::{BackendError, DispatchConfig};
+use vyre_runtime::{BackendError, DispatchConfig};
 use vyre_foundation::ir::Program;
 
 use crate::backend::dispatch::CudaBackend;
@@ -19,7 +19,7 @@ impl CudaBackend {
         program: &Program,
         handles: &[CudaResidentBuffer],
         config: &DispatchConfig,
-    ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
+    ) -> Result<vyre_runtime::TimedDispatchResult, BackendError> {
         if let Some(resources) = self.resident_grid_sync_split_route(program, handles, config)? {
             return self.dispatch_resident_with_grid_sync_split_timed(program, &resources, config);
         }
@@ -35,7 +35,7 @@ impl CudaBackend {
         program: &Program,
         bindings: &[CudaDispatchBinding<'_>],
         config: &DispatchConfig,
-    ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
+    ) -> Result<vyre_runtime::TimedDispatchResult, BackendError> {
         if crate::instrumentation::cuda_resident_borrowed_fallback_enabled() {
             let started = std::time::Instant::now();
             let enqueue_started = std::time::Instant::now();
@@ -49,7 +49,7 @@ impl CudaBackend {
                 .elapsed_nanos_u64(started, "resident-dispatch wall latency")?;
             self.telemetry
                 .record_timed_dispatch(wall_ns, None, Some(enqueue_ns), Some(wait_ns));
-            return Ok(vyre_driver::TimedDispatchResult::split_timed(
+            return Ok(vyre_runtime::TimedDispatchResult::split_timed(
                 outputs, wall_ns, None, enqueue_ns, wait_ns,
             ));
         }
@@ -86,7 +86,7 @@ impl CudaBackend {
         self.telemetry
             .record_timed_dispatch(wall_ns, device_ns, Some(enqueue_ns), Some(wait_ns));
         probe::emit_dispatch(self, wall_ns, enqueue_ns, wait_ns, device_ns);
-        Ok(vyre_driver::TimedDispatchResult::split_timed(
+        Ok(vyre_runtime::TimedDispatchResult::split_timed(
             outputs, wall_ns, device_ns, enqueue_ns, wait_ns,
         ))
     }
@@ -108,7 +108,7 @@ impl CudaBackend {
             program, bindings, config, ptx_src, module_key, false, None, true, &prepared,
         )?;
         let (dispatch_outputs, _) = dispatch.await_timed_result()?;
-        vyre_driver::replace_output_buffers_preserving_slots(dispatch_outputs, outputs);
+        vyre_runtime::replace_output_buffers_preserving_slots(dispatch_outputs, outputs);
         Ok(())
     }
 }

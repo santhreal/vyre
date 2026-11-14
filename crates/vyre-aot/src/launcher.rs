@@ -1,14 +1,14 @@
 //! Rust launcher source generator.
 //!
 //! `vyre-aot` owns the target-neutral package shell. Concrete driver crates
-//! own every target-specific launcher file through `vyre-driver`'s AOT
+//! own every target-specific launcher file through `vyre-runtime`'s AOT
 //! launcher registry.
 
 use std::collections::BTreeMap;
 use std::path::PathBuf;
 
 use thiserror::Error;
-use vyre_driver::{AotLauncherRequest, LauncherDependency};
+use vyre_runtime::{AotLauncherRequest, LauncherDependency};
 
 use crate::artifact::{registration, TargetId};
 use vyre_megakernel::ArtifactEnvelope;
@@ -89,9 +89,9 @@ pub fn emit_launcher_rust(
     };
 
     let target_files =
-        vyre_driver::emit_aot_launcher_target(&selected_target, &request).map_err(|error| {
+        vyre_runtime::emit_aot_launcher_target(&selected_target, &request).map_err(|error| {
             match error {
-                vyre_driver::BackendError::UnsupportedFeature { .. } => {
+                vyre_runtime::BackendError::UnsupportedFeature { .. } => {
                     LauncherError::TargetNotEnabled(selected_target.clone())
                 }
                 other => LauncherError::Backend(other.to_string()),

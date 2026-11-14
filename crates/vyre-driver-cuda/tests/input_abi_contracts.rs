@@ -2,7 +2,7 @@
 //!
 //! One answer decides which declarations a caller fills:
 //! `BufferDecl::consumes_host_input`. The neutral half of that contract, what
-//! `BindingPlan` accepts and how it refuses, belongs to `vyre-driver` and is
+//! `BindingPlan` accepts and how it refuses, belongs to `vyre-runtime` and is
 //! proved there. What is CUDA here is that a live dispatch agrees with the
 //! reference interpreter on the same programs.
 
@@ -23,7 +23,7 @@ struct CudaHostInputs(vyre_driver_cuda::CudaBackend);
 impl HostInputDispatch for CudaHostInputs {
     fn dispatch_host_inputs(&self, program: &Program, inputs: &[Vec<u8>]) -> Result<(), String> {
         self.0
-            .dispatch(program, inputs, &vyre_driver::DispatchConfig::default())
+            .dispatch(program, inputs, &vyre_runtime::DispatchConfig::default())
             .map(|_| ())
             .map_err(|error| error.to_string())
     }

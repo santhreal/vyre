@@ -2,7 +2,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
 
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use super::buffer_plan::PlannedBuffer;
 use super::resident::{metal_physical_buffer_len, MetalResidentBufferTable};

@@ -5,7 +5,7 @@
 use crate::harness;
 
 use harness::{bytes_u32, live_backend, u32_bytes};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_libs::decode::hex::{
     hex_decode, hex_decode_table, hex_decoded_capacity, HEX_WORKGROUP_SIZE,
 };

@@ -18,7 +18,7 @@ pub(crate) use descriptor_cursor::next_dispatch_binding;
 use std::sync::Arc;
 
 use smallvec::SmallVec;
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_foundation::ir::Program;
 
 use crate::backend::plan::CudaDispatchPlan;
@@ -58,7 +58,7 @@ mod tests {
         };
         use crate::backend::output_range::CudaOutputReadback;
         use crate::backend::resident::CudaResidentBuffer;
-        use vyre_driver::ResidentOwner;
+        use vyre_runtime::ResidentOwner;
 
         #[test]
         fn resident_fallback_fill_payload_preserves_last_good_bytes_when_reservation_fails() {

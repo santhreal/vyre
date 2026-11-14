@@ -7,7 +7,6 @@ members = [
     "crates/vyre",
     "crates/vyre-foundation",
     "crates/vyre-megakernel",
-    "crates/vyre-driver",
     "crates/vyre-driver-metal",
     "crates/vyre-driver-wgpu",
     "crates/vyre-driver-spirv",
@@ -26,7 +25,7 @@ members = [
     "crates/vyre-primitives",
     "crates/vyre-test-support",
     # Executes the optimizer's own passes as Vyre Programs. Sits between
-    # vyre-primitives and vyre-driver.
+    # vyre-primitives and vyre-runtime.
     "crates/vyre-pass-engine",
     "conform/vyre-conform-spec",
     "conform/vyre-conform",
@@ -256,7 +255,6 @@ private_intra_doc_links = "warn"
 vyre = { version = "0.8.0", path = "crates/vyre", default-features = false }
 vyre-foundation = { version = "0.8.0", path = "crates/vyre-foundation" }
 vyre-megakernel = { version = "0.8.0", path = "crates/vyre-megakernel" }
-vyre-driver = { version = "0.8.0", path = "crates/vyre-driver" }
 vyre-driver-metal = { version = "0.8.0", path = "crates/vyre-driver-metal" }
 vyre-driver-wgpu = { version = "0.8.0", path = "crates/vyre-driver-wgpu" }
 vyre-driver-cuda = { version = "0.8.0", path = "crates/vyre-driver-cuda" }

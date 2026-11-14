@@ -1,5 +1,5 @@
 use crate::harness::{bytes_u32, with_live_backend};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_libs::parsing::line_splice_classify::line_splice_classify_u8;
 use vyre_reference::composition_witness::line_splice_classify_witness as reference_line_splice_classify;
 

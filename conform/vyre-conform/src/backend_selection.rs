@@ -14,7 +14,7 @@ use vyre_registry_link::backend::live_backend_registry;
 /// Returns an error message if the registry fails or the backend ID is not linked.
 pub fn backend_registration(
     backend_id: &str,
-) -> Result<&'static vyre_driver::BackendRegistration, String> {
+) -> Result<&'static vyre_runtime::BackendRegistration, String> {
     let registrations = live_backend_registry()
         .map_err(|error| format!("backend registry startup failed: {error}"))?;
     let requested = if backend_id == "auto" {
@@ -51,7 +51,7 @@ pub fn backend_registration(
 ///
 /// Returns an error message if the registry fails to initialize.
 pub fn semantic_execution_backends(
-) -> Result<Vec<&'static vyre_driver::BackendRegistration>, String> {
+) -> Result<Vec<&'static vyre_runtime::BackendRegistration>, String> {
     let registrations = live_backend_registry()
         .map_err(|error| format!("backend registry startup failed: {error}"))?;
     Ok(registrations
@@ -60,7 +60,7 @@ pub fn semantic_execution_backends(
         .collect())
 }
 
-fn supports_semantic_execution(backend: &vyre_driver::BackendRegistration) -> bool {
+fn supports_semantic_execution(backend: &vyre_runtime::BackendRegistration) -> bool {
     admits_semantic_execution(
         backend.reference_oracle,
         backend.target_compiler.is_some(),
@@ -116,11 +116,11 @@ pub struct UnavailableBackend {
 /// ends.
 #[must_use]
 pub fn partition_by_host_availability(
-    backends: &[&'static vyre_driver::BackendRegistration],
+    backends: &[&'static vyre_runtime::BackendRegistration],
 ) -> (
     Vec<(
-        &'static vyre_driver::BackendRegistration,
-        Box<dyn vyre_driver::VyreBackend>,
+        &'static vyre_runtime::BackendRegistration,
+        Box<dyn vyre_runtime::VyreBackend>,
     )>,
     Vec<UnavailableBackend>,
 ) {
@@ -171,8 +171,8 @@ static TARGET_FACTS: LazyLock<Mutex<BTreeMap<&'static str, Arc<RegisteredTargetF
 ///
 /// Returns the acquisition refusal when this host cannot acquire the backend.
 pub fn registered_target_facts(
-    registration: &'static vyre_driver::BackendRegistration,
-) -> Result<vyre_megakernel::DeviceFacts, vyre_driver::BackendError> {
+    registration: &'static vyre_runtime::BackendRegistration,
+) -> Result<vyre_megakernel::DeviceFacts, vyre_runtime::BackendError> {
     Ok(registered_facts(registration)?.facts)
 }
 
@@ -208,8 +208,8 @@ pub fn target_facts_acquisitions(backend_id: &str) -> u64 {
 }
 
 fn registered_facts(
-    registration: &'static vyre_driver::BackendRegistration,
-) -> Result<Arc<RegisteredTargetFacts>, vyre_driver::BackendError> {
+    registration: &'static vyre_runtime::BackendRegistration,
+) -> Result<Arc<RegisteredTargetFacts>, vyre_runtime::BackendError> {
     // A refusal is not cached. Acquisition failure is a property of the host at
     // that moment, and a backend that comes back has to be usable without
     // restarting the process.
@@ -243,9 +243,9 @@ fn registered_facts(
 ///
 /// Returns an error message if the filter matches no registered backend.
 pub fn select_backends(
-    all_backends: &[&'static vyre_driver::BackendRegistration],
+    all_backends: &[&'static vyre_runtime::BackendRegistration],
     filter: &str,
-) -> Result<Vec<&'static vyre_driver::BackendRegistration>, String> {
+) -> Result<Vec<&'static vyre_runtime::BackendRegistration>, String> {
     if filter == "all" {
         return Ok(all_backends.to_vec());
     }

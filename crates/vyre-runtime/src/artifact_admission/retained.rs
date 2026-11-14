@@ -3,8 +3,8 @@ use std::sync::{Mutex, MutexGuard};
 
 use vyre_foundation::failure_domain::{govern_mutex, RecoveryClass};
 
-use vyre_driver::{BackendError, BindingSet, BoundResource, Completion, DeviceIdentity};
 use vyre_megakernel::{ArtifactValueId, Digest};
+use vyre_runtime::{BackendError, BindingSet, BoundResource, Completion, DeviceIdentity};
 
 use super::session::{ArtifactSession, ArtifactSessionError};
 

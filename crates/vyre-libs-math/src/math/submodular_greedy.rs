@@ -21,7 +21,7 @@
 //! | future `vyre-libs::ml::active_learning` | active-learning batch acquisition |
 //! | future `vyre-libs::nn::coreset` | coreset construction for large datasets |
 //! | future `vyre-libs::security::sensor_placement` | optimal IDS sensor placement |
-//! | `vyre-driver` compile-cache eviction | pick K Programs to keep cached that maximize expected hit rate over recent dispatch trace. Same `argmax_of_marginals` primitive. |
+//! | `vyre-runtime` compile-cache eviction | pick K Programs to keep cached that maximize expected hit rate over recent dispatch trace. Same `argmax_of_marginals` primitive. |
 //!
 //! # Algorithm shape
 //!

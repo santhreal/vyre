@@ -1,7 +1,7 @@
 //! Domain-separated cache identity for PTX source and loaded CUDA modules.
 
-use vyre_driver::input_identity::domain_separated_exact_input_key;
-use vyre_driver::{BackendError, DispatchConfig};
+use vyre_runtime::input_identity::domain_separated_exact_input_key;
+use vyre_runtime::{BackendError, DispatchConfig};
 use vyre_foundation::ir::Program;
 
 use crate::backend::dispatch_phase_probe as probe;
@@ -43,7 +43,7 @@ pub(super) fn ptx_source_cache_key_from_program_identity(
     config: &DispatchConfig,
     ptx_target_sm: u32,
     subgroup_size: u32,
-    feature_flags: vyre_driver::PipelineFeatureFlags,
+    feature_flags: vyre_runtime::PipelineFeatureFlags,
 ) -> Result<PtxSourceCacheKey, BackendError> {
     BackendError::reject_blocked_contraction(
         program,
@@ -51,13 +51,13 @@ pub(super) fn ptx_source_cache_key_from_program_identity(
         crate::CUDA_BACKEND_ID,
     )?;
     let normalized_digest = probe::measure_nested(probe::Nested::PtxDigest, || {
-        vyre_driver::try_normalized_program_cache_digest(program)
+        vyre_runtime::try_normalized_program_cache_digest(program)
     })
     .map_err(|error| BackendError::new(format!("CUDA PTX source cache digest failed: {error}")))?;
     let vsa_bytes = probe::measure_nested(probe::Nested::PtxVsa, || {
-        vsa_fingerprint_cache_bytes(vyre_driver::program_vsa_fingerprint_words(program))
+        vsa_fingerprint_cache_bytes(vyre_runtime::program_vsa_fingerprint_words(program))
     });
-    let dispatch_policy_digest = vyre_driver::dispatch_policy_cache_digest(config);
+    let dispatch_policy_digest = vyre_runtime::dispatch_policy_cache_digest(config);
     let feature_flag_bytes = feature_flags.bits().to_le_bytes();
     let key = domain_separated_exact_input_key(
         CUDA_PTX_SOURCE_FROM_PROGRAM_DOMAIN,

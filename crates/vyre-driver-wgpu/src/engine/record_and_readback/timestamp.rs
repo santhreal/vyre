@@ -8,7 +8,7 @@ use std::sync::{
     Arc,
 };
 use std::time::Instant;
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 /// Queries a timed dispatch records: pass boundary at 0 and 1, encoder writes
 /// at 2 and 3. The device capability probe resolves the same layout, so a

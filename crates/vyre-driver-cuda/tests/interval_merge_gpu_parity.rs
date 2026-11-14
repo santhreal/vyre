@@ -6,7 +6,7 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_libs::math::interval::interval_merge_program;
 
 fn cpu_interval_merge(

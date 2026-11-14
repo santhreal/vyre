@@ -20,7 +20,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use vyre_driver::{BackendRegistration, BoundResource, Completion, DeviceIdentity};
+use vyre_runtime::{BackendRegistration, BoundResource, Completion, DeviceIdentity};
 use vyre_driver_cuda::{registered_backend_id, CUDA_BACKEND_ID};
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
@@ -62,7 +62,7 @@ fn facts() -> ExternalFacts {
 /// is compiled at all; once compiled, the device is required and its absence
 /// fails the suite here with the driver's own diagnosis.
 fn required_cuda_registration() -> &'static BackendRegistration {
-    vyre_driver::backend_registration(CUDA_BACKEND_ID).unwrap_or_else(|error| {
+    vyre_runtime::backend_registration(CUDA_BACKEND_ID).unwrap_or_else(|error| {
         panic!(
             "requested device `{CUDA_BACKEND_ID}` is unavailable. A requested device that cannot \
              be resolved fails the run; no host route substitutes for it. Fix: link and install \
@@ -171,7 +171,7 @@ impl DeviceGraphRun {
     }
 
     /// Submit `bindings` and return the completion plus its device evidence.
-    fn submit(&self, bindings: vyre_driver::BindingSet) -> (Completion, DeviceExecutionEvidence) {
+    fn submit(&self, bindings: vyre_runtime::BindingSet) -> (Completion, DeviceExecutionEvidence) {
         let completion = self
             .session
             .submit_and_wait(bindings)
@@ -820,7 +820,7 @@ fn cuda_executes_independent_concurrent_arms_connected_graph() {
 /// from becoming vacuous: an empty registry fails instead of passing.
 #[test]
 fn every_registered_production_backend_must_acquire_its_device() {
-    let registrations = vyre_driver::registered_backends_by_precedence_slice()
+    let registrations = vyre_runtime::registered_backends_by_precedence_slice()
         .expect("backend registry initialization");
     assert!(
         !registrations.is_empty(),
@@ -871,7 +871,7 @@ fn every_registered_production_backend_must_acquire_its_device() {
 
 #[test]
 fn unavailable_requested_device_is_refused_by_name() {
-    let registrations = vyre_driver::registered_backends_by_precedence_slice()
+    let registrations = vyre_runtime::registered_backends_by_precedence_slice()
         .expect("backend registry initialization");
     let absent = "cuda-not-installed";
     assert!(
@@ -879,7 +879,7 @@ fn unavailable_requested_device_is_refused_by_name() {
         "the unavailable-device fixture `{absent}` must not be a registered backend"
     );
 
-    let registration_error = vyre_driver::backend_registration(absent)
+    let registration_error = vyre_runtime::backend_registration(absent)
         .err()
         .unwrap_or_else(|| {
             panic!("resolving unavailable device `{absent}` must fail rather than substitute one")
@@ -894,7 +894,7 @@ fn unavailable_requested_device_is_refused_by_name() {
         "the refusal must state the corrective action: {registration_error}"
     );
 
-    let acquire_error = vyre_driver::acquire(absent)
+    let acquire_error = vyre_runtime::acquire(absent)
         .err()
         .unwrap_or_else(|| {
             panic!("acquiring unavailable device `{absent}` must fail rather than substitute one")

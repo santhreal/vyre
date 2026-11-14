@@ -3,8 +3,8 @@
 use std::sync::Arc;
 
 use smallvec::SmallVec;
-use vyre_driver::BindingRole;
-use vyre_driver::{
+use vyre_runtime::BindingRole;
+use vyre_runtime::{
     BackendError, DispatchConfig, OutputBuffers, PendingDispatch, Resource, VyreBackend,
 };
 use vyre_foundation::ir::Program;
@@ -29,7 +29,7 @@ use self::transfers::*;
 
 struct GridSyncSplitCudaBackend<'a>(&'a CudaBackend);
 
-impl vyre_driver::sealed::Sealed for GridSyncSplitCudaBackend<'_> {}
+impl vyre_runtime::sealed::Sealed for GridSyncSplitCudaBackend<'_> {}
 
 impl VyreBackend for GridSyncSplitCudaBackend<'_> {
     fn id(&self) -> &'static str {
@@ -74,7 +74,7 @@ impl VyreBackend for GridSyncSplitCudaBackend<'_> {
         program: &Program,
         inputs: &[&[u8]],
         config: &DispatchConfig,
-    ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
+    ) -> Result<vyre_runtime::TimedDispatchResult, BackendError> {
         self.0.dispatch_borrowed_timed(program, inputs, config)
     }
 
@@ -102,7 +102,7 @@ impl VyreBackend for GridSyncSplitCudaBackend<'_> {
         program: &Program,
         resources: &[Resource],
         config: &DispatchConfig,
-    ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
+    ) -> Result<vyre_runtime::TimedDispatchResult, BackendError> {
         let bindings = self.0.resident_bindings_from_resources(resources)?;
         self.0.dispatch_bindings_timed(program, &bindings, config)
     }
@@ -139,7 +139,7 @@ impl CudaBackend {
         config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
         let adapter = GridSyncSplitCudaBackend(self);
-        vyre_driver::grid_sync::dispatch_with_grid_sync_split(&adapter, program, inputs, config)
+        vyre_runtime::grid_sync::dispatch_with_grid_sync_split(&adapter, program, inputs, config)
     }
 
     /// The timed twin of [`CudaBackend::dispatch_borrowed_with_grid_sync_split`].
@@ -148,9 +148,9 @@ impl CudaBackend {
         program: &Program,
         inputs: &[&[u8]],
         config: &DispatchConfig,
-    ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
+    ) -> Result<vyre_runtime::TimedDispatchResult, BackendError> {
         let adapter = GridSyncSplitCudaBackend(self);
-        vyre_driver::grid_sync::dispatch_with_grid_sync_split_timed(
+        vyre_runtime::grid_sync::dispatch_with_grid_sync_split_timed(
             &adapter, program, inputs, config,
         )
     }
@@ -200,9 +200,9 @@ impl CudaBackend {
         program: &Program,
         resources: &[Resource],
         config: &DispatchConfig,
-    ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
+    ) -> Result<vyre_runtime::TimedDispatchResult, BackendError> {
         let adapter = GridSyncSplitCudaBackend(self);
-        vyre_driver::grid_sync::dispatch_resident_with_grid_sync_split_timed(
+        vyre_runtime::grid_sync::dispatch_resident_with_grid_sync_split_timed(
             &adapter, program, resources, config,
         )
     }
@@ -239,7 +239,7 @@ impl CudaBackend {
         handles: &[super::resident::CudaResidentBuffer],
         config: &DispatchConfig,
     ) -> Result<Option<SmallVec<[Resource; 8]>>, BackendError> {
-        if !vyre_driver::grid_sync::contains_grid_sync(program) {
+        if !vyre_runtime::grid_sync::contains_grid_sync(program) {
             return Ok(None);
         }
         let resources = super::resident::resident_resources_from_handles(handles)?;
@@ -274,7 +274,7 @@ impl CudaBackend {
         let (major, minor) = self.compute_capability();
         Err(BackendError::UnsupportedFeature {
             name: format!(
-                "cuda_native_grid_sync_lowering (compute_capability={major}.{minor}, hardware_cooperative_launch={}, lowers_grid_sync={}): this device cannot run a whole-grid barrier natively, and CUDA refuses to emulate one by silently splitting the program into host-orchestrated launches, because allows_host_grid_sync_split() advertises false and callers such as vyre-primitives' persistent fixpoint treat that as a guarantee. Run on a device with cooperative launch (compute capability 6.0 or later), restructure the program to use a workgroup-scoped barrier, or perform the split explicitly above the backend with vyre_driver::grid_sync::dispatch_with_grid_sync_split",
+                "cuda_native_grid_sync_lowering (compute_capability={major}.{minor}, hardware_cooperative_launch={}, lowers_grid_sync={}): this device cannot run a whole-grid barrier natively, and CUDA refuses to emulate one by silently splitting the program into host-orchestrated launches, because allows_host_grid_sync_split() advertises false and callers such as vyre-primitives' persistent fixpoint treat that as a guarantee. Run on a device with cooperative launch (compute capability 6.0 or later), restructure the program to use a workgroup-scoped barrier, or perform the split explicitly above the backend with vyre_runtime::grid_sync::dispatch_with_grid_sync_split",
                 self.hardware_supports_grid_sync(),
                 self.lowers_grid_sync()
             ),
@@ -289,7 +289,7 @@ impl CudaBackend {
         inputs: &[&[u8]],
         config: &DispatchConfig,
     ) -> Result<Vec<Vec<u8>>, BackendError> {
-        if vyre_driver::grid_sync::contains_grid_sync(program)
+        if vyre_runtime::grid_sync::contains_grid_sync(program)
             && self.grid_sync_program_needs_host_split(program, inputs, config)?
         {
             return self.dispatch_borrowed_with_grid_sync_split(program, inputs, config);
@@ -326,7 +326,7 @@ impl CudaBackend {
                     fix: error.to_string(),
                 })?;
         let program = lowered_program.as_ref().unwrap_or(program);
-        if vyre_driver::grid_sync::contains_grid_sync(program) {
+        if vyre_runtime::grid_sync::contains_grid_sync(program) {
             // Same route decision the synchronous path makes. An over-residency
             // grid has no native launch to be asynchronous about: the split is
             // a sequence of regular launches whose segments feed each other
@@ -377,14 +377,14 @@ impl CudaBackend {
         program: &Program,
         inputs: &[&[u8]],
         config: &DispatchConfig,
-    ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
+    ) -> Result<vyre_runtime::TimedDispatchResult, BackendError> {
         let lowered_program =
             vyre_foundation::transform::collectives::lower_single_rank_collectives(program)
                 .map_err(|error| BackendError::InvalidProgram {
                     fix: error.to_string(),
                 })?;
         let program = lowered_program.as_ref().unwrap_or(program);
-        if vyre_driver::grid_sync::contains_grid_sync(program)
+        if vyre_runtime::grid_sync::contains_grid_sync(program)
             && self.grid_sync_program_needs_host_split(program, inputs, config)?
         {
             return self.dispatch_borrowed_with_grid_sync_split_timed(program, inputs, config);
@@ -404,7 +404,7 @@ impl CudaBackend {
         config: &DispatchConfig,
         ptx_src: &str,
         module_key: ModuleCacheKey,
-    ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
+    ) -> Result<vyre_runtime::TimedDispatchResult, BackendError> {
         let prepared = self.prepare_host_dispatch(program, inputs, config)?;
         self.dispatch_prepared_borrowed_timed_with_ptx_key(
             program, inputs, config, ptx_src, module_key, &prepared,
@@ -432,7 +432,7 @@ impl CudaBackend {
         ptx_src: &str,
         module_key: ModuleCacheKey,
         prepared: &CudaDispatchPlan,
-    ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
+    ) -> Result<vyre_runtime::TimedDispatchResult, BackendError> {
         let started = std::time::Instant::now();
         let enqueue_started = std::time::Instant::now();
         let pending = self.dispatch_borrowed_async_with_ptx_concrete(
@@ -444,7 +444,7 @@ impl CudaBackend {
         let (outputs, device_ns) = pending.await_timed_result()?;
         let wait_ns = CUDA_NUMERIC.elapsed_nanos_u64(wait_started, "host-dispatch wait latency")?;
         if let Some(measured_device_ns) = device_ns {
-            let _accepted = vyre_driver::record_launch_measurement(
+            let _accepted = vyre_runtime::record_launch_measurement(
                 program,
                 config,
                 self.launch_limits(),
@@ -456,7 +456,7 @@ impl CudaBackend {
         let wall_ns = CUDA_NUMERIC.elapsed_nanos_u64(started, "host-dispatch wall latency")?;
         self.telemetry
             .record_timed_dispatch(wall_ns, device_ns, Some(enqueue_ns), Some(wait_ns));
-        Ok(vyre_driver::TimedDispatchResult::split_timed(
+        Ok(vyre_runtime::TimedDispatchResult::split_timed(
             outputs, wall_ns, device_ns, enqueue_ns, wait_ns,
         ))
     }
@@ -809,7 +809,7 @@ impl CudaBackend {
                     add_transfer_bytes(&mut readback_bytes, readback.byte_len, "output readback")?;
                     add_transfer_operation(&mut readback_operations, "output readback")?;
                     let base_ptr = allocations_ref.ptr(binding.buffer_index, &binding.name)?;
-                    let device_ptr = vyre_driver::accounting::checked_add_u64_usize_offset_lazy(
+                    let device_ptr = vyre_runtime::accounting::checked_add_u64_usize_offset_lazy(
                         base_ptr,
                         readback.device_offset,
                         || {
@@ -952,7 +952,7 @@ impl CudaBackend {
         // a remap of the load error: a genuine ISA failure must keep
         // reporting CUDA_ERROR_INVALID_PTX.
         check_workgroup_scratch_budget(program, self.max_shared_memory_per_block_bytes())?;
-        if vyre_driver::grid_sync::contains_grid_sync(program) {
+        if vyre_runtime::grid_sync::contains_grid_sync(program) {
             let mut borrowed_inputs = SmallVec::<[&[u8]; 8]>::new();
             reserve_smallvec(
                 &mut borrowed_inputs,

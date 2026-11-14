@@ -1,4 +1,4 @@
-use vyre_driver::{BackendError, DispatchConfig};
+use vyre_runtime::{BackendError, DispatchConfig};
 use vyre_foundation::ir::Program;
 
 use crate::backend::dispatch::CudaBackend;

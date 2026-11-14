@@ -15,7 +15,7 @@
 //! Shared the same way as `crate::preferred_dispatch_backend_contract`: each
 //! backend crate calls into this one owner from its own suite.
 
-use vyre_driver::{BackendError, DispatchConfig, Resource, VyreBackend};
+use vyre_runtime::{BackendError, DispatchConfig, Resource, VyreBackend};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// Constant the fixture program adds to each input lane.

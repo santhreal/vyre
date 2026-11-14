@@ -13,8 +13,8 @@ use harness::{
     reference_outputs, u32_bytes, GENERATED_LANE_COUNT as LANE_COUNT,
     GENERATED_WORKGROUP_SIZE_X as WORKGROUP_SIZE_X,
 };
-use vyre_driver::VyreBackend;
-use vyre_driver::{ResidentDispatchStep, ResidentReadRange};
+use vyre_runtime::VyreBackend;
+use vyre_runtime::{ResidentDispatchStep, ResidentReadRange};
 use vyre_driver_cuda::CudaBackendRegistration;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 

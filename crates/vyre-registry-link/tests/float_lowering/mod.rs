@@ -1,6 +1,6 @@
 //! Shared reading of the float lowering decision ledger.
 //!
-//! The ledger is `crates/vyre-driver/float-lowering-decisions.toml`: one row per
+//! The ledger is `crates/vyre-runtime/float-lowering-decisions.toml`: one row per
 //! backend stating what it does with each `FloatLoweringMode`. Two suites read
 //! it. The closure suite runs in every lane and asks whether a row exists for
 //! every backend and mode this build carries. The device suite runs only where
@@ -12,7 +12,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
 
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 use vyre_foundation::fp_parity::FloatLoweringMode;
 use vyre_registry_link::backend::{linked_backend_sources, live_backend_registry};
 
@@ -58,7 +58,7 @@ pub struct Decision {
 /// Where the ledger is, resolved from the checkout the test binary runs in.
 pub fn ledger_path() -> PathBuf {
     vyre_test_support::monorepo::vyre_workspace_root()
-        .join("crates/vyre-driver/float-lowering-decisions.toml")
+        .join("crates/vyre-runtime/float-lowering-decisions.toml")
 }
 
 /// The ledger as one row per backend id.

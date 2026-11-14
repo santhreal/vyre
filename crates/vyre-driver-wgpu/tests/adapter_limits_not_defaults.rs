@@ -13,7 +13,7 @@
 use crate::harness;
 use harness::{selected_adapter, shared_live_backend as live_backend};
 
-use vyre_driver::VyreBackend;
+use vyre_runtime::VyreBackend;
 
 // ------------------------------------------------------------------
 // 1. Limits must not be conservative defaults

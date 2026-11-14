@@ -7,7 +7,7 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_spirv::SpirvBackendRegistration;
 use vyre_foundation::ir::Program;
 use vyre_reference::value::Value;
@@ -169,7 +169,7 @@ fn spirv_rejects_cooperative_dispatch() {
         .dispatch(&program, &[pack_words(&a), pack_words(&b)], &config)
         .expect_err("Fix: SPIR-V must reject cooperative dispatch with UnsupportedFeature");
     match error {
-        vyre_driver::BackendError::UnsupportedFeature { name, backend } => {
+        vyre_runtime::BackendError::UnsupportedFeature { name, backend } => {
             assert!(name.contains("cooperative"), "got {name}");
             assert_eq!(backend, vyre_driver_spirv::SPIRV_BACKEND_ID);
         }

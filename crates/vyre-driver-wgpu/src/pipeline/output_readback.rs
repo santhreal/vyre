@@ -5,8 +5,8 @@
 //! device allocation and trimming on the host silently turns small logical
 //! outputs into full-buffer PCIe transfers.
 
-use vyre_driver::BackendError;
-use vyre_driver::OutputBindingLayout;
+use vyre_runtime::BackendError;
+use vyre_runtime::OutputBindingLayout;
 
 use crate::buffer::{GpuBufferHandle, StagingBufferPool};
 

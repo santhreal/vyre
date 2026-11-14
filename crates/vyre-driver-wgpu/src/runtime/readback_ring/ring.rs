@@ -3,8 +3,8 @@
 use crossbeam_channel::Receiver;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
-use vyre_driver::accounting::rebasing_atomic_next_u64;
-use vyre_driver::BackendError;
+use vyre_runtime::accounting::rebasing_atomic_next_u64;
+use vyre_runtime::BackendError;
 
 use super::capacity::{aligned_copy_len, staging_capacity, MAX_RING_SIZE, MIN_RING_SIZE};
 use super::slot::{

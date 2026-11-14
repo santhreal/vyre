@@ -4,7 +4,7 @@
 //! harnesses, so this test drives the backend trait surface with thousands of
 //! generated edge-heavy inputs instead of only hand-picked examples.
 
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_driver_reference::CpuRefEvaluator;
 use vyre_foundation::ir::Expr;
 

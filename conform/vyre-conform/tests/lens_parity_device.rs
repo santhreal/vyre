@@ -136,7 +136,7 @@ fn cpu_vs_backend_accepts_transcendental_ulp_divergence() {
     );
 }
 
-fn build_registered_backend() -> &'static vyre_driver::BackendRegistration {
+fn build_registered_backend() -> &'static vyre_runtime::BackendRegistration {
     vyre_conform::production::live_test_backend().expect(
         "Fix: a dispatch-capable backend must be registered for convergence lens. \
          Link a concrete driver crate into the test binary.",

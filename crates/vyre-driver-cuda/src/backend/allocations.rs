@@ -9,12 +9,12 @@ use cudarc::driver::sys::CUresult;
 use dashmap::DashMap;
 use rustc_hash::FxHasher;
 use smallvec::SmallVec;
-use vyre_driver::accounting::{
+use vyre_runtime::accounting::{
     checked_add_usize_lazy, checked_atomic_add_usize_guarded_with_order,
     checked_atomic_add_usize_with_order, checked_atomic_sub_usize,
     repair_atomic_sub_usize_with_order,
 };
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use super::staging_reserve::reserve_smallvec;
 

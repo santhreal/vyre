@@ -13,7 +13,7 @@ pub(crate) fn semantic_execution(
 ) -> (RegisteredSemanticExecutor, SemanticExecutionPolicy) {
     let _ = vyre_driver_wgpu::registered_backend_id();
     let registration =
-        vyre_driver::backend_registration(WGPU_BACKEND_ID).expect("registered WGPU backend");
+        vyre_runtime::backend_registration(WGPU_BACKEND_ID).expect("registered WGPU backend");
     let executor = RegisteredSemanticExecutor::new(registration);
     let policy = SemanticExecutionPolicy::new(
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),

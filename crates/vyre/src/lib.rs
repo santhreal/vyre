@@ -92,7 +92,7 @@ pub use vyre_runtime::artifact_admission::{
 /// Resident-queue submission against an admitted artifact.
 pub use vyre_runtime::persistent_executor::PersistentExecutor;
 
-pub use vyre_driver::{
+pub use vyre_runtime::{
     registered_backends, ArtifactInstance, BackendRegistration, BindingSet, Completion,
     DeviceIdentity, Submission,
 };
@@ -116,7 +116,7 @@ mod tests {
     // neither and the helper is dead code the workspace lint floor rejects.
     #[cfg(any(feature = "cuda", feature = "wgpu"))]
     fn backend_is_registered(id: &str) -> bool {
-        vyre_driver::registered_backends()
+        vyre_runtime::registered_backends()
             .expect("feature-selected backend registrations must not conflict")
             .iter()
             .any(|registration| registration.id == id)

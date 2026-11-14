@@ -2,7 +2,7 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::codegen::{
     program_to_ptx, program_to_ptx_for_sm, program_to_ptx_for_sm_and_subgroup,
 };

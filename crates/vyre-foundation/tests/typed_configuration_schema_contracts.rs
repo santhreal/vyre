@@ -261,7 +261,7 @@ fn source_derived_field_set_closure_and_bounds_validation() {
         "vyre-foundation",
         "vyre-runtime",
         "vyre-bench",
-        "vyre-driver",
+        "vyre-runtime",
         "vyre-driver-cuda",
         "vyre-driver-wgpu",
         "vyre-conform",

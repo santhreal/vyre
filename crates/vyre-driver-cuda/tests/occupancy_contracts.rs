@@ -6,7 +6,7 @@
 //! device: the arithmetic these assert is exactly what a host without a GPU can
 //! still get wrong.
 
-use vyre_driver::validation::blocks_per_compute_unit;
+use vyre_runtime::validation::blocks_per_compute_unit;
 use vyre_driver_cuda::occupancy::{
     can_launch_concurrently, cooperative_thread_residency_block_limit, estimate_occupancy,
     ConcurrentLaunchBlocker, ConcurrentLaunchDecision, KernelResourceUsage, OccupancyEstimate,

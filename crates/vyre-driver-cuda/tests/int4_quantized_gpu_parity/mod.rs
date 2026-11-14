@@ -11,7 +11,7 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_primitives::wire::{
     decode_f32_le_bytes_all, decode_i32_le_bytes_all, pack_f32_slice, pack_u32_slice,

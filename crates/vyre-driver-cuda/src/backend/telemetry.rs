@@ -2,10 +2,10 @@
 
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use vyre_driver::accounting::{
+use vyre_runtime::accounting::{
     atomic_max_u64, checked_atomic_add_u64 as checked_add_u64, pinning_atomic_increment_u64,
 };
-use vyre_driver::LaunchPlan;
+use vyre_runtime::LaunchPlan;
 
 /// Point-in-time CUDA backend telemetry.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
@@ -545,7 +545,7 @@ impl CudaTelemetry {
             return true;
         }
         let result = checked_add_u64(counter, value, |current, attempted| {
-            vyre_driver::BackendError::new(format!(
+            vyre_runtime::BackendError::new(format!(
                 "CUDA telemetry counter `{name}` overflowed u64: current={current}, add={attempted}. Fix: rotate telemetry snapshots or shard the dispatch accounting window before counters overflow."
             ))
         });
@@ -770,7 +770,7 @@ mod tests {
     #[test]
     fn launch_snapshot_reports_logical_thread_utilization_proxy() {
         let telemetry = CudaTelemetry::default();
-        let launch = vyre_driver::LaunchPlan {
+        let launch = vyre_runtime::LaunchPlan {
             grid: [1, 1, 1],
             workgroup: [128, 1, 1],
             element_count: 64,
@@ -793,7 +793,7 @@ mod tests {
     #[test]
     fn launch_snapshot_reports_unclamped_logical_element_density() {
         let telemetry = CudaTelemetry::default();
-        let launch = vyre_driver::LaunchPlan {
+        let launch = vyre_runtime::LaunchPlan {
             grid: [1, 1, 1],
             workgroup: [32, 1, 1],
             element_count: 96,
@@ -815,7 +815,7 @@ mod tests {
     #[test]
     fn launch_snapshot_records_thread_slot_overflow_instead_of_panicking() {
         let telemetry = CudaTelemetry::default();
-        let launch = vyre_driver::LaunchPlan {
+        let launch = vyre_runtime::LaunchPlan {
             grid: [u32::MAX, u32::MAX, u32::MAX],
             workgroup: [1024, 1024, 64],
             element_count: 1,

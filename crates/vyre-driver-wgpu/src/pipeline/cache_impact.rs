@@ -6,7 +6,7 @@
 //! error mapping around the shared reachability walk, so the two could disagree
 //! about which entries a change touched.
 
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 use vyre_megakernel::{SemanticExecutionPolicy, SemanticExecutor};
 
 /// The rule-graph state one invalidation is evaluated against.
@@ -39,7 +39,7 @@ impl RuleImpactQuery<'_> {
         executor: &dyn SemanticExecutor,
         policy: &SemanticExecutionPolicy,
     ) -> Result<Vec<u32>, BackendError> {
-        vyre_driver::cache_invalidation::impacted_entries(
+        vyre_runtime::cache_invalidation::impacted_entries(
             executor,
             policy,
             self.intervention_mask,

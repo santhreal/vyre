@@ -1,5 +1,5 @@
-use vyre_driver::BackendError;
-use vyre_driver::BindingRole;
+use vyre_runtime::BackendError;
+use vyre_runtime::BindingRole;
 
 use super::launch_params::launch_param_byte_len;
 use super::plan::CudaDispatchPlan;
@@ -198,7 +198,7 @@ mod tests {
     use std::sync::Arc;
 
     use smallvec::smallvec;
-    use vyre_driver::{BackendError, Binding, BindingPlan, BindingRole, LaunchPlan};
+    use vyre_runtime::{BackendError, Binding, BindingPlan, BindingRole, LaunchPlan};
 
     use super::*;
     use crate::backend::CudaDispatchPlan;

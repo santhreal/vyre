@@ -14,7 +14,7 @@ publish = false
 [dependencies]
 vyre = { workspace = true }
 vyre-foundation = { workspace = true }
-vyre-driver = { workspace = true, features = ["test-fixtures"] }
+vyre-runtime = { workspace = true, features = ["test-fixtures"] }
 vyre-driver-wgpu = { workspace = true }
 # Every driver crate is linked through this owner, which asserts that each one
 # reached the backend registry. Benchmarks report the linked dispatch set, so a
@@ -26,7 +26,6 @@ vyre-registry-link = { workspace = true, features = [
     "wgpu",
 ] }
 vyre-reference = { workspace = true }
-vyre-runtime = { workspace = true }
 # vyre-libs provides domain Program builders for benchmarks and verification.
 vyre-libs = { workspace = true, features = [
     "bitset",

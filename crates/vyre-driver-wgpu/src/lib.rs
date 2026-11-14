@@ -35,8 +35,8 @@ pub const WGPU_TARGET_ID: TargetId = TargetId::expect_valid(WGPU_BACKEND_ID);
 pub use stats::WgpuBackendStats;
 use std::hash::BuildHasherDefault;
 use std::sync::{atomic::AtomicBool, Arc};
-use vyre_driver::shape_prediction::{ShapeFingerprint, ShapeHistory};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::shape_prediction::{ShapeFingerprint, ShapeHistory};
+use vyre_runtime::DispatchConfig;
 use vyre_foundation::ir::DataType;
 use vyre_foundation::ir::Program;
 use vyre_foundation::validate::BackendValidationCapabilities;
@@ -71,7 +71,7 @@ pub struct WgpuBackend {
             BuildHasherDefault<rustc_hash::FxHasher>,
         >,
     >,
-    pub(crate) validation_cache: Arc<vyre_driver::validation::ValidationCache>,
+    pub(crate) validation_cache: Arc<vyre_runtime::validation::ValidationCache>,
     pub(crate) shape_history: Arc<std::sync::Mutex<ShapeHistory>>,
     pub(crate) predicted_programs: Arc<
         dashmap::DashMap<
@@ -82,7 +82,7 @@ pub struct WgpuBackend {
     >,
     pub(crate) bind_group_layout_cache: Arc<
         dashmap::DashMap<
-            vyre_driver::BackendLayoutFingerprint,
+            vyre_runtime::BackendLayoutFingerprint,
             Arc<[Arc<wgpu::BindGroupLayout>]>,
             BuildHasherDefault<rustc_hash::FxHasher>,
         >,
@@ -94,7 +94,7 @@ pub struct WgpuBackend {
     /// buffer lives; this table is the strong reference that decides that.
     pub(crate) resident_handles: Arc<
         dashmap::DashMap<
-            vyre_driver::ResidentHandle,
+            vyre_runtime::ResidentHandle,
             crate::buffer::GpuBufferHandle,
             BuildHasherDefault<rustc_hash::FxHasher>,
         >,
@@ -193,7 +193,7 @@ impl BackendValidationCapabilities for WgpuBackend {
 /// Create an artifact materializer bound to the selected WGPU adapter.
 pub fn artifact_materializer(
     backend: WgpuBackend,
-) -> Result<Box<dyn vyre_driver::ArtifactMaterializer>, vyre_driver::BackendError> {
+) -> Result<Box<dyn vyre_runtime::ArtifactMaterializer>, vyre_runtime::BackendError> {
     materializer::materializer_for_backend(backend)
 }
 
@@ -210,20 +210,20 @@ pub fn registered_backend_id() -> Option<&'static str> {
     Some(WGPU_BACKEND_ID)
 }
 
-vyre_driver::register_backend! {
+vyre_runtime::register_backend! {
     id: WGPU_BACKEND_ID,
     target_id: WGPU_TARGET_ID,
     payload_format: Some(target_compiler::WGPU_TARGET_FORMAT),
     reference_oracle: false,
     factory: || {
-        WgpuBackend::acquire().map(|backend| Box::new(backend) as Box<dyn vyre_driver::VyreBackend>)
+        WgpuBackend::acquire().map(|backend| Box::new(backend) as Box<dyn vyre_runtime::VyreBackend>)
     },
-    supported_ops: vyre_driver::default_supported_ops_with_trap,
-    semantic_operations: vyre_driver::dialect_only_supported_ops,
+    supported_ops: vyre_runtime::default_supported_ops_with_trap,
+    semantic_operations: vyre_runtime::dialect_only_supported_ops,
     target_compiler: Some(target_compiler::target_compiler_factory),
     materializer: Some(materializer::materializer_factory),
     rank: 30,
 }
 
-impl vyre_driver::sealed::Sealed for crate::pipeline::WgpuPipeline {}
-impl vyre_driver::sealed::Sealed for WgpuBackend {}
+impl vyre_runtime::sealed::Sealed for crate::pipeline::WgpuPipeline {}
+impl vyre_runtime::sealed::Sealed for WgpuBackend {}

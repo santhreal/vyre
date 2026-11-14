@@ -5,7 +5,7 @@
 //! handles; the parent pipeline module stays out of resource ownership policy.
 
 use smallvec::SmallVec;
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 use vyre_lower::TRAP_SIDECAR_WORDS;
 
 use crate::numeric::WGPU_NUMERIC;
@@ -29,7 +29,7 @@ impl WgpuPipeline {
 
     pub(crate) fn resolve_persistent_resources(
         &self,
-        resources: &[vyre_driver::Resource],
+        resources: &[vyre_runtime::Resource],
         queue: &wgpu::Queue,
     ) -> Result<ResolvedPersistentResources, BackendError> {
         let binding_capacity = self.buffer_bindings.len();
@@ -93,11 +93,11 @@ impl WgpuPipeline {
     fn resolve_persistent_resource(
         &self,
         info: &BufferBindingInfo,
-        resource: &vyre_driver::Resource,
+        resource: &vyre_runtime::Resource,
         queue: &wgpu::Queue,
     ) -> Result<crate::buffer::GpuBufferHandle, BackendError> {
         match resource {
-            vyre_driver::Resource::Resident(id) => {
+            vyre_runtime::Resource::Resident(id) => {
                 let handle = crate::buffer::GpuBufferHandle::from_resident_handle(
                     *id,
                     "WGPU persistent resident dispatch",
@@ -111,7 +111,7 @@ impl WgpuPipeline {
                 validate_handle("persistent", info, &handle)?;
                 Ok(handle)
             }
-            vyre_driver::Resource::Borrowed(bytes) => {
+            vyre_runtime::Resource::Borrowed(bytes) => {
                 let byte_len = self.persistent_resource_byte_len(info, Some(bytes.as_slice()))?;
                 let byte_len_u64 =
                     WGPU_NUMERIC.usize_to_u64(byte_len, "persistent resource bytes")?;

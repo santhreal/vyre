@@ -10,7 +10,7 @@
 
 use naga::{ArraySize, ResourceBinding, TypeInner};
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_driver_wgpu::emit::{self, WgpuProgram};
 use vyre_driver_wgpu::runtime::EnabledFeatures;
 

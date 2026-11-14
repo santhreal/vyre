@@ -11,7 +11,7 @@
 use crate::harness;
 use harness::{add_one_input, add_one_program, shared_live_backend};
 
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 const WORDS: u32 = 257;
 

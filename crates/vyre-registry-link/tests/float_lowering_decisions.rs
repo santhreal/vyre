@@ -22,7 +22,7 @@
 
 use std::collections::BTreeSet;
 
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_foundation::fp_parity::FloatLoweringMode;
 use vyre_registry_link::backend::{linked_backend_sources, DECLARED_SOURCES};
 
@@ -93,7 +93,7 @@ fn unsupported_backend_refuses_strict_ieee_compilation_and_cache_key_generation(
     _config.float_lowering = FloatLoweringMode::StrictIeee;
 
     for backend in ["cuda", "metal", "spirv"] {
-        let err = vyre_driver::BackendError::reject_blocked_contraction(
+        let err = vyre_runtime::BackendError::reject_blocked_contraction(
             &_program,
             FloatLoweringMode::StrictIeee,
             backend,
@@ -101,11 +101,11 @@ fn unsupported_backend_refuses_strict_ieee_compilation_and_cache_key_generation(
         .expect_err("Fix: unsupported backend must reject blocked contraction");
         assert_eq!(
             err.code(),
-            vyre_driver::ErrorCode::UnsupportedFeature,
+            vyre_runtime::ErrorCode::UnsupportedFeature,
             "Fix: refusal error code must be UnsupportedFeature for {backend}"
         );
         match err {
-            vyre_driver::BackendError::UnsupportedFeature {
+            vyre_runtime::BackendError::UnsupportedFeature {
                 name,
                 backend: err_backend,
             } => {

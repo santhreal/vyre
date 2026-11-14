@@ -43,7 +43,7 @@ spirv-val = []
 device-tests = []
 
 [dependencies]
-vyre-driver = { workspace = true }
+vyre-runtime = { workspace = true }
 vyre-foundation = { workspace = true }
 vyre-megakernel = { workspace = true }
 vyre-lower = { workspace = true }
@@ -51,7 +51,7 @@ vyre-emit = { workspace = true, features = ["spirv"] }
 ash.workspace = true
 
 [dev-dependencies]
-vyre-driver = { workspace = true, features = ["test-fixtures"] }
+vyre-runtime = { workspace = true, features = ["test-fixtures"] }
 # integration tests/benches assert against these crates' public APIs
 vyre-reference = { workspace = true }
 tempfile.workspace = true

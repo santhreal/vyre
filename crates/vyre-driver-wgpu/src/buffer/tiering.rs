@@ -8,7 +8,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 use crossbeam_channel::{bounded, Receiver, Sender, TrySendError};
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 const TIERING_EVENT_CAPACITY_MIN: usize = 1024;
 const TIERING_EVENT_CAPACITY_MAX: usize = 65_536;

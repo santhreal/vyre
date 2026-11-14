@@ -4,7 +4,7 @@
 //! one device-copy duty for static launch parameters so `src/pipeline.rs`
 //! remains orchestration-only.
 
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use crate::backend::allocations::DeviceAllocation;
 use crate::backend::copy::aligned_async_copy_len;

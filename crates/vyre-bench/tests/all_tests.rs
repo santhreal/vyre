@@ -86,10 +86,6 @@ pub mod finite_queue_artifact;
 #[path = "nvme_gpu_ingest_telemetry.rs"]
 pub mod nvme_gpu_ingest_telemetry;
 
-/// Integration tests from `tests/perf_analyses_snapshot.rs`.
-#[path = "perf_analyses_snapshot.rs"]
-pub mod perf_analyses_snapshot;
-
 /// Integration tests from `tests/performance_contract_baseline_truth.rs`.
 #[path = "performance_contract_baseline_truth.rs"]
 pub mod performance_contract_baseline_truth;

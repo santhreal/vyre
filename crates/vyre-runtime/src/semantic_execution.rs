@@ -2,11 +2,11 @@
 
 use std::collections::BTreeMap;
 
-use vyre_driver::{BackendRegistration, BindingSet, BoundResource};
 use vyre_megakernel::{
     ArtifactValueId, SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionRequest,
     SemanticExecutor,
 };
+use vyre_runtime::{BackendRegistration, BindingSet, BoundResource};
 
 use crate::artifact_admission::{ArtifactSession, ArtifactSessionError};
 

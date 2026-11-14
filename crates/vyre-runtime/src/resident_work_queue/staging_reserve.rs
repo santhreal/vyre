@@ -1,7 +1,7 @@
 //! Shared fallible staging reservations for megakernel host-side runtime paths.
 
 use crate::PipelineError;
-use vyre_driver::reservation_policy::ReservationPolicy;
+use vyre_runtime::reservation_policy::ReservationPolicy;
 
 const MEGAKERNEL_STAGING: ReservationPolicy = ReservationPolicy::new(
     "megakernel runtime staging",

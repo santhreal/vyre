@@ -5,7 +5,7 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_libs::graph::program_graph::ProgramGraphShape;
 use vyre_libs::graph::tensor_flow_forward::{
     tensor_flow_forward, try_tensor_words, TENSOR_FLOW_FORWARD_WORKGROUP_SIZE,

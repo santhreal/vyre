@@ -5,7 +5,7 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_driver::backend_precedence;
+use vyre_runtime::backend_precedence;
 use vyre_driver_wgpu::runtime::router::{BackendRouter, Override, Reason};
 use vyre_foundation::ir::Program;
 

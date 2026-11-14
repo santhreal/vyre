@@ -2,9 +2,9 @@ use std::ffi::c_void;
 use std::fmt::Write as _;
 
 use cudarc::driver::sys::CUstream;
-use vyre_driver::accounting::checked_add_usize_lazy;
-use vyre_driver::transfer_accounting::TransferAccountingPolicy;
-use vyre_driver::{BackendError, PendingDispatch};
+use vyre_runtime::accounting::checked_add_usize_lazy;
+use vyre_runtime::transfer_accounting::TransferAccountingPolicy;
+use vyre_runtime::{BackendError, PendingDispatch};
 use vyre_foundation::ir::Program;
 
 use super::super::plan::CudaDispatchPlan;
@@ -29,7 +29,7 @@ pub(crate) struct CudaReadyPending {
 pub(crate) const CUDA_HOST_TRANSFER_ACCOUNTING: TransferAccountingPolicy =
     TransferAccountingPolicy::new("CUDA", "split the dispatch into bounded chunks");
 
-impl vyre_driver::sealed::Sealed for CudaReadyPending {}
+impl vyre_runtime::sealed::Sealed for CudaReadyPending {}
 
 impl PendingDispatch for CudaReadyPending {
     fn is_ready(&self) -> bool {
@@ -91,7 +91,7 @@ pub(crate) fn check_workgroup_scratch_budget(
         // the limit and error, but it reports a scratch total the program does not
         // have, and the file's accounting contract forbids saturating arithmetic
         // for exactly that reason.
-        total = vyre_driver::accounting::checked_add_u64_usize_offset_lazy(
+        total = vyre_runtime::accounting::checked_add_u64_usize_offset_lazy(
             total,
             bytes,
             || {
@@ -208,8 +208,8 @@ mod tests {
     use crate::backend::CudaDispatchPlan;
     use smallvec::smallvec;
     use std::sync::Arc;
-    use vyre_driver::LaunchPlan;
-    use vyre_driver::{Binding, BindingPlan, BindingRole};
+    use vyre_runtime::LaunchPlan;
+    use vyre_runtime::{Binding, BindingPlan, BindingRole};
 
     #[test]
     fn host_upload_batch_capacity_counts_inputs_once_plus_params() {

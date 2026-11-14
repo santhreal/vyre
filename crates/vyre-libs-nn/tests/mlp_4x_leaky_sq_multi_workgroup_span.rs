@@ -20,7 +20,7 @@
 //!    value is overwritten with one computed from zeros.
 //!
 //! The grid is not the caller's choice. A `BufferDecl::workgroup` binding makes
-//! the program shared, and `vyre-driver` `dispatch_element_count_for_program`
+//! the program shared, and `vyre-runtime` `dispatch_element_count_for_program`
 //! (mirrored by the reference interpreter's `force_full_span`) then sizes the
 //! dispatch to the WIDEST NON-SHARED binding. Here that is `w1` at
 //! `model_dim * hidden_dim`, never the `model_dim` the body actually walks, so a

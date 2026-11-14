@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use metal::{Buffer, Device};
-use vyre_driver::{BackendError, BindingPlan, BindingRole, OutputBindingLayout};
+use vyre_runtime::{BackendError, BindingPlan, BindingRole, OutputBindingLayout};
 
 use super::resident::{
     copy_to_shared_buffer, metal_physical_buffer_len, new_host_input_buffer, new_zero_buffer,

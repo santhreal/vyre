@@ -2,7 +2,7 @@
 
 use std::sync::Arc;
 
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use super::binding::{
     accepts_params_handle, clear_outputs_for_bound, consumes_host_input, declared_byte_size,
@@ -225,7 +225,7 @@ impl WgpuPipeline {
     ) -> Result<(Vec<GpuBufferHandle>, Vec<GpuBufferHandle>), BackendError> {
         let (_device, queue) = &*self.device_queue;
         let mut input_handles = Vec::new();
-        vyre_driver::allocation::try_reserve_vec_to_capacity(
+        vyre_runtime::allocation::try_reserve_vec_to_capacity(
             &mut input_handles,
             self.buffer_bindings.len(),
         )
@@ -236,7 +236,7 @@ impl WgpuPipeline {
             ))
         })?;
         let mut output_handles = Vec::new();
-        vyre_driver::allocation::try_reserve_vec_to_capacity(
+        vyre_runtime::allocation::try_reserve_vec_to_capacity(
             &mut output_handles,
             self.buffer_bindings.len(),
         )
@@ -423,7 +423,7 @@ impl WgpuPipeline {
         let mut grouped_bound: Vec<
             smallvec::SmallVec<[(&BufferBindingInfo, &GpuBufferHandle); 16]>,
         > = Vec::new();
-        vyre_driver::allocation::try_reserve_vec_to_capacity(
+        vyre_runtime::allocation::try_reserve_vec_to_capacity(
             &mut grouped_bound,
             self.bind_group_layouts.len(),
         )
@@ -456,7 +456,7 @@ impl WgpuPipeline {
             slot.push((*info, *handle));
         }
         let mut bind_groups = Vec::new();
-        vyre_driver::allocation::try_reserve_vec_to_capacity(
+        vyre_runtime::allocation::try_reserve_vec_to_capacity(
             &mut bind_groups,
             self.bind_group_layouts.len(),
         )

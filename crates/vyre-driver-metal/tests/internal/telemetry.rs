@@ -9,7 +9,7 @@ use super::*;
 use std::collections::BTreeMap;
 
 use super::fixtures::stores_word;
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 
 #[test]
 fn apple_backend_metric_snapshot_exposes_cache_and_resident_counters() {

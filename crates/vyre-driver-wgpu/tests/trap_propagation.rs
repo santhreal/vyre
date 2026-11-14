@@ -2,7 +2,7 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 

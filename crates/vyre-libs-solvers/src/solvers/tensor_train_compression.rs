@@ -170,7 +170,7 @@ pub fn compress_cost_tensor_f32_via_with_scratch_into(
             rem,
             r_next,
         );
-        // Real-backend dispatch-input contract (vyre-driver `role_for_buffer`): one input per
+        // Real-backend dispatch-input contract (vyre-runtime `role_for_buffer`): one input per
         // INPUT-CONSUMING buffer in buffer order. The step declares six such buffers. `input_matrix`
         // RO (0) then the plain-ReadWrite `u_out` (1, m*r_next), `rem_out` (2, r_next*rem), and the
         // internal `tt_ata`/`tt_evec` Gram+eigenvector (3,4, rem*rem each) and `tt_eval` (5, rem)

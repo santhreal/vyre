@@ -2,9 +2,9 @@
 
 use std::collections::BTreeMap;
 
-use vyre_driver::{BackendError, BackendRegistration, Completion, DeviceIdentity};
 use vyre_foundation::diagnostics::RetryClass;
 use vyre_megakernel::{ArtifactValueId, Digest};
+use vyre_runtime::{BackendError, BackendRegistration, Completion, DeviceIdentity};
 
 use crate::artifact_admission::{ArtifactSession, ArtifactSessionError, RetainedArtifactSession};
 use crate::recovery::classify_backend_error;

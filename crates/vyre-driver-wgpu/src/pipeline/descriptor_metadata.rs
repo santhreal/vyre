@@ -8,7 +8,7 @@
 use std::sync::Arc;
 
 use rustc_hash::FxHashSet;
-use vyre_driver::{BackendError, BackendLayoutClass, BackendLayoutFingerprint, BackendLayoutSlot};
+use vyre_runtime::{BackendError, BackendLayoutClass, BackendLayoutFingerprint, BackendLayoutSlot};
 use vyre_emit::naga::program::TrapTag;
 use vyre_lower::TRAP_SIDECAR_NAME;
 
@@ -58,7 +58,7 @@ pub fn descriptor_buffer_bindings(
     host_input_bindings: &FxHashSet<(u32, u32)>,
 ) -> Result<Vec<BufferBindingInfo>, BackendError> {
     let mut bindings = Vec::new();
-    vyre_driver::allocation::try_reserve_vec_to_capacity(
+    vyre_runtime::allocation::try_reserve_vec_to_capacity(
         &mut bindings,
         descriptor.bindings.slots.len(),
     )
@@ -105,7 +105,7 @@ pub(crate) fn bind_group_layout_fingerprint(
     bindings: &[BufferBindingInfo],
 ) -> Result<BackendLayoutFingerprint, BackendError> {
     let mut slots = Vec::new();
-    vyre_driver::allocation::try_reserve_vec_to_capacity(&mut slots, bindings.len()).map_err(|source| {
+    vyre_runtime::allocation::try_reserve_vec_to_capacity(&mut slots, bindings.len()).map_err(|source| {
         BackendError::new(format!(
             "bind-group layout fingerprint allocation failed for {} bindings: {source}. Fix: split the lowered kernel before WGPU pipeline metadata extraction.",
             bindings.len()
@@ -151,7 +151,7 @@ pub(crate) fn create_bind_group_layouts(
         ))
     })?;
     let mut layouts: Vec<Arc<wgpu::BindGroupLayout>> = Vec::new();
-    vyre_driver::allocation::try_reserve_vec_to_capacity(&mut layouts, group_count).map_err(|source| {
+    vyre_runtime::allocation::try_reserve_vec_to_capacity(&mut layouts, group_count).map_err(|source| {
         BackendError::new(format!(
             "bind-group layout vector allocation failed for {group_count} groups: {source}. Fix: split the lowered kernel before WGPU pipeline creation."
         ))
@@ -162,7 +162,7 @@ pub(crate) fn create_bind_group_layouts(
             .filter(|binding| binding.group == group_index)
             .count();
         let mut entries = Vec::new();
-        vyre_driver::allocation::try_reserve_vec_to_capacity(&mut entries, group_binding_count).map_err(|source| {
+        vyre_runtime::allocation::try_reserve_vec_to_capacity(&mut entries, group_binding_count).map_err(|source| {
             BackendError::new(format!(
                 "bind-group layout entry allocation failed for group {group_index} with {group_binding_count} bindings: {source}. Fix: split the lowered kernel before WGPU pipeline creation."
             ))

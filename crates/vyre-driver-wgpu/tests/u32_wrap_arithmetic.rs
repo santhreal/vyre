@@ -5,7 +5,7 @@
 use crate::harness;
 use harness::u32_bytes;
 
-use vyre_driver::VyreBackend;
+use vyre_runtime::VyreBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 #[test]
@@ -36,7 +36,7 @@ fn u32_mul_accumulate_wraps_to_low_32_bits() {
         .dispatch_borrowed(
             &program,
             &[out_init.as_slice(), a.as_slice(), b.as_slice()],
-            &vyre_driver::DispatchConfig::default(),
+            &vyre_runtime::DispatchConfig::default(),
         )
         .expect("Fix: WGPU must dispatch the u32 wrapping arithmetic contract.");
     assert_eq!(outputs, vec![u32_bytes(&[0])]);

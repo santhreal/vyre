@@ -18,7 +18,7 @@
 //! DRAM / PCIe-BAR speed instead of the ~90 MB/s staged path.
 
 use crate::numeric::WGPU_NUMERIC;
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 /// Write the aligned byte prefix and one padded 4-byte tail, returning the
 /// first byte after the logical padded payload.

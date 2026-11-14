@@ -205,7 +205,7 @@ vyre = { workspace = true }
 vyre-primitives = { workspace = true, features = ["hardware"], default-features = false }
 vyre-emit = { workspace = true, features = ["naga"] }
 vyre-lower = { workspace = true }
-vyre-driver = { workspace = true }
+vyre-runtime = { workspace = true }
 vyre-reference = { workspace = true }
 proptest.workspace = true
 naga.workspace = true

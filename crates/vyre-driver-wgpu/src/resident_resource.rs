@@ -6,10 +6,10 @@ use crate::WgpuBackend;
 pub(crate) fn allocate_resident(
     backend: &WgpuBackend,
     byte_len: usize,
-) -> Result<vyre_driver::Resource, vyre_driver::BackendError> {
+) -> Result<vyre_runtime::Resource, vyre_runtime::BackendError> {
     let device_queue = backend.current_device_queue();
     let len = u64::try_from(byte_len).map_err(|source| {
-        vyre_driver::BackendError::new(format!(
+        vyre_runtime::BackendError::new(format!(
             "WGPU resident allocation byte length {byte_len} cannot fit u64: {source}. Fix: shard the resident buffer before allocation."
         ))
     })?;
@@ -20,22 +20,22 @@ pub(crate) fn allocate_resident(
     )?;
     let id = handle.resident_handle()?;
     backend.resident_handles.insert(id, handle);
-    Ok(vyre_driver::Resource::Resident(id))
+    Ok(vyre_runtime::Resource::Resident(id))
 }
 
 /// Free one backend-resident WGPU buffer.
 pub(crate) fn free_resident(
     backend: &WgpuBackend,
-    resource: vyre_driver::Resource,
-) -> Result<(), vyre_driver::BackendError> {
-    let vyre_driver::Resource::Resident(id) = resource else {
-        return Err(vyre_driver::BackendError::new(
+    resource: vyre_runtime::Resource,
+) -> Result<(), vyre_runtime::BackendError> {
+    let vyre_runtime::Resource::Resident(id) = resource else {
+        return Err(vyre_runtime::BackendError::new(
             "WGPU resident free received a borrowed resource. Fix: only free handles returned by allocate_resident.",
         ));
     };
     crate::buffer::check_resident_owner(id, "WGPU resident free")?;
     backend.resident_handles.remove(&id).ok_or_else(|| {
-        vyre_driver::BackendError::new(format!(
+        vyre_runtime::BackendError::new(format!(
             "WGPU resident free received stale handle {id}. Fix: free each resident resource exactly once."
         ))
     })?;

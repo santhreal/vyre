@@ -12,7 +12,7 @@ use dashmap::mapref::entry::Entry;
 use dashmap::DashMap;
 use rustc_hash::FxHasher;
 use smallvec::SmallVec;
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use super::cache_key::{
     module_cache_key_from_domain_digest, ModuleCacheKey, PtxSourceCacheKey,
@@ -222,8 +222,8 @@ impl CudaModuleCache {
         self.modules.len()
     }
 
-    pub(crate) fn snapshot(&self) -> vyre_driver::PipelineCacheSnapshot {
-        vyre_driver::PipelineCacheSnapshot {
+    pub(crate) fn snapshot(&self) -> vyre_runtime::PipelineCacheSnapshot {
+        vyre_runtime::PipelineCacheSnapshot {
             hits: self.hits.load(Ordering::Relaxed),
             misses: self.misses.load(Ordering::Relaxed),
         }
@@ -244,7 +244,7 @@ impl CudaModuleCache {
             "module cache eviction removal key",
         ) else {
             self.modules.clear();
-            vyre_driver::cache_eviction::record_eviction_counts(keys.len(), keys.len());
+            vyre_runtime::cache_eviction::record_eviction_counts(keys.len(), keys.len());
             return;
         };
 
@@ -253,7 +253,7 @@ impl CudaModuleCache {
         for key in &to_remove {
             self.modules.remove(key);
         }
-        vyre_driver::cache_eviction::record_eviction_counts(dropped, total);
+        vyre_runtime::cache_eviction::record_eviction_counts(dropped, total);
     }
 }
 

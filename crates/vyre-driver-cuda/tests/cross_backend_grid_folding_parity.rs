@@ -20,7 +20,7 @@
 #![cfg(feature = "device-tests")]
 
 use crate::harness;
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 

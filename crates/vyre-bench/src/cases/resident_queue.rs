@@ -148,7 +148,7 @@ pub(crate) fn resident_pool_sets_metric(resident_used: bool, sample_sets: usize)
 mod tests {
     use super::{account, resident_pool_sets_metric};
     use crate::api::resident::ResidentDispatch;
-    use vyre_driver::TimedDispatchResult;
+    use vyre_runtime::TimedDispatchResult;
 
     fn dispatch(
         wall_ns: u64,

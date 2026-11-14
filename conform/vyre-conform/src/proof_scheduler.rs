@@ -34,7 +34,7 @@ pub(crate) fn proof_worker_count(item_count: usize) -> usize {
 
 pub(crate) fn prepare_entries_in_parallel(
     entries: Vec<UnifiedEntry>,
-    backends: &[&'static vyre_driver::BackendRegistration],
+    backends: &[&'static vyre_runtime::BackendRegistration],
 ) -> PreparedEntryBatch {
     if entries.is_empty() {
         return PreparedEntryBatch {
@@ -142,7 +142,7 @@ pub(crate) fn prepare_entries_in_parallel(
 /// Each backend still runs inside a scope of its own, so a panic below the
 /// worker scope is one backend's rows rather than the process.
 pub(crate) fn prove_backends_in_sequence(
-    backends: &[&'static vyre_driver::BackendRegistration],
+    backends: &[&'static vyre_runtime::BackendRegistration],
     prepared_entries: &[PreparedEntry],
 ) -> Vec<Vec<ConformanceResult>> {
     let mut results = Vec::with_capacity(backends.len());
@@ -179,7 +179,7 @@ pub(crate) fn prove_backends_in_sequence(
 }
 
 fn prove_one_backend(
-    backend: &'static vyre_driver::BackendRegistration,
+    backend: &'static vyre_runtime::BackendRegistration,
     prepared_entries: &[PreparedEntry],
 ) -> Vec<ConformanceResult> {
     let started = std::time::Instant::now();

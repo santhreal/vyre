@@ -2,7 +2,7 @@
 //! many handles a plan needs, and the cursor that takes the next handle or
 //! bound resource in that order.
 
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use crate::backend::plan::CudaDispatchPlan;
 use crate::backend::resident::{CudaDispatchBinding, CudaResidentBuffer};

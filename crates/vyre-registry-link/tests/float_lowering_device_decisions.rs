@@ -1,6 +1,6 @@
 //! Does a shipped backend answer what the float lowering ledger claims?
 //!
-//! WHY: a row in `crates/vyre-driver/float-lowering-decisions.toml` is a claim about
+//! WHY: a row in `crates/vyre-runtime/float-lowering-decisions.toml` is a claim about
 //! an implementation, and a claim nothing compares against the implementation
 //! is a comment. Every case here constructs a real backend, so the suite is
 //! admitted only where a device is.
@@ -17,7 +17,7 @@
 #![cfg(feature = "device-tests")]
 #![forbid(unsafe_code)]
 
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_foundation::fp_parity::FloatLoweringMode;
 use vyre_foundation::ir::UnOp;
 use vyre_registry_link::backend::live_backend_registry;

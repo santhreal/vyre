@@ -6,7 +6,7 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_libs::reduce::gather::gather;
 use vyre_libs::reduce::histogram::histogram;
 use vyre_libs::reduce::radix_sort::radix_sort;

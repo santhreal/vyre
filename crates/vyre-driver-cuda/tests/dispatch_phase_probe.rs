@@ -22,7 +22,7 @@ use std::collections::BTreeMap;
 use std::process::Command;
 
 use crate::harness::{add_one_program, resident_compiled_cuda_outputs};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 
 const HELPER_FLAG: &str = "VYRE_CUDA_PHASE_PROBE_HELPER";
 const RECORD: &str = "vyre-cuda-dispatch-phase";

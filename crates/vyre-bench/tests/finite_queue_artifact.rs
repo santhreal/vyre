@@ -33,7 +33,7 @@ fn finite_queue_program_compiles_to_authenticated_cuda_payload() {
         compiler::compile(&request).expect("finite queue graph must compile to a neutral artifact");
     vyre_registry_link::backend::live_backend_registry()
         .expect("Fix: the backend registry must freeze cleanly");
-    let registration = vyre_driver::backend_registration(vyre_driver_cuda::CUDA_BACKEND_ID)
+    let registration = vyre_runtime::backend_registration(vyre_driver_cuda::CUDA_BACKEND_ID)
         .expect("CUDA target compiler registration must be linked");
     let compiler = registration
         .target_compiler()

@@ -236,7 +236,7 @@ impl<'a> AsyncUringStream<'a> {
             // Successful DMA: bytes landed in GPU-visible memory. Tail
             // publication is batched after CQ drain so one poll with N
             // completions performs one release atomic instead of N.
-            completed = vyre_driver::accounting::checked_add_u32_value(
+            completed = vyre_runtime::accounting::checked_add_u32_value(
                 completed,
                 1,
                 PipelineError::CounterOverflow {
@@ -595,7 +595,7 @@ fn empty_iovec_storage() -> PipelineError {
 
 fn checked_chunk_target_offset(chunk_idx: usize, len: u32) -> Result<u64, PipelineError> {
     let chunk_idx = usize_to_u64(chunk_idx, "chunk index")?;
-    vyre_driver::accounting::checked_mul_u64_lazy(chunk_idx, u64::from(len), || {
+    vyre_runtime::accounting::checked_mul_u64_lazy(chunk_idx, u64::from(len), || {
         PipelineError::CounterOverflow {
             scope: CounterScope::IoUring,
             counter: "chunk destination offset",
@@ -609,7 +609,7 @@ fn checked_chunk_target_offset(chunk_idx: usize, len: u32) -> Result<u64, Pipeli
 }
 
 fn checked_target_end(target_offset: u64, len: u32) -> Result<u64, PipelineError> {
-    vyre_driver::accounting::checked_add_u64_lazy(target_offset, u64::from(len), || {
+    vyre_runtime::accounting::checked_add_u64_lazy(target_offset, u64::from(len), || {
         PipelineError::CounterOverflow {
             scope: CounterScope::IoUring,
             counter: "target range end offset",
@@ -624,7 +624,7 @@ fn checked_target_end(target_offset: u64, len: u32) -> Result<u64, PipelineError
 
 fn increment_queue_counter(counter: &mut u32, label: &'static str) -> Result<(), PipelineError> {
     let current = *counter;
-    *counter = vyre_driver::accounting::checked_add_u32_value(
+    *counter = vyre_runtime::accounting::checked_add_u32_value(
         current,
         1,
         PipelineError::CounterOverflow {

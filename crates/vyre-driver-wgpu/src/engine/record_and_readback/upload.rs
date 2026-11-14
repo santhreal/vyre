@@ -1,5 +1,5 @@
 use crate::numeric::WGPU_NUMERIC;
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 pub(super) fn pool_backend_error(error: impl std::fmt::Display) -> BackendError {
     BackendError::new(format!(

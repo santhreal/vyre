@@ -3,8 +3,8 @@
 use std::sync::{Arc, Mutex};
 
 use smallvec::SmallVec;
-use vyre_driver::input_identity::{domain_separated_exact_input_key, ExactInputKey};
-use vyre_driver::{
+use vyre_runtime::input_identity::{domain_separated_exact_input_key, ExactInputKey};
+use vyre_runtime::{
     dispatch_configs_share_launch_shape, sealed, BackendError, DispatchConfig, LaunchPlan,
 };
 use vyre_foundation::ir::Program;
@@ -210,7 +210,7 @@ pub(crate) fn require_compiled_launch_shape(
         return Ok(());
     }
     Err(BackendError::InvalidProgram {
-        fix: "Fix: a compiled CUDA pipeline was dispatched with a config that changes its launch shape, as `vyre_driver::dispatch_configs_share_launch_shape` defines it. Compile the artifact for that config and dispatch the instance it materializes.".to_string(),
+        fix: "Fix: a compiled CUDA pipeline was dispatched with a config that changes its launch shape, as `vyre_runtime::dispatch_configs_share_launch_shape` defines it. Compile the artifact for that config and dispatch the instance it materializes.".to_string(),
     })
 }
 
@@ -236,8 +236,8 @@ fn select_cuda_pipeline_execution_strategy(
 mod tests {
     use std::sync::Arc;
 
-    use vyre_driver::replace_output_buffers_preserving_slots;
-    use vyre_driver::LaunchPlan;
+    use vyre_runtime::replace_output_buffers_preserving_slots;
+    use vyre_runtime::LaunchPlan;
 
     use super::{cuda_compiled_pipeline_identity_key, require_compiled_launch_shape};
 
@@ -246,7 +246,7 @@ mod tests {
     /// one differing in a shape field is rejected with the recompile fix.
     #[test]
     fn dispatch_config_must_preserve_the_compiled_launch_shape() {
-        let compiled = vyre_driver::DispatchConfig::default();
+        let compiled = vyre_runtime::DispatchConfig::default();
         let mut timeout_only = compiled.clone();
         timeout_only.timeout = Some(std::time::Duration::from_millis(1));
         require_compiled_launch_shape(&compiled, &compiled)
@@ -261,7 +261,7 @@ mod tests {
         for reshaped in [regridded, refixed] {
             let error = require_compiled_launch_shape(&compiled, &reshaped)
                 .expect_err("Fix: a reshaped config must be rejected");
-            let vyre_driver::BackendError::InvalidProgram { fix } = error else {
+            let vyre_runtime::BackendError::InvalidProgram { fix } = error else {
                 panic!("Fix: a reshaped config must report InvalidProgram, got {error:?}");
             };
             assert!(

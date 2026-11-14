@@ -2,7 +2,7 @@ use crate::dispatch_timeout::{deadline, enforce_budget, reject_unserviceable};
 use crate::pipeline::tuning::wgpu_launch_limits;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use vyre_driver::validation::LaunchGeometryLimits;
+use vyre_runtime::validation::LaunchGeometryLimits;
 use vyre_foundation::ir::Program;
 
 use crate::{PredictedProgram, WgpuBackend};
@@ -22,17 +22,17 @@ pub(crate) struct WgpuPendingDispatch {
 
 struct WgpuLaunchFeedback {
     program: Arc<Program>,
-    config: vyre_driver::DispatchConfig,
+    config: vyre_runtime::DispatchConfig,
     limits: LaunchGeometryLimits,
     element_count: u32,
     workgroup: [u32; 3],
 }
 
-impl vyre_driver::sealed::Sealed for WgpuPendingDispatch {}
+impl vyre_runtime::sealed::Sealed for WgpuPendingDispatch {}
 
 impl WgpuPendingDispatch {
     pub(crate) fn ready(
-        outputs: vyre_driver::OutputBuffers,
+        outputs: vyre_runtime::OutputBuffers,
         started: Instant,
         timeout: Option<Duration>,
     ) -> Self {
@@ -47,7 +47,7 @@ impl WgpuPendingDispatch {
 
     pub(crate) fn await_owned(
         self,
-    ) -> Result<vyre_driver::OutputBuffers, vyre_driver::BackendError> {
+    ) -> Result<vyre_runtime::OutputBuffers, vyre_runtime::BackendError> {
         let Self {
             kind,
             started,
@@ -69,8 +69,8 @@ impl WgpuPendingDispatch {
 
     pub(crate) fn await_into(
         self,
-        outputs: &mut vyre_driver::OutputBuffers,
-    ) -> Result<(), vyre_driver::BackendError> {
+        outputs: &mut vyre_runtime::OutputBuffers,
+    ) -> Result<(), vyre_runtime::BackendError> {
         let Self {
             kind,
             started,
@@ -81,7 +81,7 @@ impl WgpuPendingDispatch {
         run_prefetch(prefetch);
         match kind {
             WgpuPendingKind::Ready(ready) => {
-                vyre_driver::replace_output_buffers_preserving_slots(ready, outputs);
+                vyre_runtime::replace_output_buffers_preserving_slots(ready, outputs);
                 Ok(())
             }
             WgpuPendingKind::Readback(pending) => match deadline(started, timeout) {
@@ -96,9 +96,9 @@ impl WgpuPendingDispatch {
     pub(crate) fn await_mapped_outputs<F>(
         self,
         mut visitor: F,
-    ) -> Result<(), vyre_driver::BackendError>
+    ) -> Result<(), vyre_runtime::BackendError>
     where
-        F: FnMut(usize, &[u8]) -> Result<(), vyre_driver::BackendError>,
+        F: FnMut(usize, &[u8]) -> Result<(), vyre_runtime::BackendError>,
     {
         let Self {
             kind,
@@ -132,7 +132,7 @@ impl WgpuPendingDispatch {
 
     pub(crate) fn await_timed_owned(
         self,
-    ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
+    ) -> Result<vyre_runtime::TimedDispatchResult, vyre_runtime::BackendError> {
         let Self {
             kind,
             started,
@@ -149,7 +149,7 @@ impl WgpuPendingDispatch {
             },
         };
         if let (Some(feedback), Some(measured_device_ns)) = (launch_feedback, device_ns) {
-            let _accepted = vyre_driver::record_launch_measurement(
+            let _accepted = vyre_runtime::record_launch_measurement(
                 &feedback.program,
                 &feedback.config,
                 feedback.limits,
@@ -159,7 +159,7 @@ impl WgpuPendingDispatch {
             );
         }
         enforce_budget(started, timeout, "dispatch exceeded configured timeout")?;
-        Ok(vyre_driver::TimedDispatchResult::device_timed(
+        Ok(vyre_runtime::TimedDispatchResult::device_timed(
             outputs,
             crate::numeric::WGPU_NUMERIC.elapsed_nanos_u64(started, "timed dispatch")?,
             device_ns,
@@ -167,18 +167,18 @@ impl WgpuPendingDispatch {
     }
 }
 
-impl vyre_driver::PendingDispatch for WgpuPendingDispatch {
+impl vyre_runtime::PendingDispatch for WgpuPendingDispatch {
     fn is_ready(&self) -> bool {
         self.is_ready_inner()
     }
 
-    fn await_result(self: Box<Self>) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
+    fn await_result(self: Box<Self>) -> Result<Vec<Vec<u8>>, vyre_runtime::BackendError> {
         (*self).await_owned()
     }
 
     fn await_timed_result(
         self: Box<Self>,
-    ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
+    ) -> Result<vyre_runtime::TimedDispatchResult, vyre_runtime::BackendError> {
         (*self).await_timed_owned()
     }
 }
@@ -191,8 +191,8 @@ impl WgpuBackend {
         &self,
         program: &Program,
         inputs: &[&[u8]],
-        config: &vyre_driver::DispatchConfig,
-    ) -> Result<WgpuPendingDispatch, vyre_driver::BackendError> {
+        config: &vyre_runtime::DispatchConfig,
+    ) -> Result<WgpuPendingDispatch, vyre_runtime::BackendError> {
         self.dispatch_borrowed_async_mode(program, inputs, config, false)
     }
 
@@ -200,8 +200,8 @@ impl WgpuBackend {
         &self,
         program: &Program,
         inputs: &[&[u8]],
-        config: &vyre_driver::DispatchConfig,
-    ) -> Result<WgpuPendingDispatch, vyre_driver::BackendError> {
+        config: &vyre_runtime::DispatchConfig,
+    ) -> Result<WgpuPendingDispatch, vyre_runtime::BackendError> {
         self.dispatch_borrowed_async_mode(program, inputs, config, true)
     }
 
@@ -209,18 +209,18 @@ impl WgpuBackend {
         &self,
         program: &Program,
         inputs: &[&[u8]],
-        config: &vyre_driver::DispatchConfig,
+        config: &vyre_runtime::DispatchConfig,
         capture_timing: bool,
-    ) -> Result<WgpuPendingDispatch, vyre_driver::BackendError> {
+    ) -> Result<WgpuPendingDispatch, vyre_runtime::BackendError> {
         let started = Instant::now();
         self.enforce_config_caps(config)?;
         self.validate_with_cache(program)?;
-        if vyre_driver::grid_sync::contains_grid_sync(program)
-            && !vyre_driver::VyreBackend::supports_grid_sync(self)
+        if vyre_runtime::grid_sync::contains_grid_sync(program)
+            && !vyre_runtime::VyreBackend::supports_grid_sync(self)
         {
             return Ok(WgpuPendingDispatch {
                 kind: WgpuPendingKind::Ready(
-                    vyre_driver::grid_sync::dispatch_with_grid_sync_split(
+                    vyre_runtime::grid_sync::dispatch_with_grid_sync_split(
                         self, program, inputs, config,
                     )?,
                 ),
@@ -237,10 +237,10 @@ impl WgpuBackend {
         &self,
         program: &Program,
         inputs: &[&[u8]],
-        config: &vyre_driver::DispatchConfig,
+        config: &vyre_runtime::DispatchConfig,
         started: Instant,
         capture_timing: bool,
-    ) -> Result<WgpuPendingDispatch, vyre_driver::BackendError> {
+    ) -> Result<WgpuPendingDispatch, vyre_runtime::BackendError> {
         if program.is_explicit_noop() {
             return Ok(WgpuPendingDispatch {
                 kind: WgpuPendingKind::Ready(Vec::new()),
@@ -294,12 +294,12 @@ impl WgpuBackend {
 
 fn wgpu_launch_feedback(
     program: &Program,
-    config: &vyre_driver::DispatchConfig,
+    config: &vyre_runtime::DispatchConfig,
     pipeline: &crate::pipeline::WgpuPipeline,
-) -> Result<WgpuLaunchFeedback, vyre_driver::BackendError> {
+) -> Result<WgpuLaunchFeedback, vyre_runtime::BackendError> {
     let limits = wgpu_launch_limits(&pipeline.device_queue.0);
     let element_count = u32::try_from(pipeline.output_word_count).map_err(|source| {
-        vyre_driver::BackendError::new(format!(
+        vyre_runtime::BackendError::new(format!(
             "WGPU launch feedback output word count {} cannot fit u32: {source}. Fix: split the dispatch before recording a timed launch measurement.",
             pipeline.output_word_count
         ))
@@ -316,7 +316,7 @@ fn wgpu_launch_feedback(
 struct PipelinePrefetch {
     backend: WgpuBackend,
     program: Arc<Program>,
-    config: vyre_driver::DispatchConfig,
+    config: vyre_runtime::DispatchConfig,
 }
 
 impl PipelinePrefetch {
@@ -344,9 +344,9 @@ impl WgpuBackend {
     fn next_shape_prefetch(
         &self,
         program: &Program,
-        config: &vyre_driver::DispatchConfig,
-    ) -> Result<Option<PipelinePrefetch>, vyre_driver::BackendError> {
-        let fingerprint = vyre_driver::program_vsa_fingerprint_words(program);
+        config: &vyre_runtime::DispatchConfig,
+    ) -> Result<Option<PipelinePrefetch>, vyre_runtime::BackendError> {
+        let fingerprint = vyre_runtime::program_vsa_fingerprint_words(program);
         self.predicted_programs
             .entry(fingerprint)
             .and_modify(|cached| cached.config = config.clone())
@@ -356,11 +356,11 @@ impl WgpuBackend {
             });
 
         let predicted = {
-            let mut history = vyre_driver::lock_policy::govern_mutex(
+            let mut history = vyre_runtime::lock_policy::govern_mutex(
                 &self.shape_history,
                 "wgpu_backend",
                 "shape_history",
-                vyre_driver::lock_policy::RecoveryClass::TransactionallyRecoverable,
+                vyre_runtime::lock_policy::RecoveryClass::TransactionallyRecoverable,
             )?;
             history.record(fingerprint);
             self.predicted_programs
@@ -382,7 +382,7 @@ impl WgpuBackend {
     }
 }
 
-pub(crate) fn timestamp_profile_requested(config: &vyre_driver::DispatchConfig) -> bool {
+pub(crate) fn timestamp_profile_requested(config: &vyre_runtime::DispatchConfig) -> bool {
     matches!(
         config.profile.as_deref(),
         Some("gpu-timestamps" | "wgpu-timestamps" | "timestamps")

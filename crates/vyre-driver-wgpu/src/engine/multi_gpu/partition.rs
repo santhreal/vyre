@@ -66,7 +66,7 @@ pub fn partition_work_stealing(
 ) -> Result<Vec<Partition>, String> {
     validate_inputs(devices, items)?;
     let mut partitions = Vec::new();
-    vyre_driver::allocation::try_reserve_vec_to_capacity(&mut partitions, devices.len()).map_err(|error| {
+    vyre_runtime::allocation::try_reserve_vec_to_capacity(&mut partitions, devices.len()).map_err(|error| {
         format!(
             "partition table allocation failed for {} GPU devices: {error}. Fix: lower the adapter fanout or memory pressure before scheduling.",
             devices.len()
@@ -87,7 +87,7 @@ pub fn partition_work_stealing(
     for device in devices {
         let partition_index = partitions.len();
         let mut item_ids = Vec::new();
-        vyre_driver::allocation::try_reserve_vec_to_capacity(&mut item_ids, target_item_capacity).map_err(|error| {
+        vyre_runtime::allocation::try_reserve_vec_to_capacity(&mut item_ids, target_item_capacity).map_err(|error| {
             format!(
                 "partition assignment allocation failed for GPU device {} and {} target work slots: {error}. Fix: split the multi-GPU batch.",
                 device.device_index, target_item_capacity
@@ -106,7 +106,7 @@ pub fn partition_work_stealing(
     }
 
     let mut ordered = Vec::new();
-    vyre_driver::allocation::try_reserve_vec_to_capacity(&mut ordered, items.len()).map_err(|error| {
+    vyre_runtime::allocation::try_reserve_vec_to_capacity(&mut ordered, items.len()).map_err(|error| {
         format!(
             "partition work-order allocation failed for {} items: {error}. Fix: split the multi-GPU batch.",
             items.len()

@@ -1,5 +1,5 @@
 use crate::api::case::{BenchContext, BenchError};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_foundation::ir::Program;
 
 /// Result of a dispatch that includes backend device timing when available.

@@ -1,6 +1,6 @@
 //! Shared preferred-dispatch backend registry contracts for driver crates.
 
-use vyre_driver::{acquire_preferred_dispatch_backend, backend_dispatches, backend_precedence};
+use vyre_runtime::{acquire_preferred_dispatch_backend, backend_dispatches, backend_precedence};
 
 /// Assert the registry reports `backend_id` as dispatching at
 /// `expected_precedence`.

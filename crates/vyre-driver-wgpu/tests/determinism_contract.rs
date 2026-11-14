@@ -12,7 +12,7 @@
 
 use proptest::prelude::*;
 use std::sync::LazyLock;
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::{BinOp, BufferDecl, DataType, Expr, Node, UnOp};
 

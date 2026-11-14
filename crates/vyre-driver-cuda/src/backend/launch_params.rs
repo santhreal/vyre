@@ -1,6 +1,6 @@
 //! Checked CUDA launch-parameter sizing.
 
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 /// Return the byte length of a CUDA launch-parameter word block.
 pub(crate) fn launch_param_byte_len(

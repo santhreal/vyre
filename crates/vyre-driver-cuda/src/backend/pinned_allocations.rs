@@ -9,7 +9,7 @@ use crossbeam_queue::ArrayQueue;
 use dashmap::DashMap;
 use rustc_hash::FxHasher;
 use smallvec::SmallVec;
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use super::allocations::{
     allocation_bucket, allocation_bucket_cache_slots, reserve_cached_bytes,
@@ -85,7 +85,7 @@ impl PinnedHostAllocation {
         byte_offset: usize,
         byte_len: usize,
     ) -> Result<(), BackendError> {
-        let end = vyre_driver::accounting::checked_usize_byte_range_end_lazy(
+        let end = vyre_runtime::accounting::checked_usize_byte_range_end_lazy(
             byte_offset,
             byte_len,
             self.byte_len,
@@ -177,7 +177,7 @@ impl PinnedHostAllocation {
     ) -> Result<(), BackendError> {
         // The bounds check is the point: it rejects an out-of-range slice
         // before the pointer arithmetic below.
-        vyre_driver::accounting::checked_usize_byte_range_end_lazy(
+        vyre_runtime::accounting::checked_usize_byte_range_end_lazy(
             byte_offset,
             byte_len,
             self.byte_len,
@@ -507,7 +507,7 @@ impl HostTransferAllocations {
     }
 
     fn reserve_next_allocation_slot(&mut self, context: &'static str) -> Result<(), BackendError> {
-        let next_len = vyre_driver::accounting::checked_add_usize_lazy(
+        let next_len = vyre_runtime::accounting::checked_add_usize_lazy(
             self.allocations.len(),
             1,
             || {
@@ -522,7 +522,7 @@ impl HostTransferAllocations {
     }
 
     fn reserve_next_output_slot(&mut self, context: &'static str) -> Result<(), BackendError> {
-        let next_len = vyre_driver::accounting::checked_add_usize_lazy(
+        let next_len = vyre_runtime::accounting::checked_add_usize_lazy(
             self.outputs.len(),
             1,
             || {
@@ -679,7 +679,7 @@ impl HostTransferAllocations {
         };
         // The bounds check is the point: it rejects a range past the transfer
         // length before any copy is attempted.
-        vyre_driver::accounting::checked_usize_byte_range_end_lazy(
+        vyre_runtime::accounting::checked_usize_byte_range_end_lazy(
             byte_offset,
             byte_len,
             transfer.byte_len,

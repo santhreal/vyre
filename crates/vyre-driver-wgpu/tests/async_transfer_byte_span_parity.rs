@@ -15,7 +15,7 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::Program;
 use vyre_test_support::async_span_parity::{assert_matrix_covers_every_alignment, cases, SpanCase};

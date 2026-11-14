@@ -61,13 +61,13 @@ impl CacheTier {
     ///
     /// # Errors
     ///
-    /// Returns [`vyre_driver::BackendError`] if tier LRU metadata cannot be
+    /// Returns [`vyre_runtime::BackendError`] if tier LRU metadata cannot be
     /// reserved.
     #[inline]
     pub fn try_new(
         name: impl Into<String>,
         capacity: u64,
-    ) -> Result<Self, vyre_driver::BackendError> {
+    ) -> Result<Self, vyre_runtime::BackendError> {
         Ok(Self {
             name: name.into(),
             capacity,
@@ -208,10 +208,10 @@ impl TieredCache {
     ///
     /// # Errors
     ///
-    /// Returns [`vyre_driver::BackendError`] if cache access metadata cannot be
+    /// Returns [`vyre_runtime::BackendError`] if cache access metadata cannot be
     /// reserved.
     #[inline]
-    pub fn try_new(tiers: Vec<CacheTier>) -> Result<Self, vyre_driver::BackendError> {
+    pub fn try_new(tiers: Vec<CacheTier>) -> Result<Self, vyre_runtime::BackendError> {
         Self::try_with_policy(tiers, LruPolicy::default())
     }
 }
@@ -241,13 +241,13 @@ impl TieredCache {
     ///
     /// # Errors
     ///
-    /// Returns [`vyre_driver::BackendError`] if cache access metadata cannot be
+    /// Returns [`vyre_runtime::BackendError`] if cache access metadata cannot be
     /// reserved.
     #[inline]
     pub fn try_with_policy(
         tiers: Vec<CacheTier>,
         policy: LruPolicy,
-    ) -> Result<Self, vyre_driver::BackendError> {
+    ) -> Result<Self, vyre_runtime::BackendError> {
         Ok(Self {
             tiers,
             tracker: AccessTracker::try_new()?,

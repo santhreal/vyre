@@ -38,14 +38,14 @@ impl SpirvBackend {
     /// identity-by-meaning key that crosses backend boundaries.
     #[must_use]
     pub fn program_fingerprint(program: &Program) -> Vec<u32> {
-        vyre_driver::program_vsa_fingerprint(program)
+        vyre_runtime::program_vsa_fingerprint(program)
     }
 
     /// Snapshot the driver-tier observability surface
-    /// ([`vyre_driver::observability::DriverObservability`]).
+    /// ([`vyre_runtime::observability::DriverObservability`]).
     #[must_use]
-    pub fn observability_snapshot() -> vyre_driver::observability::DriverObservability {
-        vyre_driver::observability::DriverObservability::snapshot()
+    pub fn observability_snapshot() -> vyre_runtime::observability::DriverObservability {
+        vyre_runtime::observability::DriverObservability::snapshot()
     }
 
     /// SPIR-V module disk-cache directory. Same on-disk-key family as

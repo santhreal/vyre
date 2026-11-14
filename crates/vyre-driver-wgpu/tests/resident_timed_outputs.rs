@@ -7,7 +7,7 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_driver::VyreBackend;
+use vyre_runtime::VyreBackend;
 
 use vyre_test_support::resident_async_overlap_contract::{
     add_program, assert_resident_async_slots_retire_independently, DeviceTiming,
@@ -35,7 +35,7 @@ fn resident_timed_dispatch_returns_public_readwrite_outputs() {
         let timed = backend.dispatch_resident_timed(
             &program,
             &[out.clone(), input.clone()],
-            &vyre_driver::DispatchConfig::default(),
+            &vyre_runtime::DispatchConfig::default(),
         )?;
         assert_eq!(
             timed.outputs.len(),
@@ -47,7 +47,7 @@ fn resident_timed_dispatch_returns_public_readwrite_outputs() {
             timed.device_ns.unwrap_or_default() > 0,
             "Fix: WGPU resident timed dispatch must report GPU timestamp device_ns so release benchmarks do not fall back to readback wall time."
         );
-        Ok::<(), vyre_driver::BackendError>(())
+        Ok::<(), vyre_runtime::BackendError>(())
     })();
     let free_out = backend.free_resident(out);
     let free_input = backend.free_resident(input);

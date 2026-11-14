@@ -676,21 +676,6 @@ feature = "default"
 publication_class = "conformance-tooling"
 
 [[package_features]]
-package = "vyre-driver"
-feature = "default"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-driver"
-feature = "libs-compositions"
-publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-driver"
-feature = "test-fixtures"
-publication_class = "extension-sdk"
-
-[[package_features]]
 package = "vyre-driver-cuda"
 feature = "cuda"
 publication_class = "concrete-backend"
@@ -1663,6 +1648,11 @@ publication_class = "internal-engine"
 [[package_features]]
 package = "vyre-runtime"
 feature = "subgroup-ops"
+publication_class = "internal-engine"
+
+[[package_features]]
+package = "vyre-runtime"
+feature = "test-fixtures"
 publication_class = "internal-engine"
 
 [[package_features]]

@@ -88,7 +88,7 @@ impl<'a> GpuMappedBuffer<'a> {
         let offset_u64 = mapped_byte_count(offset, "GpuMappedBuffer sub-region offset")?;
         let len_u64 = mapped_byte_count(len, "GpuMappedBuffer sub-region length")?;
         let region_len = mapped_byte_count(self.len, "GpuMappedBuffer mapped length")?;
-        let _end = vyre_driver::accounting::checked_usize_byte_range_end_lazy(
+        let _end = vyre_runtime::accounting::checked_usize_byte_range_end_lazy(
             offset,
             len,
             self.len,

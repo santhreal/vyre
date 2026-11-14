@@ -35,9 +35,9 @@ use harness::{
     bytes_u32, cross_block_grid_sync_expected, cross_block_grid_sync_inputs,
     cross_block_grid_sync_program, CROSS_BLOCK_GRID_SYNC_WORKGROUP,
 };
-use vyre_driver::resolve_launch_workgroup;
-use vyre_driver::validation::LaunchGeometryLimits;
-use vyre_driver::DispatchConfig;
+use vyre_runtime::resolve_launch_workgroup;
+use vyre_runtime::validation::LaunchGeometryLimits;
+use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::occupancy::cooperative_thread_residency_block_limit;
 use vyre_driver_cuda::{cuda_factory, CudaBackend};
 use vyre_foundation::ir::MemoryOrdering;

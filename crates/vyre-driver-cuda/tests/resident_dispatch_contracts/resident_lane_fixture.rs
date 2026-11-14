@@ -167,8 +167,8 @@ pub(super) fn free_resource_lanes(backend: &CudaBackendRegistration, lanes: Vec<
 pub(super) fn step<'a>(
     program: &'a Program,
     resources: &'a [Resource],
-) -> vyre_driver::ResidentDispatchStep<'a> {
-    vyre_driver::ResidentDispatchStep {
+) -> vyre_runtime::ResidentDispatchStep<'a> {
+    vyre_runtime::ResidentDispatchStep {
         program,
         resources,
         launch: None,
@@ -180,8 +180,8 @@ pub(super) fn read_range(
     resource: &Resource,
     byte_offset: usize,
     byte_len: usize,
-) -> vyre_driver::ResidentReadRange<'_> {
-    vyre_driver::ResidentReadRange {
+) -> vyre_runtime::ResidentReadRange<'_> {
+    vyre_runtime::ResidentReadRange {
         resource,
         byte_offset,
         byte_len,

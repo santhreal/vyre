@@ -193,7 +193,7 @@ consumed_by = [
 
 [[layer]]
 name = "test-tooling"
-rank = 5
+rank = 7
 purpose = "Shared verification fixtures and harness support, private to the workspace."
 # No production consumer. A fixture crate is reached by a dev-dependency
 # only, which cargo resolves in a separate graph.
@@ -293,7 +293,7 @@ consumed_by = [
 
 [[layer]]
 name = "tooling"
-rank = 7
+rank = 8
 purpose = "Gates, benchmarks, and generators that read the whole workspace."
 # A gate binary reaches the gate registry and the evidence crates beside it,
 # and nothing else reaches any of them.
@@ -312,7 +312,7 @@ responsibility = "Public facade. Re-export IR, driver, runtime, and the artifact
 [[crate]]
 package = "vyre-alloc-probe"
 path = "crates/vyre-alloc-probe"
-layer = "standalone-tooling"
+layer = "test-tooling"
 seam = "allocation-probe"
 interface = "Per-thread heap counters installed as the global allocator."
 responsibility = "Count heap traffic per thread behind a GlobalAlloc wrapper, so an allocation budget measures the code under test rather than the test schedule. Depends on no vyre crate, so a harness binary links it at run time and a driver suite links it as a dev-dependency."
@@ -348,15 +348,6 @@ layer = "conformance"
 seam = "conformance-schema"
 interface = "Versioned conformance case, result and certificate schemas."
 responsibility = "Define conformance case, result, and certificate schemas against the public facade."
-
-[[crate]]
-package = "vyre-driver"
-path = "crates/vyre-driver"
-layer = "backend-neutral"
-seam = "backend-contract"
-interface = "The backend-neutral target, materialization, submission and completion contracts, and the driver registry every backend registers into."
-responsibility = "Define backend-neutral device, target compiler registration, artifact materialization, binding, submission, completion, capability, dispatch, and evidence contracts."
-facade_exported = true
 
 [[crate]]
 package = "vyre-driver-cuda"
@@ -655,8 +646,8 @@ package = "vyre-runtime"
 path = "crates/vyre-runtime"
 layer = "runtime"
 seam = "runtime"
-interface = "Artifact admission, residency, submission, recovery and readback lifecycle."
-responsibility = "Execute the artifact's selected persistence: sessions, recovery, residency, scheduling, caches, telemetry, readback, and IO. Does not decide whether to be persistent."
+interface = "Backend-neutral target, materialization, submission and completion contracts, the backend registry, and artifact admission, residency, recovery and readback."
+responsibility = "Define the device, target compiler registration, artifact materialization, binding, submission, completion, capability and dispatch contracts every backend registers into, and execute the artifact\'s selected persistence: sessions, recovery, residency, scheduling, caches, readback, and IO."
 facade_exported = true
 
 [[crate]]
@@ -994,6 +985,3 @@ reason = "vyre, vyre-registry-link and vyre-driver-wgpu each gate their own link
 name = "gpu"
 reason = "vyre-conform and vyre-primitives each gate their own requirement for a real device, and the sets do not overlap"
 
-[[configuration.shared_capability]]
-name = "libs-compositions"
-reason = "vyre-driver and vyre-runtime each select the vyre-libs domains their own compositions need, and neither set is the other"

@@ -75,11 +75,11 @@ fn required_input<'a>(
     prefix: &str,
     input_kind: &str,
     fix: &str,
-) -> Result<&'a [u8], vyre_driver::BackendError> {
+) -> Result<&'a [u8], vyre_runtime::BackendError> {
     inputs
         .get(input_index)
         .copied()
-        .ok_or_else(|| vyre_driver::BackendError::InvalidProgram {
+        .ok_or_else(|| vyre_runtime::BackendError::InvalidProgram {
             fix: format!(
                 "Fix: {prefix} {context} expected {input_kind} index {input_index} for `{binding_name}` but only {} {input_kind}(s) were supplied. {fix}",
                 inputs.len()
@@ -94,7 +94,7 @@ macro_rules! define_required_input {
             input_index: usize,
             binding_name: &str,
             context: &'static str,
-        ) -> Result<&'a [u8], vyre_driver::BackendError> {
+        ) -> Result<&'a [u8], vyre_runtime::BackendError> {
             super::required_input(
                 inputs,
                 input_index,

@@ -34,6 +34,6 @@ pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 /// Exposes substrate counters + decision histograms so callers
 /// emitting AOT bundles can include them in their build provenance.
 #[must_use]
-pub fn observability_snapshot() -> vyre_driver::observability::DriverObservability {
-    vyre_driver::observability::DriverObservability::snapshot()
+pub fn observability_snapshot() -> vyre_runtime::observability::DriverObservability {
+    vyre_runtime::observability::DriverObservability::snapshot()
 }

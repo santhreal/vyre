@@ -13,7 +13,7 @@
 
 use std::collections::BTreeMap;
 
-use vyre_driver::BoundResource;
+use vyre_runtime::BoundResource;
 use vyre_driver_wgpu::{registered_backend_id, WGPU_BACKEND_ID};
 use vyre_megakernel::{
     attach_target, compile, CompileObjective, CompileRequest, Digest, ExternalFacts,
@@ -29,7 +29,7 @@ const INPUT_LANES: [u32; 4] = [1, 2, 3, 4];
 fn wgpu_executes_pure_dataflow_connected_graph() {
     let _ = registered_backend_id();
     let registration =
-        vyre_driver::backend_registration(WGPU_BACKEND_ID).expect("registered WGPU backend");
+        vyre_runtime::backend_registration(WGPU_BACKEND_ID).expect("registered WGPU backend");
     let device = registration
         .acquire()
         .expect("WGPU device acquisition must succeed");

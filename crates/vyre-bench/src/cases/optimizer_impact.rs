@@ -201,7 +201,7 @@ fn dispatch_variant(
     ctx: &BenchContext,
     program: &Program,
     prepared: &OptimizerImpactPrepared,
-) -> Result<vyre_driver::TimedDispatchResult, BenchError> {
+) -> Result<vyre_runtime::TimedDispatchResult, BenchError> {
     if let Some(resident) = &prepared.resident {
         return resident
             .dispatch_execution_timed(ctx, program, &ctx.dispatch_config)

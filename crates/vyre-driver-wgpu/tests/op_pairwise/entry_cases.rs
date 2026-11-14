@@ -6,8 +6,8 @@ use std::collections::BTreeMap;
 use std::sync::LazyLock;
 use vyre::ir::DataType;
 use vyre::ir::{BufferAccess, BufferDecl, Program};
-use vyre_driver::DispatchConfig;
-use vyre_driver::VyreBackend;
+use vyre_runtime::DispatchConfig;
+use vyre_runtime::VyreBackend;
 use vyre_foundation::fp_parity;
 use vyre_reference::value::Value;
 

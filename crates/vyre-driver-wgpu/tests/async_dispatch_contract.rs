@@ -5,7 +5,7 @@
 use crate::harness;
 use harness::add_one_program;
 
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::{BinOp, BufferDecl, DataType, Expr, Node, Program};
 
@@ -285,7 +285,7 @@ fn dispatch_borrowed_for_each_mapped_output_propagates_visitor_error() {
 
     let error = backend
         .dispatch_borrowed_for_each_mapped_output(&program, &borrowed, &config, |_, _| {
-            Err(vyre_driver::BackendError::new(
+            Err(vyre_runtime::BackendError::new(
                 "visitor rejected mapped output",
             ))
         })

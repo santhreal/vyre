@@ -5,7 +5,7 @@ use metal::{
     Buffer, CommandBuffer, ComputePipelineState, Device, MTLCommandBufferStatus, MTLSize,
     NSUInteger,
 };
-use vyre_driver::{
+use vyre_runtime::{
     dispatch_element_count_for_program, enforce_actual_output_budget,
     infer_dispatch_grid_for_count, output_binding_layouts, sealed, BackendError, BindingPlan,
     DispatchConfig, OutputBindingLayout, PendingDispatch, TimedDispatchResult,

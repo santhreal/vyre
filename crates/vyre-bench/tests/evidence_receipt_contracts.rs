@@ -1009,7 +1009,7 @@ fn compiler_source_crates_name_zero_workload_or_expert_baselines() {
         "crates/vyre-megakernel/src",
         "crates/vyre-lower/src",
         "crates/vyre-runtime/src",
-        "crates/vyre-driver/src",
+        "crates/vyre-runtime/src",
         "crates/vyre-primitives/src",
         "crates/vyre-spec/src",
         "crates/vyre-aot/src",

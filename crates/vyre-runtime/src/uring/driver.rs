@@ -452,7 +452,7 @@ impl<'a> NvmeGpuIngestDriver<'a> {
                 fix: "pass the namespace block size",
             });
         }
-        let byte_count = vyre_driver::accounting::checked_mul_u32_value(
+        let byte_count = vyre_runtime::accounting::checked_mul_u32_value(
             blocks,
             bytes_per_block,
             PipelineError::CounterOverflow {
@@ -735,7 +735,7 @@ fn checked_telemetry_add(
     increment: u64,
     label: &'static str,
 ) -> Result<u64, PipelineError> {
-    vyre_driver::accounting::checked_add_u64_lazy(current, increment, || {
+    vyre_runtime::accounting::checked_add_u64_lazy(current, increment, || {
         PipelineError::CounterOverflow {
             scope: CounterScope::IoUring,
             counter: label,
@@ -760,7 +760,7 @@ fn usize_to_u64(value: usize, label: &'static str) -> Result<u64, PipelineError>
 fn slot_byte_offset(slot_idx: usize, slot_bytes: usize) -> Result<u64, PipelineError> {
     let slot_idx_u64 = usize_to_u64(slot_idx, "io_uring ingest slot index")?;
     let slot_bytes_u64 = usize_to_u64(slot_bytes, "io_uring ingest slot byte length")?;
-    let offset = vyre_driver::accounting::checked_mul_usize_lazy(slot_idx, slot_bytes, || {
+    let offset = vyre_runtime::accounting::checked_mul_usize_lazy(slot_idx, slot_bytes, || {
         PipelineError::CounterOverflow {
             scope: CounterScope::IoUring,
             counter: "io_uring ingest slot byte offset",

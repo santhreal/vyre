@@ -7,7 +7,7 @@ pub(crate) mod self_optimizer;
 use std::{collections::BTreeMap, sync::Arc};
 
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 pub(crate) use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_megakernel::{
@@ -130,7 +130,7 @@ const PARITY_ARTIFACT_BYTES: u64 = 1_000_000;
 
 pub(crate) fn cuda_semantic_execution() -> (RegisteredSemanticExecutor, SemanticExecutionPolicy) {
     let _ = vyre_driver_cuda::registered_backend_id();
-    let registration = vyre_driver::backend_registration(vyre_driver_cuda::CUDA_BACKEND_ID)
+    let registration = vyre_runtime::backend_registration(vyre_driver_cuda::CUDA_BACKEND_ID)
         .expect("registered CUDA backend");
     let device = registration.acquire().expect("live CUDA backend");
     let executor = RegisteredSemanticExecutor::new(registration);
@@ -183,8 +183,8 @@ pub(crate) struct AdmittedCudaArtifact {
     /// Collective-lowered program, present when lowering rewrote it.
     pub(crate) program: Option<Program>,
     pub(crate) envelope: vyre_megakernel::ArtifactEnvelope,
-    pub(crate) materializer: Box<dyn vyre_driver::ArtifactMaterializer>,
-    pub(crate) instance: Box<dyn vyre_driver::ArtifactInstance>,
+    pub(crate) materializer: Box<dyn vyre_runtime::ArtifactMaterializer>,
+    pub(crate) instance: Box<dyn vyre_runtime::ArtifactInstance>,
 }
 
 /// Compile `program` for the acquired CUDA device and materialize it.
@@ -201,7 +201,7 @@ pub(crate) fn materialized_cuda_artifact(
                 panic!("Fix: CUDA generated case `{case_name}` collective lowering failed: {error}")
             });
     let admitted_program = lowered_program.as_ref().unwrap_or(program);
-    let registration = vyre_driver::backend_registration(vyre_driver_cuda::CUDA_BACKEND_ID)
+    let registration = vyre_runtime::backend_registration(vyre_driver_cuda::CUDA_BACKEND_ID)
         .unwrap_or_else(|error| {
             panic!("Fix: CUDA generated case `{case_name}` registration failed: {error}")
         });
@@ -282,10 +282,10 @@ pub(crate) fn compiled_cuda_outputs(
     let program = admitted.program.as_ref().unwrap_or(program);
     let envelope = &admitted.envelope;
     let instance = admitted.instance.as_ref();
-    let plan = vyre_driver::BindingPlan::build(program).unwrap_or_else(|error| {
+    let plan = vyre_runtime::BindingPlan::build(program).unwrap_or_else(|error| {
         panic!("Fix: CUDA generated case `{case_name}` binding plan failed: {error}")
     });
-    let mut bindings = vyre_driver::BindingSet::new(envelope.neutral().digest());
+    let mut bindings = vyre_runtime::BindingSet::new(envelope.neutral().digest());
     for binding in &plan.bindings {
         let Some(input_index) = binding.input_index else {
             continue;
@@ -303,7 +303,7 @@ pub(crate) fn compiled_cuda_outputs(
             });
         bindings.insert(
             resource.value,
-            vyre_driver::BoundResource::Host(inputs[input_index].clone()),
+            vyre_runtime::BoundResource::Host(inputs[input_index].clone()),
         );
     }
     let completion = instance
@@ -364,13 +364,13 @@ pub(crate) fn resident_compiled_cuda_outputs(
 ) -> Vec<Vec<u8>> {
     let admitted = materialized_cuda_artifact(program, case_name);
     let program = admitted.program.as_ref().unwrap_or(program);
-    let plan = vyre_driver::BindingPlan::build(program).unwrap_or_else(|error| {
+    let plan = vyre_runtime::BindingPlan::build(program).unwrap_or_else(|error| {
         panic!("Fix: CUDA resident artifact case `{case_name}` binding plan failed: {error}")
     });
-    let mut bindings = vyre_driver::BindingSet::new(admitted.envelope.neutral().digest());
+    let mut bindings = vyre_runtime::BindingSet::new(admitted.envelope.neutral().digest());
     let mut allocated = Vec::new();
     for binding in &plan.bindings {
-        if binding.role == vyre_driver::BindingRole::Shared {
+        if binding.role == vyre_runtime::BindingRole::Shared {
             continue;
         }
         let value = admitted
@@ -419,7 +419,7 @@ pub(crate) fn resident_compiled_cuda_outputs(
                 )
             });
         allocated.push(resource.clone());
-        bindings.insert(value, vyre_driver::BoundResource::Resident(resource));
+        bindings.insert(value, vyre_runtime::BoundResource::Resident(resource));
     }
     let completion = admitted
         .instance

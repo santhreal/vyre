@@ -5,7 +5,7 @@ use crate::allocation::reserve_smallvec_to_capacity;
 use crate::numeric::WGPU_NUMERIC;
 use smallvec::SmallVec;
 use std::sync::Arc;
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 use vyre_emit::naga::program::TRAP_SIDECAR_WORDS;
 
 pub(super) fn record_readback_copies(

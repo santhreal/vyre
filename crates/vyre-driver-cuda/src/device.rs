@@ -85,7 +85,7 @@ mod context_init_error_tests {
             panic!("Unable to dynamically load the \"nvcuda\" shared library - searched for library names: [\"nvcuda.dll\"]. Ensure that `LD_LIBRARY_PATH` has the correct path to the installed library.");
         });
         let err_str = acquisition_err.unwrap_err();
-        let backend_err = vyre_driver::BackendError::DispatchFailed {
+        let backend_err = vyre_runtime::BackendError::DispatchFailed {
             code: None,
             message: format!("CUDA backend acquisition failed: {err_str}"),
         };
@@ -735,9 +735,9 @@ impl CudaDeviceCaps {
 
     /// Project the probed device into the neutral driver profile.
     #[must_use]
-    pub fn to_device_profile(&self) -> vyre_driver::DeviceProfile {
+    pub fn to_device_profile(&self) -> vyre_runtime::DeviceProfile {
         let subgroup = self.subgroup_caps();
-        let profile = vyre_driver::DeviceProfile {
+        let profile = vyre_runtime::DeviceProfile {
             backend: "cuda",
             supports_subgroup_ops: subgroup.supports_subgroup,
             supports_indirect_dispatch: self.cooperative_launch,
@@ -771,7 +771,7 @@ impl CudaDeviceCaps {
             l1_cache_bytes: 0,
             l2_cache_bytes: self.l2_cache_bytes_u32(),
             mem_bw_gbps: self.memory_bandwidth_gbps(),
-            timing_quality: vyre_driver::DeviceTimingQuality::DeviceTimestamps,
+            timing_quality: vyre_runtime::DeviceTimingQuality::DeviceTimestamps,
             supports_device_timestamps: true,
             supports_hardware_counters: false,
             ideal_unroll_depth: 0,
@@ -780,15 +780,15 @@ impl CudaDeviceCaps {
             shared_memory_bank_count: SHARED_MEMORY_BANK_COUNT,
             shared_memory_bank_width_bytes: SHARED_MEMORY_BANK_WIDTH_BYTES,
         };
-        vyre_driver::DeviceSignatureTable::builtins().map_or(profile, |table| {
+        vyre_runtime::DeviceSignatureTable::builtins().map_or(profile, |table| {
             table.apply_generation_to_profile(self.native_sm(), profile)
         })
     }
 
     /// Project CUDA warp capabilities into the shared subgroup record.
     #[must_use]
-    pub fn subgroup_caps(&self) -> vyre_driver::SubgroupCaps {
-        vyre_driver::SubgroupCaps::native(self.required_warp_size_u32())
+    pub fn subgroup_caps(&self) -> vyre_runtime::SubgroupCaps {
+        vyre_runtime::SubgroupCaps::native(self.required_warp_size_u32())
     }
 }
 
@@ -802,7 +802,7 @@ mod tests {
     fn cuda_profile_applies_builtin_sm_signature() {
         let profile = synthetic_sm120_envelope_default().to_device_profile();
         let table =
-            vyre_driver::DeviceSignatureTable::builtins().expect("Fix: builtin signatures load");
+            vyre_runtime::DeviceSignatureTable::builtins().expect("Fix: builtin signatures load");
         let signature = table
             .find_architecture_generation(120)
             .expect("Fix: SM_120 must match the builtin Blackwell signature");

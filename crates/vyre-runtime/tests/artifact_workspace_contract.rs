@@ -10,7 +10,7 @@
 
 use std::sync::Arc;
 
-use vyre_driver::{BackendRegistration, BoundResource};
+use vyre_runtime::{BackendRegistration, BoundResource};
 
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,

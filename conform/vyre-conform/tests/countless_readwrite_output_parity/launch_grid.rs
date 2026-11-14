@@ -48,7 +48,7 @@ fn artifact_submission_retains_the_resolved_element_count_geometry() {
     let program = xor_program(BufferDecl::read_write("out", 1, DataType::U32), WIDE);
     let inputs = inputs_for(&program, WIDE as usize * 4, WIDE);
     let borrowed = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
-    let registration = vyre_driver::backend_registration(vyre_driver_wgpu::WGPU_BACKEND_ID)
+    let registration = vyre_runtime::backend_registration(vyre_driver_wgpu::WGPU_BACKEND_ID)
         .expect("WGPU artifact target must be registered");
     let production = ProductionSession::from_registration(&program, registration)
         .expect("WGPU adapter required");

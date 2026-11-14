@@ -145,7 +145,7 @@ fn measure(
         .dispatch_timed(
             program,
             &prepared.inputs,
-            &vyre_driver::DispatchConfig::default(),
+            &vyre_runtime::DispatchConfig::default(),
         )
         .map_err(|error| BenchError::ExecutionFailed(error.to_string()))?;
 

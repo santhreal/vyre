@@ -23,7 +23,7 @@ enum Execution {
 }
 
 pub(crate) fn compare_backend_against_reference(
-    backend: &'static vyre_driver::BackendRegistration,
+    backend: &'static vyre_runtime::BackendRegistration,
     prepared: &PreparedEntry,
 ) -> ConformanceResult {
     let backend_id = backend.id.to_string();

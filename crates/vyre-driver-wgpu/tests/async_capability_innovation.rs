@@ -18,7 +18,7 @@ use harness::{
 
 use std::time::{Duration, Instant};
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::validate::BackendValidationCapabilities;
 
@@ -65,7 +65,7 @@ fn subgroup_capability_is_derived_from_adapter_features() {
     // and the positive min_subgroup_size limit.
     let adapter_has_subgroup =
         adapter_features.contains(wgpu::Features::SUBGROUP) && limits.min_subgroup_size > 0;
-    let reported = <WgpuBackend as vyre_driver::VyreBackend>::supports_subgroup_ops(&backend);
+    let reported = <WgpuBackend as vyre_runtime::VyreBackend>::supports_subgroup_ops(&backend);
 
     if adapter_has_subgroup {
         assert!(
@@ -94,7 +94,7 @@ fn indirect_capability_is_derived_from_adapter_properties() {
     let backend = live_backend();
 
     let info = backend.adapter_info();
-    let reported = <WgpuBackend as vyre_driver::VyreBackend>::supports_indirect_dispatch(&backend);
+    let reported = <WgpuBackend as vyre_runtime::VyreBackend>::supports_indirect_dispatch(&backend);
 
     // Indirect dispatch is only honest on real GPU device types with sufficient
     // storage-buffer binding size for the u32 x/y/z dispatch tuple.
@@ -381,12 +381,12 @@ fn backend_capability_snapshot_matches_live_adapter() {
     let bvc = BackendValidationCapabilities::backend_capabilities(&backend);
     assert_eq!(
         bvc.supports_subgroup_ops,
-        <WgpuBackend as vyre_driver::VyreBackend>::supports_subgroup_ops(&backend),
+        <WgpuBackend as vyre_runtime::VyreBackend>::supports_subgroup_ops(&backend),
         "Fix: BackendValidationCapabilities snapshot must match live VyreBackend for subgroup"
     );
     assert_eq!(
         bvc.supports_indirect_dispatch,
-        <WgpuBackend as vyre_driver::VyreBackend>::supports_indirect_dispatch(&backend),
+        <WgpuBackend as vyre_runtime::VyreBackend>::supports_indirect_dispatch(&backend),
         "Fix: BackendValidationCapabilities snapshot must match live VyreBackend for indirect"
     );
     assert_eq!(

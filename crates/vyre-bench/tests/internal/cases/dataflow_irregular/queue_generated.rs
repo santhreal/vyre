@@ -91,10 +91,10 @@ fn generated_word_queue_materializer_launches_frontier_words_not_nodes() {
             vec![0_u8; queue_capacity as usize * std::mem::size_of::<u32>()],
             vyre_primitives::wire::pack_u32_slice(&[0]),
         ];
-        let grid = vyre_driver::infer_dispatch_grid(
+        let grid = vyre_runtime::infer_dispatch_grid(
             &program,
             &inputs,
-            &vyre_driver::DispatchConfig::default(),
+            &vyre_runtime::DispatchConfig::default(),
         )
         .unwrap_or_else(|error| {
             panic!("generated word queue materializer case {case} failed: {error}")

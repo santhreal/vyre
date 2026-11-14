@@ -28,7 +28,7 @@ use vyre::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, GraphValueId, Node, Program,
     ProgramGraph, ValueContract, ValueLifetime,
 };
-use vyre_driver::{
+use vyre_runtime::{
     acquire, acquire_preferred_dispatch_backend, backend_registration, ArtifactMaterializer,
     BackendRegistration, BoundResource, Completion,
 };

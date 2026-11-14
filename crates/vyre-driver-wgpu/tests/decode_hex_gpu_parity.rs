@@ -7,7 +7,7 @@ use harness::acquire_live_backend as live_backend;
 use harness::bytes_u32;
 use harness::u32_bytes;
 
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_libs::decode::hex::{
     hex_decode, hex_decode_table, hex_decoded_capacity, HEX_WORKGROUP_SIZE,
 };

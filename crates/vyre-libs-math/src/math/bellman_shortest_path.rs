@@ -97,7 +97,7 @@ pub struct BellmanExtents {
 /// The launch spans `max(n_nodes, n_edges)` lanes: the relaxation body is
 /// gated on `t < n_edges` and the compare plus ping-pong on `t < n_nodes`,
 /// and `dispatch_element_count_for_program`
-/// (`crates/vyre-driver/src/program_walks/dispatch_params.rs:19`) sizes an
+/// (`crates/vyre-runtime/src/program_walks/dispatch_params.rs:19`) sizes an
 /// atomic-carrying program's launch from its WIDEST declared buffer. This
 /// program carries both `atomic_min` on `next_dist` and the harness's
 /// `atomic_or`, so that full-span rule applies and the span, not `n_nodes`,
@@ -859,7 +859,7 @@ mod tests {
     /// OBSERVED divergence in the CANONICAL forward workgroup order, at only FOUR
     /// nodes. This is the case a node-count-only threshold would have missed.
     ///
-    /// 4 nodes but 257 edges, so the launch is still two workgroups: `vyre-driver`
+    /// 4 nodes but 257 edges, so the launch is still two workgroups: `vyre-runtime`
     /// spans the largest declared binding, and the edge arrays are the largest here.
     /// Lane 256, in group 1, owns edge 256, the ONLY edge that reaches node 3. It
     /// relaxes `next_dist[3] = 7` correctly. But its compare is gated `t < n_nodes`,

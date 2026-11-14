@@ -1,4 +1,4 @@
-//! vyre_driver::VyreBackend implementation and core WgpuBackend methods.
+//! vyre_runtime::VyreBackend implementation and core WgpuBackend methods.
 
 use crate::staging_reserve::{reserve_backend_vec, reserve_smallvec, reserve_vec};
 use crate::{AdapterRecoveryTarget, DispatchArena, WgpuBackend};
@@ -8,13 +8,13 @@ use std::sync::{
     Arc,
 };
 use std::time::Instant;
-use vyre_driver::persistent::PersistentThreadMode;
-use vyre_driver::SpeculationMode;
+use vyre_runtime::persistent::PersistentThreadMode;
+use vyre_runtime::SpeculationMode;
 use vyre_foundation::ir::Program;
 
 fn empty_batch_result_slots<T>(
     len: usize,
-) -> Result<Vec<Option<Result<T, vyre_driver::BackendError>>>, vyre_driver::BackendError> {
+) -> Result<Vec<Option<Result<T, vyre_runtime::BackendError>>>, vyre_runtime::BackendError> {
     let mut slots = Vec::new();
     reserve_vec(
         &mut slots,
@@ -28,9 +28,9 @@ fn empty_batch_result_slots<T>(
 }
 
 fn finalize_batch_results<T>(
-    slots: Vec<Option<Result<T, vyre_driver::BackendError>>>,
+    slots: Vec<Option<Result<T, vyre_runtime::BackendError>>>,
     missing_slot_message: &'static str,
-) -> Result<Vec<Result<T, vyre_driver::BackendError>>, vyre_driver::BackendError> {
+) -> Result<Vec<Result<T, vyre_runtime::BackendError>>, vyre_runtime::BackendError> {
     let mut results = Vec::new();
     reserve_vec(
         &mut results,
@@ -41,15 +41,15 @@ fn finalize_batch_results<T>(
     )?;
     for slot in slots {
         results.push(
-            slot.unwrap_or_else(|| Err(vyre_driver::BackendError::new(missing_slot_message))),
+            slot.unwrap_or_else(|| Err(vyre_runtime::BackendError::new(missing_slot_message))),
         );
     }
     Ok(results)
 }
 
-fn elapsed_micros_u64(start: Instant, label: &str) -> Result<u64, vyre_driver::BackendError> {
+fn elapsed_micros_u64(start: Instant, label: &str) -> Result<u64, vyre_runtime::BackendError> {
     u64::try_from(start.elapsed().as_micros()).map_err(|source| {
-        vyre_driver::BackendError::new(format!(
+        vyre_runtime::BackendError::new(format!(
             "{label} elapsed time cannot fit u64 microseconds: {source}. Fix: split or timeout the dispatch before telemetry overflows."
         ))
     })
@@ -70,11 +70,11 @@ impl WgpuBackend {
 
     /// Acquire the backend, probing adapters and returning a structured error
     /// when no compatible GPU is found.
-    pub fn acquire() -> Result<Self, vyre_driver::BackendError> {
+    pub fn acquire() -> Result<Self, vyre_runtime::BackendError> {
         let ((device, queue), adapter_info, enabled_features) = crate::runtime::init_device()
             .map_err(|error| {
                 let report = crate::runtime::device::adapter_probe_report();
-                vyre_driver::BackendError::new(format!(
+                vyre_runtime::BackendError::new(format!(
                     "no compatible GPU adapter found. Probed adapters: [{}]. Missing features / limits: [{}]. Underlying error: {error}. Fix: install a compatible GPU driver and ensure a wgpu-supported backend (Vulkan, Metal, DX12) is available.",
                     report.probed.join(", "),
                     if report.missing.is_empty() {
@@ -97,10 +97,10 @@ impl WgpuBackend {
     }
 
     /// Acquire a backend bound to a specific enumerable adapter index.
-    pub fn acquire_adapter(index: usize) -> Result<Self, vyre_driver::BackendError> {
+    pub fn acquire_adapter(index: usize) -> Result<Self, vyre_runtime::BackendError> {
         let ((device, queue), adapter_info, enabled_features) =
             crate::runtime::device::init_device_for_adapter(index)
-                .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+                .map_err(|error| vyre_runtime::BackendError::new(error.to_string()))?;
         Self::from_device_queue(
             device,
             queue,
@@ -116,7 +116,7 @@ impl WgpuBackend {
         adapter_info: wgpu::AdapterInfo,
         enabled_features: crate::runtime::device::EnabledFeatures,
         recovery_target: AdapterRecoveryTarget,
-    ) -> Result<Self, vyre_driver::BackendError> {
+    ) -> Result<Self, vyre_runtime::BackendError> {
         let device_limits = device.limits();
         let adapter_name = Arc::<str>::from(adapter_info.name.as_str());
         let cache_tiers = vec![
@@ -126,11 +126,11 @@ impl WgpuBackend {
         let persistent_pool = crate::buffer::BufferPool::with_tiering(
             device.clone(),
             queue.clone(),
-            &vyre_driver::DispatchConfig::default(),
+            &vyre_runtime::DispatchConfig::default(),
             cache_tiers,
         )?;
         let (pipeline_cache_entries, pipeline_cache_bytes) =
-            vyre_driver::pipeline_cache_limits_from_env();
+            vyre_runtime::pipeline_cache_limits_from_env();
         Ok(Self {
             adapter_name,
             adapter_info,
@@ -142,7 +142,7 @@ impl WgpuBackend {
             dispatch_arena: Arc::new(arc_swap::ArcSwap::from_pointee(DispatchArena::new(
                 device.clone(),
                 queue.clone(),
-                &vyre_driver::DispatchConfig::default(),
+                &vyre_runtime::DispatchConfig::default(),
             ))),
             persistent_pool: Arc::new(arc_swap::ArcSwap::new(Arc::new(persistent_pool))),
             pipeline_cache: Arc::new(
@@ -158,9 +158,9 @@ impl WgpuBackend {
                 rustc_hash::FxHasher,
             >::default(
             ))),
-            validation_cache: Arc::new(vyre_driver::validation::ValidationCache::default()),
+            validation_cache: Arc::new(vyre_runtime::validation::ValidationCache::default()),
             shape_history: Arc::new(std::sync::Mutex::new(
-                vyre_driver::shape_prediction::ShapeHistory::new(),
+                vyre_runtime::shape_prediction::ShapeHistory::new(),
             )),
             predicted_programs: Arc::new(dashmap::DashMap::with_hasher(BuildHasherDefault::<
                 rustc_hash::FxHasher,
@@ -201,7 +201,7 @@ impl WgpuBackend {
     fn resident_pipeline_cache_key(
         &self,
         program: &Program,
-        config: &vyre_driver::DispatchConfig,
+        config: &vyre_runtime::DispatchConfig,
     ) -> [u8; 32] {
         crate::pipeline::disk_cache::early_pipeline_cache_key(program, &self.adapter_info, config)
     }
@@ -217,9 +217,9 @@ impl WgpuBackend {
     pub(crate) fn compile_pipeline(
         &self,
         program: &Program,
-        config: &vyre_driver::DispatchConfig,
+        config: &vyre_runtime::DispatchConfig,
         target: Option<crate::pipeline::AuthenticatedTarget<'_>>,
-    ) -> Result<Arc<crate::pipeline::WgpuPipeline>, vyre_driver::BackendError> {
+    ) -> Result<Arc<crate::pipeline::WgpuPipeline>, vyre_runtime::BackendError> {
         crate::pipeline::WgpuPipeline::compile_with_device_queue(
             program,
             config,
@@ -236,8 +236,8 @@ impl WgpuBackend {
     pub(crate) fn compile_resident_pipeline_cached(
         &self,
         program: &Program,
-        config: &vyre_driver::DispatchConfig,
-    ) -> Result<Arc<crate::pipeline::WgpuPipeline>, vyre_driver::BackendError> {
+        config: &vyre_runtime::DispatchConfig,
+    ) -> Result<Arc<crate::pipeline::WgpuPipeline>, vyre_runtime::BackendError> {
         let key = self.resident_pipeline_cache_key(program, config);
         if let Some(hit) = self.resident_pipeline_cache.get(&key) {
             return Ok(hit.clone());
@@ -261,13 +261,13 @@ impl WgpuBackend {
     pub(crate) fn validate_with_cache(
         &self,
         program: &Program,
-    ) -> Result<(), vyre_driver::BackendError> {
+    ) -> Result<(), vyre_runtime::BackendError> {
         self.validation_cache.get_or_validate_backend(program, self)
     }
 
     /// Test-only hook that marks the backend device as lost and invalidates
     /// caches tied to the current device generation.
-    pub fn force_device_lost(&self) -> Result<(), vyre_driver::BackendError> {
+    pub fn force_device_lost(&self) -> Result<(), vyre_runtime::BackendError> {
         self.device_lost.store(true, Ordering::Release);
         self.pipeline_cache.clear();
         self.wgsl_dispatch_pipeline_cache.clear();
@@ -277,7 +277,7 @@ impl WgpuBackend {
         self.dispatch_arena.store(Arc::new(DispatchArena::new(
             device_queue.0.clone(),
             device_queue.1.clone(),
-            &vyre_driver::DispatchConfig::default(),
+            &vyre_runtime::DispatchConfig::default(),
         )));
         Ok(())
     }
@@ -301,7 +301,7 @@ impl WgpuBackend {
         max_iterations: u32,
         pipeline_lineage_cell: &[u32],
         pipeline_keys: &[[u8; 32]],
-    ) -> Result<(), vyre_driver::BackendError> {
+    ) -> Result<(), vyre_runtime::BackendError> {
         let impact_mask = crate::pipeline::cache_impact::RuleImpactQuery {
             intervention_mask,
             rule_adj,
@@ -325,7 +325,7 @@ impl WgpuBackend {
         changed_op_handle: u32,
         pipeline_lineage_cell: &[u32],
         pipeline_keys: &[[u8; 32]],
-    ) -> Result<(), vyre_driver::BackendError> {
+    ) -> Result<(), vyre_runtime::BackendError> {
         let n = 1u32;
         let rule_adj = vec![1u32];
         let intervention_mask = vec![1u32];
@@ -373,7 +373,7 @@ impl WgpuBackend {
         max_iterations: u32,
         pipeline_lineage_cell: &[u32],
         cache_keys: &[String],
-    ) -> Result<(), vyre_driver::BackendError> {
+    ) -> Result<(), vyre_runtime::BackendError> {
         let impact_mask = crate::pipeline::cache_impact::RuleImpactQuery {
             intervention_mask,
             rule_adj,
@@ -385,25 +385,25 @@ impl WgpuBackend {
         }
         .impact_mask(executor, policy)?;
         crate::pipeline::disk_cache::remove_impacted_entries(&impact_mask, cache_keys)
-            .map_err(|error| vyre_driver::BackendError::new(error.to_string()))
+            .map_err(|error| vyre_runtime::BackendError::new(error.to_string()))
     }
 
     /// Create the backend if a GPU adapter is available.
     #[must_use]
     #[inline]
-    pub fn new() -> Result<Self, vyre_driver::BackendError> {
-        Self::acquire().map_err(|e| vyre_driver::BackendError::new(e.to_string()))
+    pub fn new() -> Result<Self, vyre_runtime::BackendError> {
+        Self::acquire().map_err(|e| vyre_runtime::BackendError::new(e.to_string()))
     }
 
     /// Process-wide shared backend handle.
-    pub fn shared() -> Result<Arc<Self>, vyre_driver::BackendError> {
+    pub fn shared() -> Result<Arc<Self>, vyre_runtime::BackendError> {
         static SHARED: std::sync::LazyLock<Result<Arc<WgpuBackend>, String>> =
             std::sync::LazyLock::new(|| {
                 WgpuBackend::new().map(Arc::new).map_err(|e| e.to_string())
             });
         match &*SHARED {
             Ok(arc) => Ok(arc.clone()),
-            Err(msg) => Err(vyre_driver::BackendError::new(msg.clone())),
+            Err(msg) => Err(vyre_runtime::BackendError::new(msg.clone())),
         }
     }
 
@@ -412,11 +412,11 @@ impl WgpuBackend {
         &self,
         program: &Program,
         inputs: &[&[u8]],
-        config: &vyre_driver::DispatchConfig,
+        config: &vyre_runtime::DispatchConfig,
         visitor: F,
-    ) -> Result<(), vyre_driver::BackendError>
+    ) -> Result<(), vyre_runtime::BackendError>
     where
-        F: FnMut(usize, &[u8]) -> Result<(), vyre_driver::BackendError>,
+        F: FnMut(usize, &[u8]) -> Result<(), vyre_runtime::BackendError>,
     {
         let _span = tracing::trace_span!(
             "vyre.dispatch_mapped_outputs",
@@ -445,16 +445,16 @@ impl WgpuBackend {
         &self,
         program: &Program,
         inputs: &[&[u8]],
-        config: &vyre_driver::DispatchConfig,
+        config: &vyre_runtime::DispatchConfig,
         mut visitor: F,
-    ) -> Result<(), vyre_driver::BackendError>
+    ) -> Result<(), vyre_runtime::BackendError>
     where
         T: bytemuck::Pod,
-        F: FnMut(usize, &[T]) -> Result<(), vyre_driver::BackendError>,
+        F: FnMut(usize, &[T]) -> Result<(), vyre_runtime::BackendError>,
     {
         self.dispatch_borrowed_for_each_mapped_output(program, inputs, config, |index, bytes| {
             let typed = bytemuck::try_cast_slice::<u8, T>(bytes).map_err(|error| {
-                vyre_driver::BackendError::new(format!(
+                vyre_runtime::BackendError::new(format!(
                     "mapped output #{index} cannot be viewed as {}: {error}. Fix: set output_byte_range to a length and offset aligned for the requested POD type.",
                     std::any::type_name::<T>()
                 ))
@@ -466,28 +466,28 @@ impl WgpuBackend {
     /// Enforce capability requirements declared in `config`.
     pub(crate) fn enforce_config_caps(
         &self,
-        config: &vyre_driver::DispatchConfig,
-    ) -> Result<(), vyre_driver::BackendError> {
-        if config.cooperative && !<Self as vyre_driver::VyreBackend>::supports_grid_sync(self) {
-            return Err(vyre_driver::BackendError::UnsupportedFeature {
+        config: &vyre_runtime::DispatchConfig,
+    ) -> Result<(), vyre_runtime::BackendError> {
+        if config.cooperative && !<Self as vyre_runtime::VyreBackend>::supports_grid_sync(self) {
+            return Err(vyre_runtime::BackendError::UnsupportedFeature {
                 name: "wgpu cooperative grid dispatch".to_string(),
-                backend: <Self as vyre_driver::VyreBackend>::id(self).to_string(),
+                backend: <Self as vyre_runtime::VyreBackend>::id(self).to_string(),
             });
         }
         if matches!(config.speculation, Some(SpeculationMode::Force))
-            && !<Self as vyre_driver::VyreBackend>::supports_speculation(self)
+            && !<Self as vyre_runtime::VyreBackend>::supports_speculation(self)
         {
-            return Err(vyre_driver::BackendError::UnsupportedFeature {
+            return Err(vyre_runtime::BackendError::UnsupportedFeature {
                 name: "speculative dispatch".to_string(),
-                backend: <Self as vyre_driver::VyreBackend>::id(self).to_string(),
+                backend: <Self as vyre_runtime::VyreBackend>::id(self).to_string(),
             });
         }
         if matches!(config.persistent_thread, Some(PersistentThreadMode::Force))
-            && !<Self as vyre_driver::VyreBackend>::supports_persistent_thread_dispatch(self)
+            && !<Self as vyre_runtime::VyreBackend>::supports_persistent_thread_dispatch(self)
         {
-            return Err(vyre_driver::BackendError::UnsupportedFeature {
+            return Err(vyre_runtime::BackendError::UnsupportedFeature {
                 name: "persistent-thread dispatch".to_string(),
-                backend: <Self as vyre_driver::VyreBackend>::id(self).to_string(),
+                backend: <Self as vyre_runtime::VyreBackend>::id(self).to_string(),
             });
         }
         // The strict mode is a bit-identity request, and whether this adapter's
@@ -505,18 +505,18 @@ impl WgpuBackend {
     /// Dispatch a real prefilter/confirm scan through the adaptive speculative path.
     pub fn dispatch_speculative_prefilter_confirm<F>(
         &self,
-        speculator: &vyre_driver::AdaptiveSpeculator,
-        plan: vyre_driver::SpeculativeDispatchPlan<'_>,
+        speculator: &vyre_runtime::AdaptiveSpeculator,
+        plan: vyre_runtime::SpeculativeDispatchPlan<'_>,
         inputs: &[&[u8]],
-        config: &vyre_driver::DispatchConfig,
+        config: &vyre_runtime::DispatchConfig,
         confirm_serial: F,
-    ) -> Result<vyre_driver::SpeculativeDispatchOutcome, vyre_driver::BackendError>
+    ) -> Result<vyre_runtime::SpeculativeDispatchOutcome, vyre_runtime::BackendError>
     where
         F: FnMut(
-            vyre_driver::OutputBuffers,
-        ) -> Result<vyre_driver::OutputBuffers, vyre_driver::BackendError>,
+            vyre_runtime::OutputBuffers,
+        ) -> Result<vyre_runtime::OutputBuffers, vyre_runtime::BackendError>,
     {
-        vyre_driver::dispatch_prefilter_confirm(
+        vyre_runtime::dispatch_prefilter_confirm(
             self,
             speculator,
             plan,
@@ -530,9 +530,9 @@ impl WgpuBackend {
         &self,
         program: &Program,
         inputs: &[&[u8]],
-        config: &vyre_driver::DispatchConfig,
+        config: &vyre_runtime::DispatchConfig,
         started: Instant,
-    ) -> Result<crate::engine::record_and_readback::RecordedDispatch, vyre_driver::BackendError>
+    ) -> Result<crate::engine::record_and_readback::RecordedDispatch, vyre_runtime::BackendError>
     {
         self.enforce_config_caps(config)?;
         self.validate_with_cache(program)?;
@@ -564,10 +564,10 @@ impl WgpuBackend {
     /// Dispatch a batch of borrowed `(Program, inputs, config)` triples.
     pub fn dispatch_borrowed_batch(
         &self,
-        jobs: &[(&Program, &[&[u8]], &vyre_driver::DispatchConfig)],
+        jobs: &[(&Program, &[&[u8]], &vyre_runtime::DispatchConfig)],
     ) -> Result<
-        Vec<Result<vyre_driver::OutputBuffers, vyre_driver::BackendError>>,
-        vyre_driver::BackendError,
+        Vec<Result<vyre_runtime::OutputBuffers, vyre_runtime::BackendError>>,
+        vyre_runtime::BackendError,
     > {
         let _span = tracing::trace_span!(
             "vyre.dispatch_borrowed_batch",
@@ -615,11 +615,11 @@ impl WgpuBackend {
     /// Dispatch a borrowed batch and write each job's outputs into caller-owned per-job output buffers.
     pub fn dispatch_borrowed_batch_into(
         &self,
-        jobs: &[(&Program, &[&[u8]], &vyre_driver::DispatchConfig)],
-        outputs: &mut [vyre_driver::OutputBuffers],
-    ) -> Result<Vec<Result<(), vyre_driver::BackendError>>, vyre_driver::BackendError> {
+        jobs: &[(&Program, &[&[u8]], &vyre_runtime::DispatchConfig)],
+        outputs: &mut [vyre_runtime::OutputBuffers],
+    ) -> Result<Vec<Result<(), vyre_runtime::BackendError>>, vyre_runtime::BackendError> {
         if outputs.len() != jobs.len() {
-            return Err(vyre_driver::BackendError::new(format!(
+            return Err(vyre_runtime::BackendError::new(format!(
                 "dispatch_borrowed_batch_into received {} output slots for {} jobs. Fix: pass exactly one OutputBuffers slot per job.",
                 outputs.len(),
                 jobs.len()
@@ -679,11 +679,11 @@ impl WgpuBackend {
         jobs: &[(
             vyre_foundation::ir::Program,
             Vec<Vec<u8>>,
-            vyre_driver::DispatchConfig,
+            vyre_runtime::DispatchConfig,
         )],
     ) -> Result<
-        Vec<Result<vyre_driver::OutputBuffers, vyre_driver::BackendError>>,
-        vyre_driver::BackendError,
+        Vec<Result<vyre_runtime::OutputBuffers, vyre_runtime::BackendError>>,
+        vyre_runtime::BackendError,
     > {
         let mut borrowed_inputs = Vec::new();
         reserve_backend_vec(&mut borrowed_inputs, jobs.len(), "borrowed input batch")?;
@@ -712,8 +712,8 @@ impl WgpuBackend {
     pub fn compile_pipeline_for_oracle(
         &self,
         program: &vyre_foundation::ir::Program,
-        config: &vyre_driver::DispatchConfig,
-    ) -> Result<Arc<crate::pipeline::WgpuPipeline>, vyre_driver::BackendError> {
+        config: &vyre_runtime::DispatchConfig,
+    ) -> Result<Arc<crate::pipeline::WgpuPipeline>, vyre_runtime::BackendError> {
         self.enforce_config_caps(config)?;
         self.compile_pipeline(program, config, None)
     }
@@ -734,7 +734,7 @@ pub(crate) fn borrowed_slices_from_owned_inputs<'a>(
     borrowed
 }
 
-impl vyre_driver::VyreBackend for WgpuBackend {
+impl vyre_runtime::VyreBackend for WgpuBackend {
     fn id(&self) -> &'static str {
         "wgpu"
     }
@@ -744,7 +744,7 @@ impl vyre_driver::VyreBackend for WgpuBackend {
     }
 
     fn supported_ops(&self) -> &std::collections::HashSet<vyre_foundation::ir::OpId> {
-        vyre_driver::default_supported_ops_with_trap()
+        vyre_runtime::default_supported_ops_with_trap()
     }
 
     /// The contracted mode always; the strict mode where the adapter earns it.
@@ -767,8 +767,8 @@ impl vyre_driver::VyreBackend for WgpuBackend {
         &self,
         program: &Program,
         inputs: &[&[u8]],
-        config: &vyre_driver::DispatchConfig,
-    ) -> Result<Vec<Vec<u8>>, vyre_driver::BackendError> {
+        config: &vyre_runtime::DispatchConfig,
+    ) -> Result<Vec<Vec<u8>>, vyre_runtime::BackendError> {
         let _span = tracing::trace_span!(
             "vyre.dispatch",
             backend = "wgpu",
@@ -796,9 +796,9 @@ impl vyre_driver::VyreBackend for WgpuBackend {
         &self,
         program: &Program,
         inputs: &[&[u8]],
-        config: &vyre_driver::DispatchConfig,
-        outputs: &mut vyre_driver::OutputBuffers,
-    ) -> Result<(), vyre_driver::BackendError> {
+        config: &vyre_runtime::DispatchConfig,
+        outputs: &mut vyre_runtime::OutputBuffers,
+    ) -> Result<(), vyre_runtime::BackendError> {
         let _span = tracing::trace_span!(
             "vyre.dispatch_into",
             backend = "wgpu",
@@ -809,10 +809,10 @@ impl vyre_driver::VyreBackend for WgpuBackend {
         if let Some(label) = config.label.as_deref() {
             _span.record("label", label);
         }
-        if vyre_driver::grid_sync::contains_grid_sync(program)
-            && !<Self as vyre_driver::VyreBackend>::supports_grid_sync(self)
+        if vyre_runtime::grid_sync::contains_grid_sync(program)
+            && !<Self as vyre_runtime::VyreBackend>::supports_grid_sync(self)
         {
-            return vyre_driver::grid_sync::dispatch_with_grid_sync_split_into(
+            return vyre_runtime::grid_sync::dispatch_with_grid_sync_split_into(
                 self, program, inputs, config, outputs,
             );
         }
@@ -832,8 +832,8 @@ impl vyre_driver::VyreBackend for WgpuBackend {
         &self,
         program: &Program,
         inputs: &[&[u8]],
-        config: &vyre_driver::DispatchConfig,
-    ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
+        config: &vyre_runtime::DispatchConfig,
+    ) -> Result<vyre_runtime::TimedDispatchResult, vyre_runtime::BackendError> {
         let _span = tracing::trace_span!(
             "vyre.dispatch_timed",
             backend = "wgpu",
@@ -852,8 +852,8 @@ impl vyre_driver::VyreBackend for WgpuBackend {
         &self,
         program: &Program,
         inputs: &[Vec<u8>],
-        config: &vyre_driver::DispatchConfig,
-    ) -> Result<Box<dyn vyre_driver::PendingDispatch>, vyre_driver::BackendError> {
+        config: &vyre_runtime::DispatchConfig,
+    ) -> Result<Box<dyn vyre_runtime::PendingDispatch>, vyre_runtime::BackendError> {
         let _span = tracing::trace_span!(
             "vyre.dispatch_async",
             backend = "wgpu",
@@ -875,8 +875,8 @@ impl vyre_driver::VyreBackend for WgpuBackend {
         &self,
         program: &Program,
         inputs: &[&[u8]],
-        config: &vyre_driver::DispatchConfig,
-    ) -> Result<Box<dyn vyre_driver::PendingDispatch>, vyre_driver::BackendError> {
+        config: &vyre_runtime::DispatchConfig,
+    ) -> Result<Box<dyn vyre_runtime::PendingDispatch>, vyre_runtime::BackendError> {
         Ok(Box::new(WgpuBackend::dispatch_borrowed_async(
             self, program, inputs, config,
         )?))
@@ -885,101 +885,101 @@ impl vyre_driver::VyreBackend for WgpuBackend {
     fn allocate_device_buffer(
         &self,
         byte_len: usize,
-    ) -> Result<Box<dyn vyre_driver::DeviceBuffer>, vyre_driver::BackendError> {
+    ) -> Result<Box<dyn vyre_runtime::DeviceBuffer>, vyre_runtime::BackendError> {
         self.allocate_wgpu_device_buffer(byte_len)
     }
 
     fn upload_device_buffer(
         &self,
-        buffer: &mut dyn vyre_driver::DeviceBuffer,
+        buffer: &mut dyn vyre_runtime::DeviceBuffer,
         bytes: &[u8],
-    ) -> Result<(), vyre_driver::BackendError> {
+    ) -> Result<(), vyre_runtime::BackendError> {
         self.upload_wgpu_device_buffer(buffer, bytes)
     }
 
     fn download_device_buffer(
         &self,
-        buffer: &dyn vyre_driver::DeviceBuffer,
-    ) -> Result<Vec<u8>, vyre_driver::BackendError> {
+        buffer: &dyn vyre_runtime::DeviceBuffer,
+    ) -> Result<Vec<u8>, vyre_runtime::BackendError> {
         self.download_wgpu_device_buffer(buffer)
     }
 
     fn free_device_buffer(
         &self,
-        buffer: Box<dyn vyre_driver::DeviceBuffer>,
-    ) -> Result<(), vyre_driver::BackendError> {
+        buffer: Box<dyn vyre_runtime::DeviceBuffer>,
+    ) -> Result<(), vyre_runtime::BackendError> {
         self.free_wgpu_device_buffer(buffer)
     }
 
     fn allocate_resident(
         &self,
         byte_len: usize,
-    ) -> Result<vyre_driver::Resource, vyre_driver::BackendError> {
+    ) -> Result<vyre_runtime::Resource, vyre_runtime::BackendError> {
         crate::resident_resource::allocate_resident(self, byte_len)
     }
 
     fn upload_resident(
         &self,
-        resource: &vyre_driver::Resource,
+        resource: &vyre_runtime::Resource,
         bytes: &[u8],
-    ) -> Result<(), vyre_driver::BackendError> {
+    ) -> Result<(), vyre_runtime::BackendError> {
         crate::resident_upload::upload_resident(self, resource, bytes)
     }
 
     fn upload_resident_many(
         &self,
-        uploads: &[(&vyre_driver::Resource, &[u8])],
-    ) -> Result<(), vyre_driver::BackendError> {
+        uploads: &[(&vyre_runtime::Resource, &[u8])],
+    ) -> Result<(), vyre_runtime::BackendError> {
         crate::resident_upload::upload_resident_many(self, uploads)
     }
 
     fn upload_resident_at(
         &self,
-        resource: &vyre_driver::Resource,
+        resource: &vyre_runtime::Resource,
         dst_offset_bytes: usize,
         bytes: &[u8],
-    ) -> Result<(), vyre_driver::BackendError> {
+    ) -> Result<(), vyre_runtime::BackendError> {
         crate::resident_upload::upload_resident_at(self, resource, dst_offset_bytes, bytes)
     }
 
     fn upload_resident_at_many(
         &self,
-        uploads: &[(&vyre_driver::Resource, usize, &[u8])],
-    ) -> Result<(), vyre_driver::BackendError> {
+        uploads: &[(&vyre_runtime::Resource, usize, &[u8])],
+    ) -> Result<(), vyre_runtime::BackendError> {
         crate::resident_upload::upload_resident_at_many(self, uploads)
     }
 
     fn download_resident(
         &self,
-        resource: &vyre_driver::Resource,
-    ) -> Result<Vec<u8>, vyre_driver::BackendError> {
+        resource: &vyre_runtime::Resource,
+    ) -> Result<Vec<u8>, vyre_runtime::BackendError> {
         crate::resident_download::download_resident(self, resource)
     }
 
     fn download_resident_into(
         &self,
-        resource: &vyre_driver::Resource,
+        resource: &vyre_runtime::Resource,
         out: &mut Vec<u8>,
-    ) -> Result<(), vyre_driver::BackendError> {
+    ) -> Result<(), vyre_runtime::BackendError> {
         crate::resident_download::download_resident_into(self, resource, out)
     }
 
     fn download_resident_range(
         &self,
-        resource: &vyre_driver::Resource,
+        resource: &vyre_runtime::Resource,
         byte_offset: usize,
         byte_len: usize,
-    ) -> Result<Vec<u8>, vyre_driver::BackendError> {
+    ) -> Result<Vec<u8>, vyre_runtime::BackendError> {
         crate::resident_download::download_resident_range(self, resource, byte_offset, byte_len)
     }
 
     fn download_resident_range_into(
         &self,
-        resource: &vyre_driver::Resource,
+        resource: &vyre_runtime::Resource,
         byte_offset: usize,
         byte_len: usize,
         out: &mut Vec<u8>,
-    ) -> Result<(), vyre_driver::BackendError> {
+    ) -> Result<(), vyre_runtime::BackendError> {
         crate::resident_download::download_resident_range_into(
             self,
             resource,
@@ -991,72 +991,72 @@ impl vyre_driver::VyreBackend for WgpuBackend {
 
     fn download_resident_ranges_into(
         &self,
-        ranges: &[(&vyre_driver::Resource, usize, usize)],
+        ranges: &[(&vyre_runtime::Resource, usize, usize)],
         outputs: &mut [&mut Vec<u8>],
-    ) -> Result<(), vyre_driver::BackendError> {
+    ) -> Result<(), vyre_runtime::BackendError> {
         crate::resident_download::download_resident_ranges_into(self, ranges, outputs)
     }
 
     fn free_resident(
         &self,
-        resource: vyre_driver::Resource,
-    ) -> Result<(), vyre_driver::BackendError> {
+        resource: vyre_runtime::Resource,
+    ) -> Result<(), vyre_runtime::BackendError> {
         crate::resident_resource::free_resident(self, resource)
     }
 
     fn dispatch_resident_timed(
         &self,
         program: &Program,
-        resources: &[vyre_driver::Resource],
-        config: &vyre_driver::DispatchConfig,
-    ) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
+        resources: &[vyre_runtime::Resource],
+        config: &vyre_runtime::DispatchConfig,
+    ) -> Result<vyre_runtime::TimedDispatchResult, vyre_runtime::BackendError> {
         crate::resident_dispatch::dispatch_resident_timed(self, program, resources, config)
     }
 
     fn dispatch_resident_async(
         &self,
         program: &Program,
-        resources: &[vyre_driver::Resource],
-        config: &vyre_driver::DispatchConfig,
-    ) -> Result<Box<dyn vyre_driver::PendingDispatch>, vyre_driver::BackendError> {
+        resources: &[vyre_runtime::Resource],
+        config: &vyre_runtime::DispatchConfig,
+    ) -> Result<Box<dyn vyre_runtime::PendingDispatch>, vyre_runtime::BackendError> {
         crate::resident_dispatch::dispatch_resident_async(self, program, resources, config)
     }
 
     fn dispatch_with_device_buffers(
         &self,
         program: &Program,
-        inputs: &[&dyn vyre_driver::DeviceBuffer],
-        outputs: &mut [&mut dyn vyre_driver::DeviceBuffer],
-        config: &vyre_driver::DispatchConfig,
-    ) -> Result<(), vyre_driver::BackendError> {
+        inputs: &[&dyn vyre_runtime::DeviceBuffer],
+        outputs: &mut [&mut dyn vyre_runtime::DeviceBuffer],
+        config: &vyre_runtime::DispatchConfig,
+    ) -> Result<(), vyre_runtime::BackendError> {
         // Validate all buffers were allocated by us so the downcast
         // below cannot fail mid-loop after partial side-effects.
-        vyre_driver::validate_buffer_ownership(self.id(), inputs.iter().copied())?;
-        vyre_driver::validate_buffer_ownership(
+        vyre_runtime::validate_buffer_ownership(self.id(), inputs.iter().copied())?;
+        vyre_runtime::validate_buffer_ownership(
             self.id(),
             outputs
                 .iter()
-                .map(|b| &**b as &dyn vyre_driver::DeviceBuffer),
+                .map(|b| &**b as &dyn vyre_runtime::DeviceBuffer),
         )?;
 
         let resource_count = inputs.len().checked_add(outputs.len()).ok_or_else(|| {
-            vyre_driver::BackendError::new(
+            vyre_runtime::BackendError::new(
                 "resident dispatch resource count overflowed usize. Fix: split input/output resources before dispatch.",
             )
         })?;
         let mut resources =
-            smallvec::SmallVec::<[vyre_driver::Resource; 8]>::with_capacity(resource_count);
+            smallvec::SmallVec::<[vyre_runtime::Resource; 8]>::with_capacity(resource_count);
         for buffer in inputs {
             let wgpu_buf = buffer
                 .as_any()
                 .downcast_ref::<crate::WgpuDeviceBuffer>()
                 .ok_or_else(|| {
-                    vyre_driver::BackendError::new(format!(
+                    vyre_runtime::BackendError::new(format!(
                         "Fix: dispatch_with_device_buffers expected WgpuDeviceBuffer inputs but got buffer owned by `{}`.",
                         buffer.backend_id()
                     ))
                 })?;
-            resources.push(vyre_driver::Resource::Resident(
+            resources.push(vyre_runtime::Resource::Resident(
                 wgpu_buf.handle().resident_handle()?,
             ));
         }
@@ -1066,11 +1066,11 @@ impl vyre_driver::VyreBackend for WgpuBackend {
                 .as_any()
                 .downcast_ref::<crate::WgpuDeviceBuffer>()
                 .ok_or_else(|| {
-                    vyre_driver::BackendError::new(format!(
+                    vyre_runtime::BackendError::new(format!(
                         "Fix: dispatch_with_device_buffers expected WgpuDeviceBuffer outputs but got buffer owned by `{backend_id}`."
                     ))
                 })?;
-            resources.push(vyre_driver::Resource::Resident(
+            resources.push(vyre_runtime::Resource::Resident(
                 wgpu_buf.handle().resident_handle()?,
             ));
         }
@@ -1079,8 +1079,8 @@ impl vyre_driver::VyreBackend for WgpuBackend {
         pipeline.dispatch_persistent_handles_without_readback(&resources, config)
     }
 
-    fn pipeline_cache_snapshot(&self) -> Option<vyre_driver::PipelineCacheSnapshot> {
-        Some(vyre_driver::PipelineCacheSnapshot {
+    fn pipeline_cache_snapshot(&self) -> Option<vyre_runtime::PipelineCacheSnapshot> {
+        Some(vyre_runtime::PipelineCacheSnapshot {
             hits: self.pipeline_cache.hits(),
             misses: self.pipeline_cache.misses(),
         })
@@ -1145,11 +1145,11 @@ impl vyre_driver::VyreBackend for WgpuBackend {
         self.enabled_features.max_storage_buffer_binding_size
     }
 
-    fn device_profile(&self) -> vyre_driver::DeviceProfile {
+    fn device_profile(&self) -> vyre_runtime::DeviceProfile {
         WgpuBackend::device_profile(self)
     }
 
-    fn flush(&self) -> Result<(), vyre_driver::BackendError> {
+    fn flush(&self) -> Result<(), vyre_runtime::BackendError> {
         let device_queue = self.current_device_queue();
         let submission = device_queue.1.submit(std::iter::empty());
         crate::runtime::device::poll_device_wait_for(&device_queue.0, submission)?;
@@ -1160,7 +1160,7 @@ impl vyre_driver::VyreBackend for WgpuBackend {
         self.device_lost.load(Ordering::Acquire)
     }
 
-    fn try_recover(&self) -> Result<(), vyre_driver::BackendError> {
+    fn try_recover(&self) -> Result<(), vyre_runtime::BackendError> {
         let ((device, queue), adapter_info, enabled) = match &self.recovery_target {
             AdapterRecoveryTarget::Index(index) => {
                 crate::runtime::device::init_device_for_adapter(*index)
@@ -1169,19 +1169,19 @@ impl vyre_driver::VyreBackend for WgpuBackend {
                 crate::runtime::device::init_device_for_adapter_identity(identity)
             }
         }
-        .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;
+        .map_err(|error| vyre_runtime::BackendError::new(error.to_string()))?;
         let device_limits = device.limits();
         let recovered_identity = crate::runtime::device::AdapterIdentity::from_info(&adapter_info);
         let original_identity =
             crate::runtime::device::AdapterIdentity::from_info(&self.adapter_info);
         if recovered_identity != original_identity {
-            return Err(vyre_driver::BackendError::new(format!(
+            return Err(vyre_runtime::BackendError::new(format!(
                 "wgpu recovery selected a different adapter than the backend was constructed with. Original: {:?}; recovered: {:?}. Fix: construct a new backend for the new adapter instead of reusing device-local caches across adapter identities.",
                 self.adapter_info, adapter_info
             )));
         }
         if device_limits != self.device_limits || enabled != self.enabled_features {
-            return Err(vyre_driver::BackendError::new(
+            return Err(vyre_runtime::BackendError::new(
                 "wgpu recovery selected the original adapter but feature or limit negotiation changed. Fix: construct a new backend so dispatch planning and pipeline caches are rebuilt against the new device contract.",
             ));
         }
@@ -1192,7 +1192,7 @@ impl vyre_driver::VyreBackend for WgpuBackend {
         let persistent_pool = crate::buffer::BufferPool::with_tiering(
             device.clone(),
             queue.clone(),
-            &vyre_driver::DispatchConfig::default(),
+            &vyre_runtime::DispatchConfig::default(),
             cache_tiers,
         )?;
         self.device_queue
@@ -1205,7 +1205,7 @@ impl vyre_driver::VyreBackend for WgpuBackend {
         self.dispatch_arena.store(Arc::new(DispatchArena::new(
             device.clone(),
             queue.clone(),
-            &vyre_driver::DispatchConfig::default(),
+            &vyre_runtime::DispatchConfig::default(),
         )));
         self.device_lost.store(false, Ordering::Release);
 
@@ -1254,7 +1254,7 @@ mod borrowed_slice_conversion_tests {
                 match (slot + case) % 7 {
                     0 => {}
                     1 => {
-                        slots[slot] = Some(Err(vyre_driver::BackendError::new(format!(
+                        slots[slot] = Some(Err(vyre_runtime::BackendError::new(format!(
                             "generated-error-{case}-{slot}"
                         ))));
                     }

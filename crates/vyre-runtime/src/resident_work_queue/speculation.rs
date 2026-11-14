@@ -6,11 +6,11 @@
 //! shared autotune store, and the accumulated sample window is converted
 //! into the N2 adoption verdict.
 
-use vyre_driver::autotune_store::{AutotuneRecord, AutotuneStore};
-use vyre_driver::speculation_verdict::{
+use vyre_runtime::autotune_store::{AutotuneRecord, AutotuneStore};
+use vyre_runtime::speculation_verdict::{
     decide_speculation, SpeculationObservation, SpeculationVerdict,
 };
-use vyre_driver::{
+use vyre_runtime::{
     record_speculative_variant_race, SpeculativeVariantDecision, SpeculativeVariantKeys,
     SpeculativeVariantRace,
 };
@@ -158,9 +158,9 @@ impl RunningMean {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_driver::autotune_store::AutotuneKey;
-    use vyre_driver::SpecCacheKey;
-    use vyre_driver::SpeculativeVariantKind;
+    use vyre_runtime::autotune_store::AutotuneKey;
+    use vyre_runtime::SpecCacheKey;
+    use vyre_runtime::SpeculativeVariantKind;
 
     fn key(id: u64) -> SpecCacheKey {
         SpecCacheKey {

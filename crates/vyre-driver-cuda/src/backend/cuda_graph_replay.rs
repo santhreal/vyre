@@ -4,14 +4,14 @@ use std::ptr::NonNull;
 use std::sync::Arc;
 
 use smallvec::SmallVec;
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use super::allocations::cuda_check;
 use super::cuda_graph_lifecycle::{CachedCudaGraph, GraphExecGuard, StreamGuard};
 use super::dispatch::CudaBackend;
 use super::ordering::{classify_dense_permutation, DensePermutationDefect};
 use super::staging_reserve::{reserve_smallvec, reserve_vec, reserved_vec, resize_vec_slots};
-use vyre_driver::input_identity::{exact_input_key, ExactInputKey};
+use vyre_runtime::input_identity::{exact_input_key, ExactInputKey};
 
 impl CachedCudaGraph {
     pub(crate) fn input_shape_matches(&self, inputs: &[&[u8]]) -> bool {
@@ -329,7 +329,7 @@ impl CudaBackend {
         &self,
         cached: &mut CachedCudaGraph,
         inputs: &[&[u8]],
-    ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
+    ) -> Result<vyre_runtime::TimedDispatchResult, BackendError> {
         let started = std::time::Instant::now();
         let mut outputs = reserved_vec(
             cached.output_host_bufs.len(),
@@ -340,7 +340,7 @@ impl CudaBackend {
             .elapsed_nanos_u64(started, "timed cuda graph replay wall latency")?;
         self.telemetry
             .record_timed_dispatch(wall_ns, device_ns, None, None);
-        Ok(vyre_driver::TimedDispatchResult::device_timed(
+        Ok(vyre_runtime::TimedDispatchResult::device_timed(
             outputs, wall_ns, device_ns,
         ))
     }

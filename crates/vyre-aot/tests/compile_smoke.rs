@@ -195,7 +195,7 @@ fn archive_install_load_execute_update_and_rollback_lifecycle() {
         .expect("materialize v1");
     assert_eq!(instance_v1.artifact(), loaded_env.neutral().digest());
     let sub_v1 = instance_v1
-        .submit(vyre_driver::BindingSet::new(loaded_env.neutral().digest()))
+        .submit(vyre_runtime::BindingSet::new(loaded_env.neutral().digest()))
         .expect("submit v1");
     let comp_v1 = sub_v1.wait().expect("wait v1");
     assert_eq!(comp_v1.artifact, loaded_env.neutral().digest());
@@ -213,7 +213,7 @@ fn archive_install_load_execute_update_and_rollback_lifecycle() {
         .expect("materialize v2");
     assert_eq!(instance_v2.artifact(), loaded_env_v2.neutral().digest());
     let sub_v2 = instance_v2
-        .submit(vyre_driver::BindingSet::new(
+        .submit(vyre_runtime::BindingSet::new(
             loaded_env_v2.neutral().digest(),
         ))
         .expect("submit v2");
@@ -233,7 +233,7 @@ fn archive_install_load_execute_update_and_rollback_lifecycle() {
         .expect("materialize rb");
     assert_eq!(instance_rb.artifact(), loaded_env_rb.neutral().digest());
     let sub_rb = instance_rb
-        .submit(vyre_driver::BindingSet::new(
+        .submit(vyre_runtime::BindingSet::new(
             loaded_env_rb.neutral().digest(),
         ))
         .expect("submit rb");

@@ -30,7 +30,7 @@ fn cuda_large_storage_atomic_sum_crosses_workgroup_boundary() {
 /// adopted a caller grid would return that partial sum instead of the full one.
 ///
 /// A grid override beside a frozen launch is refused rather than ranked, and
-/// that rule is owned by `crates/vyre-driver/tests/backend_launch_validation.rs`. This
+/// that rule is owned by `crates/vyre-runtime/tests/backend_launch_validation.rs`. This
 /// config carries no frozen launch, so it is a legal dispatch.
 #[test]
 fn cuda_artifact_dispatch_launches_admitted_geometry_not_a_caller_grid() {

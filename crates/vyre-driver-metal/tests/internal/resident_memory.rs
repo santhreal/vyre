@@ -4,7 +4,7 @@
 use super::*;
 
 use super::fixtures::word_to_word;
-use vyre_driver::{DispatchConfig, ResidentDispatchStep, ResidentReadRange};
+use vyre_runtime::{DispatchConfig, ResidentDispatchStep, ResidentReadRange};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 #[test]

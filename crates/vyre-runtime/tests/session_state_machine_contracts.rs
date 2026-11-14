@@ -7,7 +7,7 @@
 #![forbid(unsafe_code)]
 
 use std::collections::BTreeMap;
-use vyre_driver::{BackendError, BackendRegistration, ErrorCode};
+use vyre_runtime::{BackendError, BackendRegistration, ErrorCode};
 use vyre_foundation::diagnostics::RetryClass;
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,

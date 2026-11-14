@@ -19,10 +19,10 @@
 use crate::harness;
 use harness::live_backend;
 
-use vyre_driver::parity_harness::{
+use vyre_runtime::parity_harness::{
     dispatch_single_output, elementwise_program, u32_words, ParityInput,
 };
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{DataType, Expr};
 use vyre_test_support::cast_parity::{NarrowingCase, NARROWING_CASES, NARROWING_INPUTS};

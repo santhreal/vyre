@@ -139,7 +139,7 @@ fn measure(backend: &WgpuBackend) -> Verdict {
     let witness = WITNESS.to_le_bytes();
     let readback = [0u8; 4];
     let inputs: [&[u8]; 2] = [&witness, &readback];
-    let mut config = vyre_driver::DispatchConfig::default();
+    let mut config = vyre_runtime::DispatchConfig::default();
     config.float_lowering = vyre_foundation::fp_parity::FloatLoweringMode::StrictIeee;
 
     let _probe = Measuring::enter();
@@ -176,11 +176,11 @@ fn measure(backend: &WgpuBackend) -> Verdict {
 /// admission check reads never changes between two calls.
 fn verdict(backend: &WgpuBackend) -> Verdict {
     let key = AdapterIdentity::from_info(&backend.adapter_info);
-    if let Ok(verdicts) = vyre_driver::lock_policy::govern_mutex_with_reset(
+    if let Ok(verdicts) = vyre_runtime::lock_policy::govern_mutex_with_reset(
         &VERDICTS,
         "wgpu_strict_float",
         "VERDICTS",
-        vyre_driver::lock_policy::RecoveryClass::RestartableFromCanonicalInput,
+        vyre_runtime::lock_policy::RecoveryClass::RestartableFromCanonicalInput,
         |guard| guard.clear(),
     ) {
         if let Some(known) = verdicts.get(&key) {
@@ -188,11 +188,11 @@ fn verdict(backend: &WgpuBackend) -> Verdict {
         }
     }
     let measured = measure(backend);
-    let mut verdicts = match vyre_driver::lock_policy::govern_mutex_with_reset(
+    let mut verdicts = match vyre_runtime::lock_policy::govern_mutex_with_reset(
         &VERDICTS,
         "wgpu_strict_float",
         "VERDICTS",
-        vyre_driver::lock_policy::RecoveryClass::RestartableFromCanonicalInput,
+        vyre_runtime::lock_policy::RecoveryClass::RestartableFromCanonicalInput,
         |guard| guard.clear(),
     ) {
         Ok(guard) => guard,
@@ -215,7 +215,7 @@ pub(crate) fn honored(backend: &WgpuBackend) -> bool {
 /// those are what a caller acts on: an adapter that rounds fused is answered by
 /// choosing another adapter or the contracted mode, and one the witness could
 /// not reach is a device fault to repair.
-pub(crate) fn refusal(backend: &WgpuBackend) -> vyre_driver::BackendError {
+pub(crate) fn refusal(backend: &WgpuBackend) -> vyre_runtime::BackendError {
     let strict = vyre_foundation::fp_parity::FloatLoweringMode::StrictIeee.cache_label();
     let name = match verdict(backend) {
         Verdict::Separate => format!(
@@ -235,8 +235,8 @@ pub(crate) fn refusal(backend: &WgpuBackend) -> vyre_driver::BackendError {
              answered by an unmeasured device. Fix: repair the device fault above, then retry"
         ),
     };
-    vyre_driver::BackendError::UnsupportedFeature {
+    vyre_runtime::BackendError::UnsupportedFeature {
         name,
-        backend: <WgpuBackend as vyre_driver::VyreBackend>::id(backend).to_string(),
+        backend: <WgpuBackend as vyre_runtime::VyreBackend>::id(backend).to_string(),
     }
 }

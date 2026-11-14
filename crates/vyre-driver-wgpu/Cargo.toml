@@ -25,7 +25,7 @@ parity-testing = []
 
 [dependencies]
 vyre-spec = { workspace = true }
-vyre-driver = { workspace = true }
+vyre-runtime = { workspace = true }
 vyre-foundation = { workspace = true }
 vyre-megakernel = { workspace = true }
 vyre-lower.workspace = true
@@ -52,7 +52,7 @@ bincode = { workspace = true }
 # `artifact_golden` (the emitted-WGSL byte-stability harness) is test-only and
 # lives behind this feature, like `descriptor_builder`.
 vyre-lower = { workspace = true, features = ["test-fixtures"] }
-vyre-runtime.workspace = true
+vyre-runtime = { workspace = true, features = ["test-fixtures"] }
 # The self-hosted optimizer device suites drive pass-engine scheduling directly.
 vyre-pass-engine.workspace = true
 # `ir-fixtures` carries the shared u32 binop parity tables the live-GPU
@@ -62,7 +62,6 @@ vyre-test-support = { workspace = true, features = ["semantic-requests", "driver
 vyre-alloc-probe = { workspace = true }
 # The canonical self-hosted optimizer scaling bench lives behind this feature,
 # so both concrete driver crates report the same fixtures and table.
-vyre-driver = { workspace = true, features = ["test-fixtures"] }
 tempfile.workspace = true
 proptest.workspace = true
 vyre-libs = { workspace = true, features = ["pattern", "parsing", "nn-attention", "crypto-blake3", "hash"] }

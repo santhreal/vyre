@@ -1,7 +1,7 @@
 //! Runtime counters for one readback ring.
 
 use std::sync::atomic::{AtomicU64, Ordering};
-use vyre_driver::accounting::{atomic_max_u64, rebasing_atomic_next_u64};
+use vyre_runtime::accounting::{atomic_max_u64, rebasing_atomic_next_u64};
 
 /// Statistics collected by the ring at runtime.
 #[derive(Debug, Default)]

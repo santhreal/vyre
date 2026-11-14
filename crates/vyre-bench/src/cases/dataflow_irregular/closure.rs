@@ -8,7 +8,7 @@ use crate::api::resident::{
 };
 use crate::cases::harness::{verify_exact, CaseOps, HarnessCase, WorkloadDescription};
 use crate::cases::reference_sample::timed_reference;
-use vyre_driver::{ResidentDispatchStep, ResidentReadRange};
+use vyre_runtime::{ResidentDispatchStep, ResidentReadRange};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_libs::graph::csr_forward_or_changed::csr_forward_or_changed_parallel;
 use vyre_libs::graph::program_graph::ProgramGraphShape;

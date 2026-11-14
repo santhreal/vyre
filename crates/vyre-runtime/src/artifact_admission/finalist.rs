@@ -1,13 +1,13 @@
 use std::collections::{BTreeMap, BTreeSet};
 
-use vyre_driver::{
-    ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, BoundResource,
-};
 use vyre_foundation::ir::GraphValueId;
 use vyre_megakernel::measure::DeviceState;
 use vyre_megakernel::{
     AbiAccess, Artifact, ArtifactValueId, EmittedResources, FinalistEvaluator, LaunchObservation,
     ResourceAbiRecord, ResourceRecord, TargetCompileError, TargetCompiler, TargetPayload,
+};
+use vyre_runtime::{
+    ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, BoundResource,
 };
 
 use super::AdmittedArtifact;

@@ -7,7 +7,7 @@
 #![cfg(feature = "device-tests")]
 
 use vyre::ir::{BinOp, BufferDecl, DataType, Expr, Node, Program};
-use vyre_driver::VyreBackend;
+use vyre_runtime::VyreBackend;
 use vyre_driver_wgpu::emit;
 use vyre_driver_wgpu::WgpuBackend;
 

@@ -4,7 +4,7 @@
 use super::*;
 
 use super::fixtures::{one_word_output, stores_word};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 #[test]

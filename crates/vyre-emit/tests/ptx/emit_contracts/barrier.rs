@@ -131,7 +131,7 @@ fn grid_sync_in_loop_kernel() -> KernelDescriptor {
 /// barrier degrades into a no-op with no error, no diagnostic, and a barrier
 /// still visibly present in both the IR and the PTX.
 ///
-/// Nothing else in the stack catches this: `vyre_driver::grid_sync` deliberately
+/// Nothing else in the stack catches this: `vyre_runtime::grid_sync` deliberately
 /// recurses into `Node::Loop { body }` when detecting barriers, so the IR is
 /// accepted and routed to native lowering. This emitter refusal is the only
 /// enforcement.

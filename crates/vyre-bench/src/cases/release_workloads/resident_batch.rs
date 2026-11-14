@@ -16,7 +16,7 @@ use vyre::ir::Program;
 /// A single non-batched dispatch: what a case falls back to when the backend has
 /// no resident pool, or when the pool refuses the batch.
 pub(super) struct SingleSample {
-    pub(super) timed: vyre_driver::TimedDispatchResult,
+    pub(super) timed: vyre_runtime::TimedDispatchResult,
     pub(super) resident_used: bool,
     pub(super) reset_bytes: u64,
 }
@@ -24,7 +24,7 @@ pub(super) struct SingleSample {
 /// One dispatch of a release workload, whether it came from the batch or the
 /// single fallback. `batch_wall_ns` and `batch_len` are present only for a batch.
 pub(super) struct BatchSample {
-    pub(super) timed: vyre_driver::TimedDispatchResult,
+    pub(super) timed: vyre_runtime::TimedDispatchResult,
     pub(super) resident_used: bool,
     pub(super) reset_bytes: u64,
     pub(super) batch_wall_ns: Option<u64>,
@@ -47,7 +47,7 @@ pub(super) struct BatchPlan<'a> {
     pub(super) reset_payload: &'a [u8],
     /// The config the batch dispatches under. A case that must pin its grid
     /// sets `grid_override` here; otherwise the batch infers one from `inputs`.
-    pub(super) dispatch_config: &'a vyre_driver::DispatchConfig,
+    pub(super) dispatch_config: &'a vyre_runtime::DispatchConfig,
 }
 
 /// Dispatch the resident batch when the backend supports one, otherwise the
@@ -107,7 +107,7 @@ pub(super) fn dispatch_batch_or_single(
                 )));
             }
             Ok(BatchSample {
-                timed: vyre_driver::TimedDispatchResult::device_timed(
+                timed: vyre_runtime::TimedDispatchResult::device_timed(
                     first_outputs,
                     batch.per_item_wall_ns(),
                     batch.per_item_device_ns(),
@@ -118,7 +118,7 @@ pub(super) fn dispatch_batch_or_single(
                 batch_len: Some(batch.batch_len as u64),
             })
         }
-        Err(vyre_driver::BackendError::UnsupportedFeature { .. }) => Ok(from_single(single()?)),
+        Err(vyre_runtime::BackendError::UnsupportedFeature { .. }) => Ok(from_single(single()?)),
         Err(error) => Err(BenchError::BackendFailed(error.to_string())),
     }
 }
@@ -183,7 +183,7 @@ mod tests {
 
     fn sample(batch: bool) -> BatchSample {
         BatchSample {
-            timed: vyre_driver::TimedDispatchResult::host_timed(vec![vec![0u8; 4]], 10),
+            timed: vyre_runtime::TimedDispatchResult::host_timed(vec![vec![0u8; 4]], 10),
             resident_used: batch,
             reset_bytes: if batch { 4 } else { 0 },
             batch_wall_ns: batch.then_some(160),

@@ -1,4 +1,4 @@
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use super::super::planner::{ResidentGridLimits, ResidentGridRequest, ResidentSizingPolicy};
 use super::super::staging_reserve::try_reserve_vec_capacity;

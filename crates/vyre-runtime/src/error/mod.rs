@@ -518,8 +518,8 @@ impl PipelineError {
     }
 }
 
-impl From<vyre_driver::BackendError> for PipelineError {
-    fn from(error: vyre_driver::BackendError) -> Self {
+impl From<vyre_runtime::BackendError> for PipelineError {
+    fn from(error: vyre_runtime::BackendError) -> Self {
         Self::Backend(error.to_string())
     }
 }

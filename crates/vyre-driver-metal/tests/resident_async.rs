@@ -48,12 +48,12 @@ fn resident_async_dispatch_retires_two_independent_slots() {
         let pending_a = backend.dispatch_resident_async(
             &program,
             &[out_a.clone(), input_a.clone()],
-            &vyre_driver::DispatchConfig::default(),
+            &vyre_runtime::DispatchConfig::default(),
         )?;
         let pending_b = backend.dispatch_resident_async(
             &program,
             &[out_b.clone(), input_b.clone()],
-            &vyre_driver::DispatchConfig::default(),
+            &vyre_runtime::DispatchConfig::default(),
         )?;
 
         let timed_a = pending_a.await_timed_result()?;
@@ -66,7 +66,7 @@ fn resident_async_dispatch_retires_two_independent_slots() {
                 "native Metal asynchronous retirement must separate enqueue and wait time"
             );
         }
-        Ok::<(), vyre_driver::BackendError>(())
+        Ok::<(), vyre_runtime::BackendError>(())
     })();
 
     let free_out_a = backend.free_resident(out_a);
@@ -100,12 +100,12 @@ fn dropping_pending_retires_owned_resources() {
         let pending = backend.dispatch_resident_async(
             &program,
             &[out.clone(), input.clone()],
-            &vyre_driver::DispatchConfig::default(),
+            &vyre_runtime::DispatchConfig::default(),
         )?;
         drop(pending);
         let bytes = backend.download_resident(&out)?;
         assert_eq!(bytes, 42u32.to_le_bytes());
-        Ok::<(), vyre_driver::BackendError>(())
+        Ok::<(), vyre_runtime::BackendError>(())
     })();
 
     let free_out = backend.free_resident(out);

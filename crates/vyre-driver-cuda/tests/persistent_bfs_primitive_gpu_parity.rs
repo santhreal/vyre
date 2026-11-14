@@ -5,7 +5,7 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_foundation::ir::BufferAccess;
 use vyre_libs::graph::persistent_bfs::{
     persistent_bfs, persistent_bfs_batch, validate_persistent_bfs_converged_flag,

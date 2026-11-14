@@ -2,8 +2,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 use cudarc::driver::CudaContext;
-use vyre_driver::sealed;
-use vyre_driver::{BackendError, PendingDispatch};
+use vyre_runtime::sealed;
+use vyre_runtime::{BackendError, PendingDispatch};
 
 use crate::backend::allocations::DispatchAllocations;
 use crate::backend::module_globals::ModuleGlobalsLease;
@@ -320,7 +320,7 @@ impl CudaPendingDispatch {
         if let Some(transfers) = self.host_transfers.as_ref() {
             transfers.collect_outputs_into(outputs)?;
         } else {
-            vyre_driver::replace_output_buffers_preserving_slots(
+            vyre_runtime::replace_output_buffers_preserving_slots(
                 std::mem::take(&mut self.outputs),
                 outputs,
             );
@@ -369,7 +369,7 @@ impl PendingDispatch for CudaPendingDispatch {
 
     fn await_timed_result(
         self: Box<Self>,
-    ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
+    ) -> Result<vyre_runtime::TimedDispatchResult, BackendError> {
         let started = std::time::Instant::now();
         let (outputs, device_ns) = CudaPendingDispatch::await_timed_result(*self)?;
         let wall_ns = u64::try_from(started.elapsed().as_nanos()).map_err(|_| {
@@ -377,7 +377,7 @@ impl PendingDispatch for CudaPendingDispatch {
                 "CUDA pending dispatch retirement exceeded the u64 nanosecond timing range",
             )
         })?;
-        Ok(vyre_driver::TimedDispatchResult {
+        Ok(vyre_runtime::TimedDispatchResult {
             outputs,
             wall_ns,
             device_ns,

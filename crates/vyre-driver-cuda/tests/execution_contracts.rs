@@ -8,7 +8,7 @@ use harness::{
     ordered_f32_bits, u16_bytes, u32_bytes,
 };
 
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
 use vyre_test_support::pass_programs::atomic_sum_program as make_atomic_sum_program;

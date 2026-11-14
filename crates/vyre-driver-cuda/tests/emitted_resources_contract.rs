@@ -27,7 +27,7 @@ const MINIMUM_REGISTERS: u32 = 1;
 
 #[test]
 fn the_cuda_driver_reports_the_registers_it_allocated_for_every_entry_point() {
-    let registration = vyre_driver::backend_registration(vyre_driver_cuda::CUDA_BACKEND_ID)
+    let registration = vyre_runtime::backend_registration(vyre_driver_cuda::CUDA_BACKEND_ID)
         .expect("the CUDA backend registration must be linked");
     let compiler = registration
         .target_compiler()

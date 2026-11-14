@@ -12,7 +12,7 @@ use vyre_test_support::semantic_requests::{
 fn live_executor() -> (RegisteredSemanticExecutor, DeviceFacts) {
     let _ = registered_backend_id();
     let registration =
-        vyre_driver::backend_registration(CUDA_BACKEND_ID).expect("registered CUDA backend");
+        vyre_runtime::backend_registration(CUDA_BACKEND_ID).expect("registered CUDA backend");
     let device = registration.acquire().expect("live CUDA backend");
     let facts = device.device_profile().compile_facts();
     (RegisteredSemanticExecutor::new(registration), facts)

@@ -13,7 +13,7 @@
 //! The grid is not the caller's choice by default. `frontier_to_queue` emits
 //! `atomic_add` on `queue_len`, and once a program contains any atomic the
 //! dispatch span becomes the widest non-shared binding
-//! (`vyre-driver` `dispatch_element_count_for_program`, mirrored by the CPU
+//! (`vyre-runtime` `dispatch_element_count_for_program`, mirrored by the CPU
 //! reference interpreter's `force_full_span`). The widest binding here is
 //! `active_queue`, whose count is `queue_capacity`, so a capacity that merely
 //! matches the node count already produces a multi-workgroup grid. No hostile

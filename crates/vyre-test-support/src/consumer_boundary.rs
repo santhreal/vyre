@@ -23,8 +23,8 @@
 //! #[test]
 //! fn driver_source_does_not_name_downstream_consumers() {
 //!     vyre_test_support::consumer_boundary::assert_source_does_not_name_downstream_consumers(
-//!         ConsumerBoundaryScan::for_crate("vyre-driver", vyre_crate_directory(env!("CARGO_PKG_NAME")))
-//!             .with_rationale("vyre-driver is a platform crate"),
+//!         ConsumerBoundaryScan::for_crate("vyre-runtime", vyre_crate_directory(env!("CARGO_PKG_NAME")))
+//!             .with_rationale("vyre-runtime is a platform crate"),
 //!     );
 //! }
 //! ```

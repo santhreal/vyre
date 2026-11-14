@@ -7,7 +7,7 @@
 
 #![allow(unsafe_code)]
 
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 use vyre_test_support::elementwise_programs::elementwise_add_program;
 use vyre_test_support::le_words::{pack_words, unpack_words};

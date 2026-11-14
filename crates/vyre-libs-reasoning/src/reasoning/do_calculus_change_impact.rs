@@ -427,7 +427,7 @@ where
     }
 
     let program = build_program("adj", mask_buffer, "out", n);
-    // Real-backend dispatch-input contract (vyre-driver `role_for_buffer`): one input per
+    // Real-backend dispatch-input contract (vyre-runtime `role_for_buffer`): one input per
     // INPUT-CONSUMING buffer in buffer order: `adj` RO (0), `mask` RO (1), `out` plain-ReadWrite (2,
     // InputOutput). `out` is a plain-RW output, so the backend requires a zero-filled input slot for
     // its initial contents (the per-lane kernel overwrites every cell). Passing only the two RO
@@ -582,7 +582,7 @@ fn rule3_subgraph_via_into_with_inputs(
     })?;
 
     let program = rule3_subgraph("adj", "keep_mask", "reduced", "kept", "kept_len", n);
-    // Real-backend dispatch-input contract (vyre-driver `role_for_buffer`): one input per
+    // Real-backend dispatch-input contract (vyre-runtime `role_for_buffer`): one input per
     // input-consuming buffer in buffer order: `adj` RO (0), `keep_mask` RO (1), then the three
     // plain-ReadWrite outputs `reduced` (2, n*n), `kept` (3, n), and `kept_len` (4, 1). Each
     // plain-RW output needs a zero-filled input slot for its initial contents.

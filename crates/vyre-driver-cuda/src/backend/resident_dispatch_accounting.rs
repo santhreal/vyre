@@ -1,8 +1,8 @@
 //! Shared resident-dispatch contracts and checked accounting helpers.
 
 use smallvec::SmallVec;
-use vyre_driver::transfer_accounting::TransferAccountingPolicy;
-use vyre_driver::{BackendError, DispatchConfig};
+use vyre_runtime::transfer_accounting::TransferAccountingPolicy;
+use vyre_runtime::{BackendError, DispatchConfig};
 use vyre_foundation::ir::Program;
 
 use super::output_range::CudaOutputReadback;

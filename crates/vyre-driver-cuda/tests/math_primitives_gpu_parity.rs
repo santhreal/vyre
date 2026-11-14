@@ -6,7 +6,7 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_libs::math::prefix_scan::{prefix_scan, ScanKind};
 use vyre_libs::math::scan::scan_prefix_sum;
 use vyre_libs::math::stream_compact::stream_compact;

@@ -2,7 +2,7 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_cuda::{codegen::program_to_ptx, CudaBackend, CudaBackendRegistration};
 use vyre_foundation::ir::{BufferDecl, DataType, Node, Program};
 
@@ -93,7 +93,7 @@ fn registration_resident_dispatch_rejects_unsupported_capability_before_launch()
     assert_missing_indirect_dispatch_capability(err);
 }
 
-fn assert_missing_indirect_dispatch_capability(err: vyre_driver::BackendError) {
+fn assert_missing_indirect_dispatch_capability(err: vyre_runtime::BackendError) {
     let message = err.to_string();
     assert!(
         message.contains("Fix:")
@@ -104,9 +104,9 @@ fn assert_missing_indirect_dispatch_capability(err: vyre_driver::BackendError) {
 }
 
 fn expect_backend_error<T>(
-    result: Result<T, vyre_driver::BackendError>,
+    result: Result<T, vyre_runtime::BackendError>,
     message: &'static str,
-) -> vyre_driver::BackendError {
+) -> vyre_runtime::BackendError {
     match result {
         Ok(_) => panic!("{message}"),
         Err(err) => err,

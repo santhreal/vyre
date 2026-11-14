@@ -20,7 +20,7 @@
 //! | `vyre-libs::ml::transformers` consumers | attention softmax |
 //! | `vyre-libs::ml::structured` consumers | differentiable beam search, top-k, sorting |
 //! | `vyre-libs::parsing::c::sema` consumers | identifier→typedef gradient flow |
-//! | `vyre-driver` autotuner consumers | smoothed argmax over the workgroup-size / tile-shape / fusion-threshold tuning grid; gradient descent picks the configuration |
+//! | `vyre-runtime` autotuner consumers | smoothed argmax over the workgroup-size / tile-shape / fusion-threshold tuning grid; gradient descent picks the configuration |
 //!
 //! # Fixed-point convention
 //!

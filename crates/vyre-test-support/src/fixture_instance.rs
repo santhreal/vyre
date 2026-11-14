@@ -6,7 +6,7 @@
 //! That difference is a closure here, so a method added to `ArtifactInstance`
 //! is answered once instead of in every suite that fakes a device.
 
-use vyre_driver::{
+use vyre_runtime::{
     ArtifactInstance, BackendError, BindingSet, Completion, DeviceIdentity, Submission,
 };
 use vyre_megakernel::{Artifact, Digest, EmittedResources, TargetPayload};

@@ -95,7 +95,7 @@ fn submits(text: &str, registration_type: &str) -> bool {
         }
         if registration_type == "BackendRegistration"
             && (trimmed.starts_with("register_backend!")
-                || trimmed.starts_with("vyre_driver::register_backend!"))
+                || trimmed.starts_with("vyre_runtime::register_backend!"))
         {
             return true;
         }
@@ -119,7 +119,7 @@ fn members_submitting(registration_type: &str) -> Vec<String> {
     for member in workspace_members(&root) {
         let name = crate_name(&member);
         if registration_type == "BackendRegistration"
-            && (name == "vyre-driver"
+            && (name == "vyre-runtime"
                 || name == "xtask"
 )
         {

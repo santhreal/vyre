@@ -16,7 +16,7 @@
 
 use std::collections::BTreeMap;
 
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 /// First word of every well-formed SPIR-V module.
 const SPIRV_MAGIC: u32 = 0x0723_0203;

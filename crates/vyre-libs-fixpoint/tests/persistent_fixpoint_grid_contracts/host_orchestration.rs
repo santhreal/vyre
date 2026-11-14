@@ -143,7 +143,7 @@ fn host_orchestrated_batches_reach_the_same_answer_as_one_unrolled_dispatch() {
     // A batch that spans convergence still carries the grid fences, so the
     // cooperative-launch requirement does NOT go away with a smaller batch.
     assert!(
-        vyre_driver::grid_sync::contains_grid_sync(&one_wave),
+        vyre_runtime::grid_sync::contains_grid_sync(&one_wave),
         "even a one-wave build contains GridSync, so host batching does not escape the \
          cooperative-residency ceiling"
     );
@@ -305,7 +305,7 @@ fn neither_builder_writes_changed_with_a_plain_store() {
 /// nothing fails: the state is correct, `changed` decodes correctly, and only
 /// the saved work disappears. `MemoryOrdering::GridSync` lowers either to a
 /// native cooperative grid barrier or to a kernel split. Under the split,
-/// `vyre_driver::grid_sync` dispatches every segment in order, and a
+/// `vyre_runtime::grid_sync` dispatches every segment in order, and a
 /// `Node::Return` inside segment N returns from THAT launch only; it cannot
 /// prevent the host from launching segments N+1 onward. So a run that
 /// converges at wave 2 of a 16-wave budget still issues every segment, and a
@@ -324,7 +324,7 @@ fn the_split_path_launches_every_wave_because_return_is_per_segment() {
 
     // Two GridSync barriers per wave, so the wave list splits into
     // 2 * budget + 1 segments. Every one of these is a launch the host issues.
-    let segments = vyre_driver::grid_sync::try_split_on_grid_sync(&program)
+    let segments = vyre_runtime::grid_sync::try_split_on_grid_sync(&program)
         .expect("Fix: the fixture program must split at its grid-sync fences");
     assert_eq!(
         segments.len(),

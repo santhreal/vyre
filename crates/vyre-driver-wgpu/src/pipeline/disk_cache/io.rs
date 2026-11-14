@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::{LazyLock, Mutex};
 
 use fs2::FileExt;
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use super::keys::path_fingerprint;
 use crate::staging_reserve::reserve_backend_vec;
@@ -20,11 +20,11 @@ static PENDING_DURABLE_CACHE_FILES: LazyLock<Mutex<BTreeSet<PathBuf>>> =
 
 pub(crate) fn flush_disk_pipeline_cache() -> Result<(), BackendError> {
     let paths = {
-        let mut guard = vyre_driver::lock_policy::govern_mutex(
+        let mut guard = vyre_runtime::lock_policy::govern_mutex(
             &PENDING_DURABLE_CACHE_FILES,
             "wgpu_disk_cache",
             "PENDING_DURABLE_CACHE_FILES",
-            vyre_driver::lock_policy::RecoveryClass::TransactionallyRecoverable,
+            vyre_runtime::lock_policy::RecoveryClass::TransactionallyRecoverable,
         )?;
         let mut paths = Vec::new();
         reserve_backend_vec(
@@ -40,11 +40,11 @@ pub(crate) fn flush_disk_pipeline_cache() -> Result<(), BackendError> {
     }
 
     if let Err(error) = flush_disk_cache_paths(&paths) {
-        let mut guard = vyre_driver::lock_policy::govern_mutex(
+        let mut guard = vyre_runtime::lock_policy::govern_mutex(
             &PENDING_DURABLE_CACHE_FILES,
             "wgpu_disk_cache",
             "PENDING_DURABLE_CACHE_FILES",
-            vyre_driver::lock_policy::RecoveryClass::TransactionallyRecoverable,
+            vyre_runtime::lock_policy::RecoveryClass::TransactionallyRecoverable,
         )?;
         guard.extend(paths);
         return Err(error);
@@ -53,8 +53,8 @@ pub(crate) fn flush_disk_pipeline_cache() -> Result<(), BackendError> {
 }
 
 fn flush_disk_cache_paths(paths: &[PathBuf]) -> Result<(), BackendError> {
-    vyre_driver::durable_fanout::sync_paths_and_parents(paths, |failure| {
-        use vyre_driver::durable_fanout::SyncFailure;
+    vyre_runtime::durable_fanout::sync_paths_and_parents(paths, |failure| {
+        use vyre_runtime::durable_fanout::SyncFailure;
         match &failure {
             SyncFailure::Open { path, source, .. } => {
                 trace_io_err(path, source, "pipeline cache flush open failed");
@@ -113,11 +113,11 @@ pub(super) fn write_atomic(path: &Path, bytes: &[u8], label: &str) -> Result<(),
 
 fn register_pending_durable_cache_file(path: &Path) -> Result<(), BackendError> {
     let should_flush = {
-        let mut guard = vyre_driver::lock_policy::govern_mutex(
+        let mut guard = vyre_runtime::lock_policy::govern_mutex(
             &PENDING_DURABLE_CACHE_FILES,
             "wgpu_disk_cache",
             "PENDING_DURABLE_CACHE_FILES",
-            vyre_driver::lock_policy::RecoveryClass::TransactionallyRecoverable,
+            vyre_runtime::lock_policy::RecoveryClass::TransactionallyRecoverable,
         )?;
         guard.insert(path.to_path_buf());
         guard.len() >= MAX_PENDING_DURABLE_CACHE_FILES

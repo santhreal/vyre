@@ -3,7 +3,7 @@
 //! WHY: every concrete driver used to open its payload with its own copy of
 //! these checks, and the copies drifted. Two backends demanded an entry point
 //! named `main` and two did not; one spelled shared rejections in different
-//! text. A payload one backend refused, another ran. `vyre_driver::materialize`
+//! text. A payload one backend refused, another ran. `vyre_runtime::materialize`
 //! is now the single admission decision, so this pins that decision against
 //! real compiled payloads, one case per rejection branch.
 //!
@@ -13,8 +13,8 @@
 //!
 //! Not covered here: native module loading, which needs a device.
 
-use vyre_driver::materialize::{self, MaterializerTarget};
-use vyre_driver::BackendError;
+use vyre_runtime::materialize::{self, MaterializerTarget};
+use vyre_runtime::BackendError;
 use vyre_megakernel::{
     Artifact, TargetEntryPoint, TargetModuleBundle, TargetPayload, TargetPayloadFormat,
     TargetProfile,

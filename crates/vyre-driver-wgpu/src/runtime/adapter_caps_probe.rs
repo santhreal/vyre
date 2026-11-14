@@ -13,7 +13,7 @@
 //! [`vyre_foundation::optimizer::AdapterCaps`] shape. No dispatch happens.
 
 use crate::runtime::device::EnabledFeatures;
-use vyre_driver::{DeviceProfile, DeviceSignatureTable, DeviceTimingQuality};
+use vyre_runtime::{DeviceProfile, DeviceSignatureTable, DeviceTimingQuality};
 use vyre_foundation::optimizer::AdapterCaps;
 
 /// Probe a live wgpu adapter and return the substrate-neutral

@@ -8,13 +8,13 @@ use std::hash::BuildHasherDefault;
 use std::sync::atomic::{AtomicU32, AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
-use vyre_driver::accounting::{
+use vyre_runtime::accounting::{
     checked_atomic_add_u64_with_order, checked_atomic_add_usize_with_order,
     checked_atomic_sub_usize_with_order, pinning_atomic_increment_u32,
     pinning_atomic_increment_u64,
 };
-use vyre_driver::cache_eviction_heat::CacheEntryStats;
-use vyre_driver::BackendError;
+use vyre_runtime::cache_eviction_heat::CacheEntryStats;
+use vyre_runtime::BackendError;
 
 /// Bounded cache for WGPU pipeline artifacts using shared driver-tier
 /// retention policy. Despite the legacy name, this is not LRU.
@@ -187,7 +187,7 @@ impl LruPipelineCache {
                 return;
             }
             rebasing_atomic_add_u64(&self.evictions, removed_count, "pipeline cache evictions");
-            vyre_driver::cache_eviction::record_eviction(
+            vyre_runtime::cache_eviction::record_eviction(
                 removed_count as f64 / entries.len() as f64,
             );
         }

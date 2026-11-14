@@ -16,7 +16,7 @@ use crate::harness;
 use harness::{selected_adapter, shared_live_backend as live_backend};
 
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 // ------------------------------------------------------------------
 // 1. max_workgroup_size never exceeds the adapter, and the width it reports

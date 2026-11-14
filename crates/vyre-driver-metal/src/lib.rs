@@ -10,7 +10,7 @@
 // SAFETY comment the `lint-unsafe-justification` gate reads.
 #![allow(unsafe_code)]
 
-use vyre_driver::{BackendError, VyreBackend};
+use vyre_runtime::{BackendError, VyreBackend};
 
 /// Stable backend id for native Metal execution.
 pub const METAL_BACKEND_ID: &str = "metal";
@@ -66,16 +66,16 @@ pub fn registered_backend_id() -> Option<&'static str> {
 /// feature.
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 const MATERIALIZER: Option<
-    fn() -> Result<Box<dyn vyre_driver::ArtifactMaterializer>, BackendError>,
+    fn() -> Result<Box<dyn vyre_runtime::ArtifactMaterializer>, BackendError>,
 > = Some(materializer::materializer_factory);
 
 /// No device materialization facet: see the Apple-target constant above.
 #[cfg(not(any(target_os = "macos", target_os = "ios")))]
 const MATERIALIZER: Option<
-    fn() -> Result<Box<dyn vyre_driver::ArtifactMaterializer>, BackendError>,
+    fn() -> Result<Box<dyn vyre_runtime::ArtifactMaterializer>, BackendError>,
 > = None;
 
-vyre_driver::register_backend! {
+vyre_runtime::register_backend! {
     id: METAL_BACKEND_ID,
     target_id: METAL_TARGET_ID,
     payload_format: Some(target_compiler::METAL_TARGET_FORMAT),

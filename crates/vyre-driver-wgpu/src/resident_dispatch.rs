@@ -2,25 +2,25 @@
 
 use crate::WgpuBackend;
 use std::time::Instant;
-use vyre_driver::CompiledPipeline;
+use vyre_runtime::CompiledPipeline;
 use vyre_foundation::ir::Program;
 
 /// Dispatch a program with backend-resident resources and return timing.
 pub(crate) fn dispatch_resident_timed(
     backend: &WgpuBackend,
     program: &Program,
-    resources: &[vyre_driver::Resource],
-    config: &vyre_driver::DispatchConfig,
-) -> Result<vyre_driver::TimedDispatchResult, vyre_driver::BackendError> {
+    resources: &[vyre_runtime::Resource],
+    config: &vyre_runtime::DispatchConfig,
+) -> Result<vyre_runtime::TimedDispatchResult, vyre_runtime::BackendError> {
     let started = Instant::now();
-    if vyre_driver::grid_sync::contains_grid_sync(program) {
-        return vyre_driver::grid_sync::dispatch_resident_with_grid_sync_split_timed(
+    if vyre_runtime::grid_sync::contains_grid_sync(program) {
+        return vyre_runtime::grid_sync::dispatch_resident_with_grid_sync_split_timed(
             backend, program, resources, config,
         );
     }
     let pipeline = backend.compile_resident_pipeline_cached(program, config)?;
     let timed = pipeline.dispatch_persistent_handles_timed(resources, config)?;
-    Ok(vyre_driver::TimedDispatchResult {
+    Ok(vyre_runtime::TimedDispatchResult {
         outputs: timed.outputs,
         wall_ns: crate::numeric::WGPU_NUMERIC
             .elapsed_nanos_u64(started, "resident timed dispatch")?,
@@ -33,12 +33,12 @@ pub(crate) fn dispatch_resident_timed(
 pub(crate) fn dispatch_resident_async(
     backend: &WgpuBackend,
     program: &Program,
-    resources: &[vyre_driver::Resource],
-    config: &vyre_driver::DispatchConfig,
-) -> Result<Box<dyn vyre_driver::PendingDispatch>, vyre_driver::BackendError> {
+    resources: &[vyre_runtime::Resource],
+    config: &vyre_runtime::DispatchConfig,
+) -> Result<Box<dyn vyre_runtime::PendingDispatch>, vyre_runtime::BackendError> {
     let started = Instant::now();
-    if vyre_driver::grid_sync::contains_grid_sync(program) {
-        let outputs = vyre_driver::grid_sync::dispatch_resident_with_grid_sync_split_timed(
+    if vyre_runtime::grid_sync::contains_grid_sync(program) {
+        let outputs = vyre_runtime::grid_sync::dispatch_resident_with_grid_sync_split_timed(
             backend, program, resources, config,
         )?
         .outputs;

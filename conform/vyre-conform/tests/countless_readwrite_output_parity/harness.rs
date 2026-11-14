@@ -87,7 +87,7 @@ pub(crate) fn run_target(
     inputs: &[Vec<u8>],
 ) -> Result<Vec<Vec<u8>>, String> {
     let registration =
-        vyre_driver::backend_registration(backend_id).map_err(|error| error.to_string())?;
+        vyre_runtime::backend_registration(backend_id).map_err(|error| error.to_string())?;
     let borrowed = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
     let production = ProductionSession::from_registration(program, registration)
         .map_err(|error| error.to_string())?;

@@ -7,7 +7,7 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_libs::bitset::and_into::bitset_and_into;
 use vyre_libs::bitset::and_not_into::bitset_and_not_into;
 use vyre_libs::bitset::clear_bit::bitset_clear_bit;

@@ -3,7 +3,7 @@
 
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::SmallVec;
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use crate::backend::resident::CudaResidentBuffer;
 use crate::backend::staging_reserve::{reserve_hash_set, reserve_smallvec};

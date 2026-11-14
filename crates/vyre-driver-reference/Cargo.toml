@@ -14,7 +14,7 @@ keywords = ["cpu", "reference", "backend", "vyre"]
 categories = ["algorithms", "api-bindings"]
 
 [dependencies]
-vyre-driver.workspace = true
+vyre-runtime.workspace = true
 vyre-foundation.workspace = true
 vyre-reference.workspace = true
 vyre-megakernel.workspace = true
@@ -31,7 +31,7 @@ publication_contract = "consumer-seam:vyre-graphics-app"
 workspace = true
 
 [dev-dependencies]
-vyre-driver = { workspace = true, features = ["test-fixtures"] }
+vyre-runtime = { workspace = true, features = ["test-fixtures"] }
 # The shared semantic-execution graph, bindings, and request every backend
 # contract proves the seam with, plus the strict-float witness program the
 # strict-lowering contract runs, which `ir-fixtures` carries.

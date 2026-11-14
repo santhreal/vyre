@@ -18,7 +18,7 @@
 #![cfg(feature = "device-tests")]
 
 use vyre::ir::{BufferDecl, DataType, Program};
-use vyre_driver::{BackendError, VyreBackend};
+use vyre_runtime::{BackendError, VyreBackend};
 
 fn no_op_program() -> Program {
     Program::wrapped(
@@ -36,7 +36,7 @@ fn no_op_program_returns_zero_initialized_output() {
         .expect("Fix: live WGPU backend is required for empty-program dispatch coverage");
 
     let inputs: Vec<Vec<u8>> = vec![];
-    let config = vyre_driver::DispatchConfig::default();
+    let config = vyre_runtime::DispatchConfig::default();
     let result = backend.dispatch(&program, &inputs, &config);
     assert_eq!(
         result.expect("a no-op program with one sized output must dispatch"),
@@ -60,7 +60,7 @@ fn dispatch_with_mismatched_inputs_yields_structured_error() {
     let backend = vyre_driver_wgpu::WgpuBackend::acquire()
         .expect("Fix: live WGPU backend is required for adversarial dispatch coverage");
     let inputs: Vec<Vec<u8>> = vec![]; // mismatched: 0 < 1 expected
-    let config = vyre_driver::DispatchConfig::default();
+    let config = vyre_runtime::DispatchConfig::default();
     let result = backend.dispatch(&program, &inputs, &config);
     assert!(
         matches!(result, Err(BackendError::Other(_))),

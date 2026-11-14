@@ -4,7 +4,7 @@
 
 use crate::harness;
 use harness::u32_bytes;
-use vyre_driver::{BindingPlan, BindingRole};
+use vyre_runtime::{BindingPlan, BindingRole};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 #[test]

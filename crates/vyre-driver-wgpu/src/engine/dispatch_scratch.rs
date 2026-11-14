@@ -18,7 +18,7 @@
 use std::cell::RefCell;
 
 use super::record_and_readback::binding_lookup::BindingLookup;
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 /// Reusable per-thread vectors borrowed for one dispatch.
 pub(crate) struct DispatchScratch {

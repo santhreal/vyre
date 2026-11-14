@@ -87,9 +87,9 @@ pub(crate) fn emit_plan(args: impl IntoIterator<Item = String>) -> Result<(), St
 }
 
 pub(crate) fn proof_plan_summary(
-    universe_backends: &[&'static vyre_driver::BackendRegistration],
+    universe_backends: &[&'static vyre_runtime::BackendRegistration],
     universe_entries: &[UnifiedEntry],
-    backends: &[&'static vyre_driver::BackendRegistration],
+    backends: &[&'static vyre_runtime::BackendRegistration],
     unavailable: &[UnavailableBackend],
     entries: &[PreparedEntry],
     pair_count: usize,

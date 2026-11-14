@@ -9,12 +9,12 @@ use std::sync::{
 use dashmap::DashMap;
 use rustc_hash::{FxHashMap, FxHasher};
 use smallvec::SmallVec;
-use vyre_driver::accounting::{
+use vyre_runtime::accounting::{
     checked_add_u64_lazy, checked_add_usize_lazy, checked_atomic_add_u64_guarded_with_order,
     checked_atomic_add_usize_with_order, checked_atomic_next_u64_with_order,
     checked_atomic_sub_u64 as checked_sub_u64, checked_atomic_sub_usize_with_order,
 };
-use vyre_driver::{BackendError, ResidentHandle, ResidentOwner};
+use vyre_runtime::{BackendError, ResidentHandle, ResidentOwner};
 
 use super::allocations::{alloc_cuda_ptr, free_cuda_ptr};
 use super::staging_reserve::{reserve_hash_map, reserve_smallvec};
@@ -405,7 +405,7 @@ impl CudaResidentStore {
 
     pub(crate) fn handles_from_resources(
         &self,
-        resources: &[vyre_driver::Resource],
+        resources: &[vyre_runtime::Resource],
     ) -> Result<SmallVec<[CudaResidentBuffer; 8]>, BackendError> {
         let mut handles = SmallVec::new();
         reserve_smallvec(&mut handles, resources.len(), "resident resource handles")?;
@@ -419,7 +419,7 @@ impl CudaResidentStore {
     /// resident and borrowed entries side by side in caller order.
     pub(crate) fn bindings_from_resources<'a>(
         &self,
-        resources: &'a [vyre_driver::Resource],
+        resources: &'a [vyre_runtime::Resource],
     ) -> Result<SmallVec<[CudaDispatchBinding<'a>; 8]>, BackendError> {
         let mut bindings = SmallVec::new();
         reserve_smallvec(&mut bindings, resources.len(), "resident dispatch bindings")?;
@@ -431,19 +431,19 @@ impl CudaResidentStore {
 
     /// Resolve one dispatch resource into its binding source.
     ///
-    /// A [`vyre_driver::Resource::Borrowed`] is not an error here: the resident
+    /// A [`vyre_runtime::Resource::Borrowed`] is not an error here: the resident
     /// dispatch stages it per call. Only lookups that must name device memory
     /// that outlives the call (upload, download, free) go through
     /// [`CudaResidentStore::handle_from_resource`].
     pub(crate) fn binding_from_resource<'a>(
         &self,
-        resource: &'a vyre_driver::Resource,
+        resource: &'a vyre_runtime::Resource,
     ) -> Result<CudaDispatchBinding<'a>, BackendError> {
         match resource {
-            vyre_driver::Resource::Resident(_) => Ok(CudaDispatchBinding::Resident(
+            vyre_runtime::Resource::Resident(_) => Ok(CudaDispatchBinding::Resident(
                 self.handle_from_resource(resource)?,
             )),
-            vyre_driver::Resource::Borrowed(bytes) => {
+            vyre_runtime::Resource::Borrowed(bytes) => {
                 Ok(CudaDispatchBinding::Borrowed(bytes.as_slice()))
             }
         }
@@ -451,10 +451,10 @@ impl CudaResidentStore {
 
     pub(crate) fn handle_from_resource(
         &self,
-        resource: &vyre_driver::Resource,
+        resource: &vyre_runtime::Resource,
     ) -> Result<CudaResidentBuffer, BackendError> {
         match resource {
-            vyre_driver::Resource::Resident(handle) => {
+            vyre_runtime::Resource::Resident(handle) => {
                 self.check_owner(*handle, "resident handle lookup")?;
                 let buffer = self
                     .buffers
@@ -469,7 +469,7 @@ impl CudaResidentStore {
                     byte_len: buffer.byte_len,
                 })
             }
-            vyre_driver::Resource::Borrowed(_) => Err(BackendError::InvalidProgram {
+            vyre_runtime::Resource::Borrowed(_) => Err(BackendError::InvalidProgram {
                 fix: "Fix: CUDA resident upload, download, and free name device memory that outlives the call, so they need a Resource::Resident handle; a Resource::Borrowed value has no device identity. Pass a borrowed buffer straight to the dispatch instead, which stages it per call alongside the resident bindings."
                     .to_string(),
             }),
@@ -544,13 +544,13 @@ pub(crate) fn resident_bindings_from_handles(
 /// device memory by handle, so this copies no bytes.
 pub(crate) fn resident_resources_from_handles(
     handles: &[CudaResidentBuffer],
-) -> Result<SmallVec<[vyre_driver::Resource; 8]>, BackendError> {
+) -> Result<SmallVec<[vyre_runtime::Resource; 8]>, BackendError> {
     let mut resources = SmallVec::new();
     reserve_smallvec(&mut resources, handles.len(), "resident dispatch resources")?;
     resources.extend(
         handles
             .iter()
-            .map(|handle| vyre_driver::Resource::Resident(handle.handle)),
+            .map(|handle| vyre_runtime::Resource::Resident(handle.handle)),
     );
     Ok(resources)
 }
@@ -637,7 +637,7 @@ mod tests {
         validate_resident_allocation_budget, CudaResidentBuffer, CudaResidentStore, ResidentBuffer,
         ResidentViewCache,
     };
-    use vyre_driver::BackendError;
+    use vyre_runtime::BackendError;
 
     #[test]
     fn resident_budget_validation_rejects_cumulative_over_budget_allocation() {

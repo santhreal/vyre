@@ -58,7 +58,7 @@ impl WgpuBackend {
 
     /// Driver-neutral capability profile for this live backend.
     #[must_use]
-    pub fn device_profile(&self) -> vyre_driver::DeviceProfile {
+    pub fn device_profile(&self) -> vyre_runtime::DeviceProfile {
         crate::runtime::adapter_caps_probe::from_backend_profile(
             &self.adapter_info,
             &self.device_limits,

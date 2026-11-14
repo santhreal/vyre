@@ -2,11 +2,11 @@ use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use vyre_driver::materialize::{
+use vyre_runtime::materialize::{
     self, DeviceSpec, ExecutableModule, InstanceCore, InstanceMessages, MaterializedInstance,
     MaterializerDevice, ResidentInstance,
 };
-use vyre_driver::{
+use vyre_runtime::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingPlan, BindingSet,
     CompiledPipeline, Completion, Device, DeviceIdentity, DispatchConfig, Resource, Submission,
     TimedDispatchResult,
@@ -50,7 +50,7 @@ pub(crate) struct WgpuMaterializer {
 }
 
 impl ArtifactMaterializer for WgpuMaterializer {
-    vyre_driver::materializer_passthrough!(backend);
+    vyre_runtime::materializer_passthrough!(backend);
 
     fn materialize(
         &self,
@@ -162,7 +162,7 @@ struct WgpuExecutableModule {
     input_slots: Vec<ArtifactInputSlot>,
     resident_slots: Vec<String>,
     config: DispatchConfig,
-    plan: vyre_driver::BindingPlan,
+    plan: vyre_runtime::BindingPlan,
 }
 
 struct WgpuArtifactInstance {
@@ -172,12 +172,12 @@ struct WgpuArtifactInstance {
 }
 
 impl ExecutableModule for WgpuExecutableModule {
-    vyre_driver::executable_module!();
+    vyre_runtime::executable_module!();
 }
 
 impl ArtifactInstance for WgpuArtifactInstance {
-    vyre_driver::artifact_instance_identity!();
-    vyre_driver::artifact_instance_unreported_resources!();
+    vyre_runtime::artifact_instance_identity!();
+    vyre_runtime::artifact_instance_unreported_resources!();
 
     fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
         if self.lost.load(Ordering::Acquire) {
@@ -213,7 +213,7 @@ impl ArtifactInstance for WgpuArtifactInstance {
 impl MaterializedInstance for WgpuArtifactInstance {
     type Module = WgpuExecutableModule;
 
-    vyre_driver::staged_input_gather!();
+    vyre_runtime::staged_input_gather!();
 
     fn modules(&self) -> &[Self::Module] {
         &self.modules
@@ -239,7 +239,7 @@ impl MaterializedInstance for WgpuArtifactInstance {
 }
 
 impl ResidentInstance for WgpuArtifactInstance {
-    vyre_driver::resident_pipeline_launch!();
+    vyre_runtime::resident_pipeline_launch!();
 
     fn resident_module_label(&self) -> &'static str {
         "WGPU resident target module"
@@ -354,7 +354,7 @@ mod tests {
     }
 
     /// WHY: `RESIDENT_MESSAGES` is a crate-private const, so no integration test
-    /// can name it, and the distinctness that `vyre-driver` pins for the neutral
+    /// can name it, and the distinctness that `vyre-runtime` pins for the neutral
     /// record has to be asserted beside every record that overrides one. A record
     /// whose two value-shaped rejections read alike turns an unproduced output and
     /// an unpreserved retained value into one sentence, which is the defect CUDA

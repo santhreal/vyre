@@ -1,5 +1,5 @@
 use smallvec::SmallVec;
-use vyre_driver::{BackendError, OutputBuffers};
+use vyre_runtime::{BackendError, OutputBuffers};
 
 use super::dispatch::CudaBackend;
 use super::output_range::CudaOutputReadback;

@@ -1,10 +1,10 @@
 use std::sync::Arc;
 use std::time::Instant;
 
-use vyre_driver::materialize::{
+use vyre_runtime::materialize::{
     self, DeviceSpec, ExecutableModule, InstanceCore, MaterializedInstance, MaterializerDevice,
 };
-use vyre_driver::{
+use vyre_runtime::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, DispatchConfig, Submission,
     TimedDispatchResult,
 };
@@ -22,7 +22,7 @@ pub(crate) struct SpirvMaterializer {
 }
 
 impl ArtifactMaterializer for SpirvMaterializer {
-    vyre_driver::materializer_passthrough!();
+    vyre_runtime::materializer_passthrough!();
 
     fn materialize(
         &self,
@@ -79,7 +79,7 @@ struct SpirvExecutableModule {
     program: Arc<Program>,
     words: Vec<u32>,
     config: DispatchConfig,
-    plan: vyre_driver::BindingPlan,
+    plan: vyre_runtime::BindingPlan,
     /// Bindings this module's launch stages bytes into, in target binding
     /// order. A fused artifact carries a value from one module to the next
     /// through a buffer the reading module's Program declares as consuming no
@@ -94,12 +94,12 @@ struct SpirvArtifactInstance {
 }
 
 impl ExecutableModule for SpirvExecutableModule {
-    vyre_driver::executable_module!();
+    vyre_runtime::executable_module!();
 }
 
 impl ArtifactInstance for SpirvArtifactInstance {
-    vyre_driver::artifact_instance_identity!();
-    vyre_driver::artifact_instance_unreported_resources!();
+    vyre_runtime::artifact_instance_identity!();
+    vyre_runtime::artifact_instance_unreported_resources!();
 
     fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
         self.submit_host_only(bindings, "SPIR-V artifact resident binding")
@@ -109,7 +109,7 @@ impl ArtifactInstance for SpirvArtifactInstance {
 impl MaterializedInstance for SpirvArtifactInstance {
     type Module = SpirvExecutableModule;
 
-    vyre_driver::staged_input_gather!();
+    vyre_runtime::staged_input_gather!();
 
     fn modules(&self) -> &[Self::Module] {
         &self.modules

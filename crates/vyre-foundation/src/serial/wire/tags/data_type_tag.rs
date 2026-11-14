@@ -17,7 +17,7 @@ pub(crate) const DATA_TYPE_TAG_OPAQUE: u8 = 0x80;
 /// read the same table here, so a cache key cannot describe a different type
 /// than the blob it is filed under. Two copies of this table existed before:
 /// one in the dense memory-region encoder and one in
-/// `vyre_driver::specialization`, and the driver's had already lost
+/// `vyre_runtime::specialization`, and the driver's had already lost
 /// `DataType::Quantized`, which therefore collapsed onto the unknown-variant
 /// sentinel and shared a cache key with every other unmapped type.
 ///

@@ -1,6 +1,6 @@
 //! Adversarial closure contract for the SPIR-V backend.
 //!
-//! The obligations live in `vyre_driver::hostile_input_closure`; this target
+//! The obligations live in `vyre_runtime::hostile_input_closure`; this target
 //! says which backend owes them and how to reach it. Reaching the backend means
 //! acquiring it, which needs a Vulkan device, so the target is declared
 //! `device-tests` and runs on the runner that has one. It used to print and
@@ -10,7 +10,7 @@
 #![cfg(feature = "device-tests")]
 #![forbid(unsafe_code)]
 
-use vyre_driver::hostile_input_closure::{
+use vyre_runtime::hostile_input_closure::{
     assert_trailing_inputs_rejected, assert_zero_workgroup_rejected,
 };
 use vyre_driver_spirv::SpirvBackendRegistration;

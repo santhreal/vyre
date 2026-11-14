@@ -31,7 +31,7 @@
 
 use std::path::PathBuf;
 
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_lower::artifact_golden;
 

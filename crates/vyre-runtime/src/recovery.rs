@@ -1,8 +1,8 @@
 //! Structured artifact-session recovery policy.
 
-use vyre_driver::ErrorCode;
-use vyre_driver::{BackendError, DeviceIdentity};
 use vyre_foundation::diagnostics::RetryClass;
+use vyre_runtime::ErrorCode;
+use vyre_runtime::{BackendError, DeviceIdentity};
 
 use crate::artifact_admission::{ArtifactSession, ArtifactSessionError};
 
@@ -23,11 +23,6 @@ pub fn classify_backend_error(error: &BackendError) -> RetryClass {
         // rather than retrying this one.
         | ErrorCode::ExecutionAborted
         | ErrorCode::Unknown => RetryClass::Never,
-        // `ErrorCode` is non-exhaustive, so the compiler cannot force a
-        // decision here. `backend_error_classification_exhaustive_closure` in
-        // `crates/vyre-runtime/tests/session_state_machine_contracts.rs` walks
-        // `ErrorCode::ALL` and fails until a new code is listed above.
-        _ => RetryClass::Never,
     }
 }
 

@@ -1,7 +1,7 @@
 use std::sync::{Arc, Condvar, Mutex};
 
-use vyre_driver::trap_record::{decode_trap_record, TRAP_RECORD_BYTES};
-use vyre_driver::BackendError;
+use vyre_runtime::trap_record::{decode_trap_record, TRAP_RECORD_BYTES};
+use vyre_runtime::BackendError;
 
 use super::module_cache::TrapSidecar;
 
@@ -501,7 +501,7 @@ mod tests {
              lowering to replace, or this test no longer exercises the emitted barrier count."
         );
 
-        let mut config = vyre_driver::DispatchConfig::default();
+        let mut config = vyre_runtime::DispatchConfig::default();
         config.cooperative = true;
         let ptx = crate::codegen::program_to_ptx_for_sm(&scheduled, &config, 90)
             .expect("Fix: the four-wave persistent fixpoint program must emit PTX.");

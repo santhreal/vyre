@@ -9,7 +9,7 @@
 
 use std::time::{Duration, Instant};
 
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 /// Below this the queue submission and readback map cannot complete, so the
 /// dispatch would be cancelled after paying for compilation.

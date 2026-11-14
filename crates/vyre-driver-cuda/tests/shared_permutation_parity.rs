@@ -11,7 +11,7 @@
 
 use crate::harness;
 use harness::bytes_u32;
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, MemoryOrdering, Node, Program};
 

@@ -45,7 +45,7 @@ use crate::harness;
 use harness::acquire_live_backend as live_backend;
 use harness::{bytes_f32, f32_bytes};
 
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_test_support::strict_float_programs::f32_multiply_add_program;
 
 /// `1 + 2^-12`, squared and offset by -1, is the tightest fma witness.
@@ -219,7 +219,7 @@ fn the_strict_mode_rounds_separately_or_is_refused_by_name() {
     let inputs = vec![f32_bytes(&a), f32_bytes(&b), f32_bytes(&c)];
 
     // `DispatchConfig` is non-exhaustive, so a struct expression cannot name it
-    // from outside `vyre-driver`. Mutating the default is the documented shape.
+    // from outside `vyre-runtime`. Mutating the default is the documented shape.
     let mut config = DispatchConfig::default();
     config.float_lowering = FloatLoweringMode::StrictIeee;
 

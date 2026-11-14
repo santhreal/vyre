@@ -27,7 +27,7 @@
 //!
 //! # Returns
 //!
-//! A single fused `Program`. The substrate (crates/vyre-driver/src/grid_sync)
+//! A single fused `Program`. The substrate (crates/vyre-runtime/src/grid_sync)
 //! splits the dispatch into three kernel launches at the GridSync
 //! barriers when the backend doesn't support cooperative groups.
 

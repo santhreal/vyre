@@ -11,7 +11,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use vyre_driver::{BackendRegistration, BoundResource};
+use vyre_runtime::{BackendRegistration, BoundResource};
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
     ValueContract, ValueLifetime,
@@ -791,7 +791,7 @@ fn unavailable_device_fails_closed_without_host_substitution() {
         "unregistered device must not be found in backend registry"
     );
 
-    let acquire_result = vyre_driver::backend_registration(non_existent);
+    let acquire_result = vyre_runtime::backend_registration(non_existent);
     assert!(
         acquire_result.is_err(),
         "backend acquisition for non-existent device must return Err"

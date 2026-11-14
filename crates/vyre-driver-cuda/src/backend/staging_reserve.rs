@@ -4,7 +4,7 @@ use std::hash::Hash;
 
 use rustc_hash::{FxHashMap, FxHashSet};
 use smallvec::{Array, SmallVec};
-use vyre_driver::{reservation_policy::ReservationPolicy, BackendError};
+use vyre_runtime::{reservation_policy::ReservationPolicy, BackendError};
 
 const CUDA_STAGING: ReservationPolicy = ReservationPolicy::new(
     "CUDA backend staging",

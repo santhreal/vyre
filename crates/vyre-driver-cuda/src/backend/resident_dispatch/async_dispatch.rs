@@ -2,8 +2,8 @@ use std::ffi::c_void;
 use std::sync::Arc;
 
 use smallvec::SmallVec;
-use vyre_driver::BindingRole;
-use vyre_driver::{BackendError, DispatchConfig, PendingDispatch};
+use vyre_runtime::BindingRole;
+use vyre_runtime::{BackendError, DispatchConfig, PendingDispatch};
 use vyre_foundation::ir::Program;
 
 use crate::backend::allocations::DispatchAllocations;
@@ -41,7 +41,7 @@ pub(super) fn resident_output_clear_for_readback(
     if readback.byte_len == 0 {
         return Ok(None);
     }
-    let clear_ptr = vyre_driver::accounting::checked_add_u64_usize_offset_lazy(
+    let clear_ptr = vyre_runtime::accounting::checked_add_u64_usize_offset_lazy(
         base_ptr,
         readback.device_offset,
         || {
@@ -652,7 +652,7 @@ impl CudaBackend {
                         &mut staged_readback_ops,
                         "resident staged output readback operation",
                     )?;
-                    let src_ptr = vyre_driver::accounting::checked_add_u64_usize_offset_lazy(
+                    let src_ptr = vyre_runtime::accounting::checked_add_u64_usize_offset_lazy(
                         src_base_ptr,
                         readback.device_offset,
                         || {

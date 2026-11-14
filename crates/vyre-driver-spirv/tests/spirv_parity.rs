@@ -10,7 +10,7 @@ use std::io::Write;
 use std::process::Command;
 
 use tempfile::NamedTempFile;
-use vyre_driver::BindingSet;
+use vyre_runtime::BindingSet;
 use vyre_driver_spirv::SpirvBackend;
 use vyre_foundation::ir::Program;
 use vyre_megakernel::{TargetModuleBundle, TargetPayload, TargetPayloadFormat};

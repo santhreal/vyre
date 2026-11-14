@@ -18,7 +18,7 @@
 //! releases in the proven order.
 
 use cudarc::driver::sys::CUstream;
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use crate::backend::allocations::DispatchAllocations;
 use crate::backend::pinned_allocations::HostTransferAllocations;

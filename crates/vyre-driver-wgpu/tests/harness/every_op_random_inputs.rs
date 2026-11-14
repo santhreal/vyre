@@ -4,7 +4,7 @@ use proptest::prelude::*;
 use proptest::strategy::ValueTree;
 use proptest::test_runner::TestRunner;
 use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_driver::VyreBackend;
+use vyre_runtime::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::visit::{expr_children, walk_nodes};
 
@@ -111,7 +111,7 @@ pub(crate) fn missing_capability_reason(
     let required = vyre_foundation::program_caps::scan(program);
     let check = vyre_foundation::program_caps::check_backend_capabilities(
         backend.id(),
-        &vyre_driver::validation::ProgramValidationCaps::from_backend(backend).support(),
+        &vyre_runtime::validation::ProgramValidationCaps::from_backend(backend).support(),
         &required,
     );
     check.err().map(|missing| missing.to_string())

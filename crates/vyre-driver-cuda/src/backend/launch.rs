@@ -4,9 +4,9 @@ use std::ffi::c_void;
 
 use cudarc::driver::sys::{CUfunction, CUresult, CUstream};
 use smallvec::SmallVec;
-use vyre_driver::validation::validate_launch_geometry;
-use vyre_driver::BindingPlan;
-use vyre_driver::{BackendError, DispatchConfig, LaunchPlan};
+use vyre_runtime::validation::validate_launch_geometry;
+use vyre_runtime::BindingPlan;
+use vyre_runtime::{BackendError, DispatchConfig, LaunchPlan};
 use vyre_foundation::ir::Program;
 
 use super::allocations::cuda_check;
@@ -383,7 +383,7 @@ impl CudaBackend {
         inputs: &[&[u8]],
         config: &DispatchConfig,
     ) -> Result<bool, BackendError> {
-        if !self.supports_grid_sync() || !vyre_driver::grid_sync::contains_grid_sync(program) {
+        if !self.supports_grid_sync() || !vyre_runtime::grid_sync::contains_grid_sync(program) {
             return Ok(false);
         }
         let bindings = BindingPlan::from_borrowed_inputs(program, inputs)?;
@@ -410,7 +410,7 @@ impl CudaBackend {
         bindings: &[crate::backend::resident::CudaDispatchBinding<'_>],
         config: &DispatchConfig,
     ) -> Result<bool, BackendError> {
-        if !self.supports_grid_sync() || !vyre_driver::grid_sync::contains_grid_sync(program) {
+        if !self.supports_grid_sync() || !vyre_runtime::grid_sync::contains_grid_sync(program) {
             return Ok(false);
         }
         let prepared = self.prepare_resident_dispatch(program, bindings, config)?;
@@ -572,7 +572,7 @@ impl CudaBackend {
 mod tests {
     use super::{launch_cuda_function, CudaBackend};
     use smallvec::{smallvec, SmallVec};
-    use vyre_driver::LaunchPlan;
+    use vyre_runtime::LaunchPlan;
 
     #[test]
     fn kernel_args_preserves_descriptor_argument_slots() {
@@ -614,7 +614,7 @@ mod tests {
         let error = super::launch_axis_product("grid", [u32::MAX, u32::MAX, u32::MAX])
             .expect_err("Fix: CUDA launch dimension products must not silently overflow.");
         match error {
-            vyre_driver::BackendError::InvalidProgram { fix } => {
+            vyre_runtime::BackendError::InvalidProgram { fix } => {
                 assert!(fix.contains("overflow u64"));
                 assert!(fix.contains("grid"));
             }
@@ -627,7 +627,7 @@ mod tests {
         let error = super::cooperative_resident_block_capacity(u64::MAX, 2)
             .expect_err("Fix: CUDA cooperative residency accounting must not saturate.");
         match error {
-            vyre_driver::BackendError::InvalidProgram { fix } => {
+            vyre_runtime::BackendError::InvalidProgram { fix } => {
                 assert!(fix.contains("cooperative launch residency accounting overflowed"));
             }
             other => panic!("unexpected error: {other:?}"),

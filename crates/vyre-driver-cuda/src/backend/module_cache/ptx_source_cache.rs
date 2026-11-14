@@ -8,8 +8,8 @@ use dashmap::mapref::entry::Entry;
 use dashmap::DashMap;
 use rustc_hash::FxHasher;
 use smallvec::SmallVec;
-use vyre_driver::accounting::checked_add_usize_lazy;
-use vyre_driver::{BackendError, DispatchConfig};
+use vyre_runtime::accounting::checked_add_usize_lazy;
+use vyre_runtime::{BackendError, DispatchConfig};
 use vyre_foundation::ir::Program;
 
 use super::cache_key::{ptx_source_cache_key_from_program_identity, PtxSourceCacheKey};
@@ -58,7 +58,7 @@ impl CudaPtxSourceCache {
         config: &DispatchConfig,
         ptx_target_sm: u32,
         subgroup_size: u32,
-        feature_flags: vyre_driver::PipelineFeatureFlags,
+        feature_flags: vyre_runtime::PipelineFeatureFlags,
     ) -> Result<PtxSourceCacheKey, BackendError> {
         ptx_source_cache_key_from_program_identity(
             program,
@@ -214,7 +214,7 @@ impl CudaPtxSourceCache {
             self.clear_and_report_total_eviction(keys.len());
             return;
         }
-        vyre_driver::cache_eviction::record_eviction_counts(dropped, total);
+        vyre_runtime::cache_eviction::record_eviction_counts(dropped, total);
     }
 
     /// Drop every cached source and report that the whole cache went. Reached
@@ -223,7 +223,7 @@ impl CudaPtxSourceCache {
     fn clear_and_report_total_eviction(&self, candidates: usize) {
         self.sources.clear();
         self.cached_source_bytes.store(0, Ordering::Release);
-        vyre_driver::cache_eviction::record_eviction_counts(candidates, candidates);
+        vyre_runtime::cache_eviction::record_eviction_counts(candidates, candidates);
     }
 }
 
@@ -294,7 +294,7 @@ mod tests {
         let program = Program::wrapped(vec![], [64, 1, 1], vec![]);
 
         for case in 0..2048u32 {
-            let mut config = vyre_driver::DispatchConfig::default();
+            let mut config = vyre_runtime::DispatchConfig::default();
             if case & 1 != 0 {
                 config.ulp_budget = Some((case as u8).wrapping_mul(11).wrapping_add(1));
             }
@@ -306,12 +306,12 @@ mod tests {
                 ]);
             }
             let flags = match case & 3 {
-                0 => vyre_driver::PipelineFeatureFlags::empty(),
-                1 => vyre_driver::PipelineFeatureFlags::SUBGROUP_OPS,
-                2 => vyre_driver::PipelineFeatureFlags::F16
-                    .union(vyre_driver::PipelineFeatureFlags::BF16),
-                _ => vyre_driver::PipelineFeatureFlags::TENSOR_CORES
-                    .union(vyre_driver::PipelineFeatureFlags::ASYNC_COMPUTE),
+                0 => vyre_runtime::PipelineFeatureFlags::empty(),
+                1 => vyre_runtime::PipelineFeatureFlags::SUBGROUP_OPS,
+                2 => vyre_runtime::PipelineFeatureFlags::F16
+                    .union(vyre_runtime::PipelineFeatureFlags::BF16),
+                _ => vyre_runtime::PipelineFeatureFlags::TENSOR_CORES
+                    .union(vyre_runtime::PipelineFeatureFlags::ASYNC_COMPUTE),
             };
             let ptx_target_sm = 70 + (case % 30);
             let subgroup_size = 1 + (case.rotate_left(3) % 64);
@@ -340,7 +340,7 @@ mod tests {
                 "Fix: CUDA PTX source cache identity must include subgroup size for generated case {case}."
             );
 
-            let changed_flags = flags.union(vyre_driver::PipelineFeatureFlags::PERSISTENT_THREAD);
+            let changed_flags = flags.union(vyre_runtime::PipelineFeatureFlags::PERSISTENT_THREAD);
             assert_ne!(
                 key,
                 cache
@@ -379,10 +379,10 @@ mod tests {
         CudaPtxSourceCache::new()
             .key_for_program(
                 program,
-                &vyre_driver::DispatchConfig::default(),
+                &vyre_runtime::DispatchConfig::default(),
                 86,
                 32,
-                vyre_driver::PipelineFeatureFlags::empty(),
+                vyre_runtime::PipelineFeatureFlags::empty(),
             )
             .expect("Fix: fixture Program must produce a PTX source cache key")
     }
@@ -485,9 +485,9 @@ mod tests {
         let small = build(1024);
         let large = build(1_048_576);
 
-        let small_digest = vyre_driver::try_normalized_program_cache_digest(&small)
+        let small_digest = vyre_runtime::try_normalized_program_cache_digest(&small)
             .expect("Fix: fixture Program must produce a normalized cache digest");
-        let large_digest = vyre_driver::try_normalized_program_cache_digest(&large)
+        let large_digest = vyre_runtime::try_normalized_program_cache_digest(&large)
             .expect("Fix: fixture Program must produce a normalized cache digest");
         assert_eq!(
             small_digest, large_digest,

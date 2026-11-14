@@ -3,11 +3,11 @@ use std::hash::BuildHasherDefault;
 #[cfg(feature = "device-tests")]
 use std::sync::Arc;
 
-use vyre_driver::validation::LaunchGeometryLimits;
+use vyre_runtime::validation::LaunchGeometryLimits;
 #[cfg(feature = "device-tests")]
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 #[cfg(feature = "device-tests")]
-use vyre_driver::{DEFAULT_PIPELINE_CACHE_BYTES, DEFAULT_PIPELINE_CACHE_ENTRIES};
+use vyre_runtime::{DEFAULT_PIPELINE_CACHE_BYTES, DEFAULT_PIPELINE_CACHE_ENTRIES};
 use vyre_foundation::execution_plan;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, MemoryKind, Node, Program};
 
@@ -147,7 +147,7 @@ fn record_once(
     arena: &DispatchArena,
     readback_rings: bool,
     labels: DispatchLabels,
-) -> Result<vyre_driver::OutputBuffers, BackendError> {
+) -> Result<vyre_runtime::OutputBuffers, BackendError> {
     let empty_inputs: [&[u8]; 0] = [];
     record_and_readback(RecordAndReadback {
         device_queue: &pipeline.device_queue,
@@ -255,7 +255,7 @@ mod bind_group_cache_contracts {
     /// the dispatch reports no device time rather than underflowing a delta.
     #[test]
     fn compiled_borrowed_timed_dispatch_reports_device_ns() {
-        use vyre_driver::CompiledPipeline;
+        use vyre_runtime::CompiledPipeline;
 
         let harness = PipelineHarness::new("compiled timing test");
         let device = &harness.device_queue.0;
@@ -321,7 +321,7 @@ mod bind_group_cache_contracts {
     /// place of `None`; the value is asserted absent, not its provenance.
     #[test]
     fn every_timed_entry_without_timestamps_runs_and_reports_no_device_ns() {
-        use vyre_driver::{CompiledPipeline, PendingDispatch};
+        use vyre_runtime::{CompiledPipeline, PendingDispatch};
 
         let harness = PipelineHarness::without_timestamps("timestamp-free resident dispatch test");
         assert!(
@@ -339,7 +339,7 @@ mod bind_group_cache_contracts {
 
         // One resource per public binding, in `BufferDecl` order: `out` is the
         // program's only one.
-        let resources = [vyre_driver::Resource::Borrowed(vec![0u8; 4])];
+        let resources = [vyre_runtime::Resource::Borrowed(vec![0u8; 4])];
 
         let timed = pipeline
             .dispatch_persistent_handles_timed(&resources, &harness.config)
@@ -389,14 +389,14 @@ mod bind_group_cache_contracts {
 
 mod layout_config_contracts {
     use super::*;
-    use vyre_driver::LaunchGeometry;
+    use vyre_runtime::LaunchGeometry;
 
     #[test]
     fn hex_short_truncates_to_eight_bytes() {
         let hash = *blake3::hash(b"vyre-pipeline").as_bytes();
-        let expected = vyre_driver::hex_encode(&hash[..8]);
-        assert_eq!(vyre_driver::hex_short(&hash).len(), 16);
-        assert_eq!(vyre_driver::hex_short(&hash), expected);
+        let expected = vyre_runtime::hex_encode(&hash[..8]);
+        assert_eq!(vyre_runtime::hex_short(&hash).len(), 16);
+        assert_eq!(vyre_runtime::hex_short(&hash), expected);
     }
 
     #[test]
@@ -425,7 +425,7 @@ mod layout_config_contracts {
         );
         assert_eq!(plan.memory.visible_readback_bytes, 8);
         assert_eq!(plan.memory.avoided_readback_bytes, 4088);
-        let layouts = vyre_driver::output_binding_layouts(&program)
+        let layouts = vyre_runtime::output_binding_layouts(&program)
             .expect("Fix: layout must derive; restore this invariant before continuing.");
         assert_eq!(layouts[0].layout.read_size, 8);
         assert_eq!(layouts[0].layout.copy_size, 8);

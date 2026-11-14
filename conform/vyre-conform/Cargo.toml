@@ -66,7 +66,7 @@ thiserror = { workspace = true }
 tempfile = { workspace = true }
 vyre = { workspace = true }
 vyre-conform-spec = { workspace = true }
-vyre-driver = { workspace = true }
+vyre-runtime = { workspace = true }
 vyre-driver-cuda = { workspace = true, optional = true }
 vyre-driver-spirv = { workspace = true, optional = true }
 vyre-driver-wgpu = { workspace = true, optional = true }
@@ -83,7 +83,6 @@ vyre-reference = { workspace = true }
 # submitting crate here for link effect alone is what left readers judging a
 # partial registry.
 vyre-registry-link = { workspace = true, default-features = false, features = ["operations"] }
-vyre-runtime = { workspace = true }
 vyre-spec = { workspace = true }
 
 [dev-dependencies]

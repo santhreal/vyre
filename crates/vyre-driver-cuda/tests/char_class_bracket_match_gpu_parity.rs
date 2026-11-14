@@ -10,7 +10,7 @@ use harness::{
     u32_bytes, with_live_backend,
 };
 use vyre::ir::{DataType, Program};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_libs::pattern::{
     bracket_match, BRACKET_KIND_CLOSE, BRACKET_KIND_OPEN, BRACKET_KIND_OTHER, BRACKET_MATCH_NONE,
     BRACKET_MATCH_PARALLEL_WORKGROUP_SIZE,

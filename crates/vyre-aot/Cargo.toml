@@ -22,7 +22,7 @@ workspace = true
 
 [dependencies]
 vyre-foundation.workspace = true
-vyre-driver.workspace = true
+vyre-runtime.workspace = true
 vyre-megakernel.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true

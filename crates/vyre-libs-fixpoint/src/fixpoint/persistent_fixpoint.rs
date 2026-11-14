@@ -420,7 +420,7 @@ pub fn persistent_fixpoint(
 /// because nothing fails when it applies. `MemoryOrdering::GridSync`
 /// lowers either to a native cooperative grid barrier or to a KERNEL
 /// SPLIT. Under the split each wave becomes its own kernel launch, and
-/// `vyre_driver::grid_sync` dispatches every segment in order: a
+/// `vyre_runtime::grid_sync` dispatches every segment in order: a
 /// `Node::Return` inside segment `N` returns from THAT launch only and
 /// cannot stop the host from launching segment `N + 1`. A run that
 /// converges at wave 2 of a 16-wave budget therefore still issues all
@@ -591,7 +591,7 @@ pub struct FixpointRoute {
 ///
 /// `dispatch_span` is the LAUNCH width, which is not the same number as
 /// [`FixpointState::words`]. `dispatch_element_count_for_program`
-/// (`crates/vyre-driver/src/program_walks/dispatch_params.rs:19`) sizes an
+/// (`crates/vyre-runtime/src/program_walks/dispatch_params.rs:19`) sizes an
 /// atomic-carrying program's launch from its WIDEST declared buffer, and both
 /// harnesses carry an `atomic_or`, so an op that declares buffers wider than its
 /// ping-pong state is launched over those wider buffers. A kernel matrix of
@@ -692,7 +692,7 @@ pub fn count_grid_sync(nodes: &[Node]) -> usize {
 /// The dispatch span [`fixpoint_route`] keys on, read back from a built program.
 ///
 /// Every harness this module emits carries an `atomic_or` on its convergence
-/// flag, and for an atomic-carrying program `vyre-driver`'s
+/// flag, and for an atomic-carrying program `vyre-runtime`'s
 /// `dispatch_element_count_for_program` spans the LARGEST declared buffer rather
 /// than just the output. So the span a caller must pass to `fixpoint_route` is
 /// recoverable from the program's own declarations, which is what lets a test

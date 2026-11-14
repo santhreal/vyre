@@ -1,4 +1,4 @@
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 pub(crate) fn aligned_len(len: usize) -> Result<u64, BackendError> {
     let padded = aligned_len_usize(len, "GPU buffer length")?;

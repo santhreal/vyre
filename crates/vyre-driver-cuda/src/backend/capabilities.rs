@@ -1,8 +1,8 @@
 //! CUDA capability, feature-flag, and validation policy.
 
 use std::sync::Arc;
-use vyre_driver::validation::{LaunchGeometryLimits, ProgramValidationCaps};
-use vyre_driver::{BackendError, DispatchConfig, LaunchPlan};
+use vyre_runtime::validation::{LaunchGeometryLimits, ProgramValidationCaps};
+use vyre_runtime::{BackendError, DispatchConfig, LaunchPlan};
 use vyre_foundation::ir::Program;
 use vyre_foundation::validate::ValidationOptions;
 
@@ -92,7 +92,7 @@ impl CudaBackend {
     #[must_use]
     pub fn hardware_supports_subgroup_ops(&self) -> bool {
         self.warp_size()
-            .map(vyre_driver::SubgroupCaps::native)
+            .map(vyre_runtime::SubgroupCaps::native)
             .is_some_and(|caps| caps.supports_subgroup)
     }
 
@@ -156,22 +156,22 @@ impl CudaBackend {
 
     /// Pipeline feature flags that participate in shared cache identity.
     #[must_use]
-    pub fn pipeline_feature_flags(&self) -> vyre_driver::PipelineFeatureFlags {
-        let mut flags = vyre_driver::PipelineFeatureFlags::empty();
+    pub fn pipeline_feature_flags(&self) -> vyre_runtime::PipelineFeatureFlags {
+        let mut flags = vyre_runtime::PipelineFeatureFlags::empty();
         if self.hardware_supports_subgroup_ops() {
-            flags = flags.union(vyre_driver::PipelineFeatureFlags::SUBGROUP_OPS);
+            flags = flags.union(vyre_runtime::PipelineFeatureFlags::SUBGROUP_OPS);
         }
         if self.hardware_supports_f16() {
-            flags = flags.union(vyre_driver::PipelineFeatureFlags::F16);
+            flags = flags.union(vyre_runtime::PipelineFeatureFlags::F16);
         }
         if self.hardware_supports_bf16() {
-            flags = flags.union(vyre_driver::PipelineFeatureFlags::BF16);
+            flags = flags.union(vyre_runtime::PipelineFeatureFlags::BF16);
         }
         if self.hardware_supports_tensor_cores() && self.lowers_tensor_core_ops() {
-            flags = flags.union(vyre_driver::PipelineFeatureFlags::TENSOR_CORES);
+            flags = flags.union(vyre_runtime::PipelineFeatureFlags::TENSOR_CORES);
         }
         if self.hardware_supports_async_compute() {
-            flags = flags.union(vyre_driver::PipelineFeatureFlags::ASYNC_COMPUTE);
+            flags = flags.union(vyre_runtime::PipelineFeatureFlags::ASYNC_COMPUTE);
         }
         flags
     }
@@ -500,9 +500,9 @@ mod tests {
             "Fix: fixture must be rewritten by subgroup lowering."
         );
         assert_ne!(
-            vyre_driver::try_normalized_program_cache_digest(&program)
+            vyre_runtime::try_normalized_program_cache_digest(&program)
                 .expect("Fix: fixture program must produce a normalized cache digest"),
-            vyre_driver::try_normalized_program_cache_digest(&lowered)
+            vyre_runtime::try_normalized_program_cache_digest(&lowered)
                 .expect("Fix: lowered fixture must produce a normalized cache digest"),
             "Fix: subgroup lowering rewrote the program without moving its digest."
         );

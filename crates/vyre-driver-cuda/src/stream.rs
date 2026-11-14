@@ -8,7 +8,7 @@ use crossbeam_queue::ArrayQueue;
 use cudarc::driver::sys::{
     CUevent, CUevent_flags, CUresult, CUstream, CUstream_flags, CUstream_st,
 };
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use crate::backend::allocations::cuda_check;
 

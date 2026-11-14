@@ -1,7 +1,7 @@
 //! Resident download helpers for WGPU backend resources.
 
 use smallvec::SmallVec;
-use vyre_driver::resident_transfer_fusion::{
+use vyre_runtime::resident_transfer_fusion::{
     fuse_resident_transfer_intervals, ResidentTransferInterval, ResidentTransferView,
 };
 
@@ -12,27 +12,27 @@ use crate::WgpuBackend;
 /// Download a complete backend-resident WGPU buffer into a new host buffer.
 pub(crate) fn download_resident(
     backend: &WgpuBackend,
-    resource: &vyre_driver::Resource,
-) -> Result<Vec<u8>, vyre_driver::BackendError> {
-    let vyre_driver::Resource::Resident(id) = resource else {
-        return Err(vyre_driver::BackendError::new(
+    resource: &vyre_runtime::Resource,
+) -> Result<Vec<u8>, vyre_runtime::BackendError> {
+    let vyre_runtime::Resource::Resident(id) = resource else {
+        return Err(vyre_runtime::BackendError::new(
             "WGPU resident download received a borrowed resource. Fix: allocate a resident buffer before calling download_resident_into.",
         ));
     };
     crate::buffer::check_resident_owner(*id, "WGPU resident download")?;
     let handle = backend.resident_handles.get(id).ok_or_else(|| {
-        vyre_driver::BackendError::new(format!(
+        vyre_runtime::BackendError::new(format!(
             "WGPU resident download received stale handle {id}. Fix: keep the resource allocated until all resident readbacks finish."
         ))
     })?;
     let allocation_len = usize::try_from(handle.allocation_len()).map_err(|source| {
-        vyre_driver::BackendError::new(format!(
+        vyre_runtime::BackendError::new(format!(
             "WGPU resident download allocation length cannot fit usize: {source}. Fix: split the resident readback before downloading."
         ))
     })?;
     let mut bytes = Vec::new();
-    vyre_driver::allocation::try_reserve_vec_to_capacity(&mut bytes, allocation_len).map_err(|source| {
-        vyre_driver::BackendError::new(format!(
+    vyre_runtime::allocation::try_reserve_vec_to_capacity(&mut bytes, allocation_len).map_err(|source| {
+        vyre_runtime::BackendError::new(format!(
             "WGPU resident download could not reserve {allocation_len} output byte(s): {source}. Fix: split the resident readback before downloading."
         ))
     })?;
@@ -44,17 +44,17 @@ pub(crate) fn download_resident(
 /// Download a complete backend-resident WGPU buffer into caller-owned storage.
 pub(crate) fn download_resident_into(
     backend: &WgpuBackend,
-    resource: &vyre_driver::Resource,
+    resource: &vyre_runtime::Resource,
     out: &mut Vec<u8>,
-) -> Result<(), vyre_driver::BackendError> {
-    let vyre_driver::Resource::Resident(id) = resource else {
-        return Err(vyre_driver::BackendError::new(
+) -> Result<(), vyre_runtime::BackendError> {
+    let vyre_runtime::Resource::Resident(id) = resource else {
+        return Err(vyre_runtime::BackendError::new(
             "WGPU resident download received a borrowed resource. Fix: allocate a resident buffer before calling download_resident_into.",
         ));
     };
     crate::buffer::check_resident_owner(*id, "WGPU resident download")?;
     let handle = backend.resident_handles.get(id).ok_or_else(|| {
-        vyre_driver::BackendError::new(format!(
+        vyre_runtime::BackendError::new(format!(
             "WGPU resident download received stale handle {id}. Fix: keep the resource allocated until all resident readbacks finish."
         ))
     })?;
@@ -65,13 +65,13 @@ pub(crate) fn download_resident_into(
 /// Download one byte range from a backend-resident WGPU buffer into a new host buffer.
 pub(crate) fn download_resident_range(
     backend: &WgpuBackend,
-    resource: &vyre_driver::Resource,
+    resource: &vyre_runtime::Resource,
     byte_offset: usize,
     byte_len: usize,
-) -> Result<Vec<u8>, vyre_driver::BackendError> {
+) -> Result<Vec<u8>, vyre_runtime::BackendError> {
     let mut bytes = Vec::new();
-    vyre_driver::allocation::try_reserve_vec_to_capacity(&mut bytes, byte_len).map_err(|source| {
-        vyre_driver::BackendError::new(format!(
+    vyre_runtime::allocation::try_reserve_vec_to_capacity(&mut bytes, byte_len).map_err(|source| {
+        vyre_runtime::BackendError::new(format!(
             "WGPU resident ranged download could not reserve {byte_len} output byte(s): {source}. Fix: split the resident readback range before downloading."
         ))
     })?;
@@ -82,19 +82,19 @@ pub(crate) fn download_resident_range(
 /// Download one byte range from a backend-resident WGPU buffer into caller-owned storage.
 pub(crate) fn download_resident_range_into(
     backend: &WgpuBackend,
-    resource: &vyre_driver::Resource,
+    resource: &vyre_runtime::Resource,
     byte_offset: usize,
     byte_len: usize,
     out: &mut Vec<u8>,
-) -> Result<(), vyre_driver::BackendError> {
-    let vyre_driver::Resource::Resident(id) = resource else {
-        return Err(vyre_driver::BackendError::new(
+) -> Result<(), vyre_runtime::BackendError> {
+    let vyre_runtime::Resource::Resident(id) = resource else {
+        return Err(vyre_runtime::BackendError::new(
             "WGPU resident ranged download received a borrowed resource. Fix: allocate a resident buffer before calling download_resident_range_into.",
         ));
     };
     crate::buffer::check_resident_owner(*id, "WGPU resident ranged download")?;
     let handle = backend.resident_handles.get(id).ok_or_else(|| {
-        vyre_driver::BackendError::new(format!(
+        vyre_runtime::BackendError::new(format!(
             "WGPU resident ranged download received stale handle {id}. Fix: keep the resource allocated until all resident readbacks finish."
         ))
     })?;
@@ -122,11 +122,11 @@ pub(crate) fn download_resident_range_into(
 /// Download several validated resident byte ranges into caller-owned buffers.
 pub(crate) fn download_resident_ranges_into(
     backend: &WgpuBackend,
-    ranges: &[(&vyre_driver::Resource, usize, usize)],
+    ranges: &[(&vyre_runtime::Resource, usize, usize)],
     outputs: &mut [&mut Vec<u8>],
-) -> Result<(), vyre_driver::BackendError> {
+) -> Result<(), vyre_runtime::BackendError> {
     if ranges.len() != outputs.len() {
-        return Err(vyre_driver::BackendError::new(format!(
+        return Err(vyre_runtime::BackendError::new(format!(
             "WGPU resident ranged batch download expected matching range/output counts but got {} range(s) and {} output(s). Fix: pass one caller-owned output Vec per readback range.",
             ranges.len(),
             outputs.len()
@@ -138,27 +138,27 @@ pub(crate) fn download_resident_ranges_into(
     let mut handles = SmallVec::<[(u64, GpuBufferHandle); 8]>::new();
     vyre_foundation::allocation::try_reserve_smallvec_to_capacity(&mut copies, ranges.len())
         .map_err(|source| {
-            vyre_driver::BackendError::new(format!(
+            vyre_runtime::BackendError::new(format!(
                 "WGPU resident ranged batch download could not reserve {} validated readback descriptor(s): {source}. Fix: split the resident readback batch before staging.",
                 ranges.len()
             ))
         })?;
     vyre_foundation::allocation::try_reserve_smallvec_to_capacity(&mut handles, ranges.len())
         .map_err(|source| {
-            vyre_driver::BackendError::new(format!(
+            vyre_runtime::BackendError::new(format!(
                 "WGPU resident ranged batch download could not reserve {} resident handle descriptor(s): {source}. Fix: split the resident readback batch before staging.",
                 ranges.len()
             ))
         })?;
     for &(resource, byte_offset, byte_len) in ranges {
-        let vyre_driver::Resource::Resident(id) = resource else {
-            return Err(vyre_driver::BackendError::new(
+        let vyre_runtime::Resource::Resident(id) = resource else {
+            return Err(vyre_runtime::BackendError::new(
                 "WGPU resident ranged batch download received a borrowed resource. Fix: allocate every resident buffer before calling download_resident_ranges_into.",
             ));
         };
         crate::buffer::check_resident_owner(*id, "WGPU resident ranged batch download")?;
         let handle = backend.resident_handles.get(id).ok_or_else(|| {
-            vyre_driver::BackendError::new(format!(
+            vyre_runtime::BackendError::new(format!(
                 "WGPU resident ranged batch download received stale handle {id}. Fix: keep every resource allocated until all resident readbacks finish."
             ))
         })?;
@@ -190,7 +190,7 @@ pub(crate) fn download_resident_ranges_into(
         fused.copies.len(),
     )
     .map_err(|source| {
-        vyre_driver::BackendError::new(format!(
+        vyre_runtime::BackendError::new(format!(
             "WGPU resident ranged batch download could not reserve {} fused readback output slot(s): {source}. Fix: split the resident readback batch before staging.",
             fused.copies.len()
         ))
@@ -200,7 +200,7 @@ pub(crate) fn download_resident_ranges_into(
         let handle_index = handles
             .binary_search_by_key(&copy.handle_id, |(handle_id, _)| *handle_id)
             .map_err(|_| {
-                vyre_driver::BackendError::new(format!(
+                vyre_runtime::BackendError::new(format!(
                     "WGPU resident ranged batch download fused copy references unknown handle {}. Fix: rebuild the fused readback plan after validation.",
                     copy.handle_id
                 ))
@@ -230,9 +230,9 @@ fn reserve_fused_resident_view_outputs(
     copies: &[ResidentTransferInterval],
     views: &[ResidentTransferView],
     outputs: &mut [&mut Vec<u8>],
-) -> Result<(), vyre_driver::BackendError> {
+) -> Result<(), vyre_runtime::BackendError> {
     if views.len() != outputs.len() {
-        return Err(vyre_driver::BackendError::new(format!(
+        return Err(vyre_runtime::BackendError::new(format!(
             "WGPU resident ranged batch download fused {} output view(s) for {} requested output slot(s). Fix: keep resident transfer fusion cardinality-preserving before materializing outputs.",
             views.len(),
             outputs.len()
@@ -241,27 +241,27 @@ fn reserve_fused_resident_view_outputs(
     for (view_index, (view, output)) in views.iter().copied().zip(outputs.iter_mut()).enumerate() {
         if view.byte_len != 0 {
             let Some(copy) = copies.get(view.copy_slot) else {
-                return Err(vyre_driver::BackendError::new(format!(
+                return Err(vyre_runtime::BackendError::new(format!(
                     "WGPU resident ranged batch download view {view_index} references missing fused copy slot {}. Fix: rebuild the fused readback plan before materializing outputs.",
                     view.copy_slot
                 )));
             };
             let view_end = view.byte_offset.checked_add(view.byte_len).ok_or_else(|| {
-                vyre_driver::BackendError::new(format!(
+                vyre_runtime::BackendError::new(format!(
                     "WGPU resident ranged batch download view {view_index} overflows usize at offset {} len {}. Fix: rebuild the fused readback plan before materializing outputs.",
                     view.byte_offset, view.byte_len
                 ))
             })?;
             if view_end > copy.byte_len {
-                return Err(vyre_driver::BackendError::new(format!(
+                return Err(vyre_runtime::BackendError::new(format!(
                     "WGPU resident ranged batch download view {view_index} requested bytes [{}..{}) from a {} byte fused output. Fix: rebuild the fused readback plan before materializing outputs.",
                     view.byte_offset, view_end, copy.byte_len
                 )));
             }
         }
-        vyre_driver::allocation::try_reserve_vec_to_capacity(*output, view.byte_len).map_err(
+        vyre_runtime::allocation::try_reserve_vec_to_capacity(*output, view.byte_len).map_err(
             |source| {
-                vyre_driver::BackendError::new(format!(
+                vyre_runtime::BackendError::new(format!(
                     "WGPU resident ranged batch download could not reserve {} output byte(s) for view {view_index}: {source}. Fix: split the resident readback batch before materializing outputs.",
                     view.byte_len
                 ))
@@ -272,19 +272,19 @@ fn reserve_fused_resident_view_outputs(
 }
 
 fn validate_resident_readback_range(
-    handle_id: vyre_driver::ResidentHandle,
+    handle_id: vyre_runtime::ResidentHandle,
     allocation_len: u64,
     byte_offset: u64,
     byte_len: u64,
     context: &'static str,
-) -> Result<(), vyre_driver::BackendError> {
+) -> Result<(), vyre_runtime::BackendError> {
     let end = byte_offset.checked_add(byte_len).ok_or_else(|| {
-        vyre_driver::BackendError::new(format!(
+        vyre_runtime::BackendError::new(format!(
             "WGPU resident {context} overflows u64 at offset {byte_offset} len {byte_len} for handle {handle_id}. Fix: split the readback before staging resident download."
         ))
     })?;
     if end > allocation_len {
-        return Err(vyre_driver::BackendError::new(format!(
+        return Err(vyre_runtime::BackendError::new(format!(
             "WGPU resident {context} requested byte range [{byte_offset}..{end}) from allocation {allocation_len} on handle {handle_id}. Fix: clamp the readback to the resident buffer size or split the resource."
         )));
     }
@@ -295,25 +295,25 @@ fn copy_fused_resident_view_into(
     fused_outputs: &[Vec<u8>],
     view: ResidentTransferView,
     output: &mut Vec<u8>,
-) -> Result<(), vyre_driver::BackendError> {
+) -> Result<(), vyre_runtime::BackendError> {
     if view.byte_len == 0 {
         output.clear();
         return Ok(());
     }
     let Some(fused_output) = fused_outputs.get(view.copy_slot) else {
-        return Err(vyre_driver::BackendError::new(format!(
+        return Err(vyre_runtime::BackendError::new(format!(
             "WGPU resident ranged batch download view references missing fused copy slot {}. Fix: rebuild the fused readback plan before materializing outputs.",
             view.copy_slot
         )));
     };
     let view_end = view.byte_offset.checked_add(view.byte_len).ok_or_else(|| {
-        vyre_driver::BackendError::new(format!(
+        vyre_runtime::BackendError::new(format!(
             "WGPU resident ranged batch download view overflows usize at offset {} len {}. Fix: rebuild the fused readback plan before materializing outputs.",
             view.byte_offset, view.byte_len
         ))
     })?;
     let Some(bytes) = fused_output.get(view.byte_offset..view_end) else {
-        return Err(vyre_driver::BackendError::new(format!(
+        return Err(vyre_runtime::BackendError::new(format!(
             "WGPU resident ranged batch download view requested bytes [{}..{}) from a {} byte fused output. Fix: rebuild the fused readback plan before materializing outputs.",
             view.byte_offset,
             view_end,
@@ -325,7 +325,7 @@ fn copy_fused_resident_view_into(
         return Ok(());
     }
     vyre_foundation::allocation::reserve_exact_cleared(output, bytes.len()).map_err(|source| {
-        vyre_driver::BackendError::new(format!(
+        vyre_runtime::BackendError::new(format!(
             "WGPU resident ranged batch download could not reserve {} output byte(s): {source}. Fix: split the resident readback batch before materializing outputs.",
             bytes.len()
         ))

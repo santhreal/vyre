@@ -1,14 +1,14 @@
 //! Tests for driver policy vs runtime lifecycle boundary (Section 188.3).
 //!
 //! Verifies that:
-//! 1. `vyre-driver` owns backend-neutral target planning, materialization,
+//! 1. `vyre-runtime` owns backend-neutral target planning, materialization,
 //!    submission, and compiled-pipeline caching.
 //! 2. `vyre-runtime` owns artifact admission, residency lifecycle, persistent queue
 //!    orchestration, and fault recovery.
 //! 3. Cache keys and identity stores for compiled pipelines vs admitted artifacts
 //!    remain distinct and isolated.
 
-use vyre_driver::{PipelineCacheIdentity, PipelineDeviceFingerprint};
+use vyre_runtime::{PipelineCacheIdentity, PipelineDeviceFingerprint};
 
 #[test]
 fn driver_and_runtime_store_identities_are_distinct() {

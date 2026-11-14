@@ -18,7 +18,7 @@
 use crate::harness;
 
 use harness::live_backend;
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::Program;
 use vyre_test_support::async_span_parity::{assert_matrix_covers_every_alignment, cases, SpanCase};

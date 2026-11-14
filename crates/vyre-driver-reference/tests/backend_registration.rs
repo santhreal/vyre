@@ -23,7 +23,7 @@ fn cpu_ref_evaluator_evaluates_pure_reference_program() {
         vec![Node::store("out", Expr::u32(0), Expr::u32(42))],
     );
     let outputs = evaluator
-        .evaluate(&program, &[], &vyre_driver::DispatchConfig::default())
+        .evaluate(&program, &[], &vyre_runtime::DispatchConfig::default())
         .expect("Fix: CpuRefEvaluator must evaluate a minimal Program.");
 
     assert_eq!(
@@ -56,7 +56,7 @@ fn cpu_ref_evaluator_executes_a_fenced_program() {
         .evaluate(
             &program,
             &[seed.as_slice()],
-            &vyre_driver::DispatchConfig::default(),
+            &vyre_runtime::DispatchConfig::default(),
         )
         .expect("Fix: CpuRefEvaluator must evaluate a whole-grid fence.");
     assert_eq!(

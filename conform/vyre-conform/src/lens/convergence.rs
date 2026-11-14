@@ -1,6 +1,6 @@
 //! Convergence lens: dispatch until the read-write state stabilises.
 
-use vyre_driver::{BackendError, BackendRegistration};
+use vyre_runtime::{BackendError, BackendRegistration};
 use vyre_foundation::ir::Program;
 use vyre_foundation::operation::SemanticOperation;
 use vyre_libs::operation_catalog::convergence_contract;

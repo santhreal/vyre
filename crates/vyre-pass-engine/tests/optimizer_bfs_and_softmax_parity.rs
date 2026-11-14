@@ -317,7 +317,7 @@ fn dispatch_softmax_normalizes_precomputed_exponentials_in_16_16() {
     );
 }
 
-/// Largest declared non-shared binding, which is the extent `vyre-driver` launches
+/// Largest declared non-shared binding, which is the extent `vyre-runtime` launches
 /// over. `wg_scratch` is this program's only shared binding and is declared at 256,
 /// below every span this test exercises, so a plain maximum is exact here.
 fn dispatch_span(program: &Program) -> u32 {

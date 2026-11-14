@@ -6,7 +6,7 @@
 // only the Apple-gated tests do. The non-Apple test asserts the absence of a
 // registration and reaches for none of it.
 #[cfg(any(target_os = "macos", target_os = "ios"))]
-use vyre_driver::BindingSet;
+use vyre_runtime::BindingSet;
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, Node, Program, ProgramGraph, ValueLifetime,
@@ -45,7 +45,7 @@ fn artifact() -> vyre_megakernel::Artifact {
 /// WHY: pure Metal target compilation remains available without acquiring a device on Apple hosts.
 #[test]
 fn registered_target_compiler_emits_selected_metal_bundle() {
-    let registration = vyre_driver::registered_backends()
+    let registration = vyre_runtime::registered_backends()
         .expect("valid backend registry")
         .iter()
         .find(|registration| registration.id == vyre_driver_metal::METAL_BACKEND_ID)
@@ -69,7 +69,7 @@ fn registered_target_compiler_emits_selected_metal_bundle() {
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 #[test]
 fn registered_materializer_executes_authenticated_msl() {
-    let registration = vyre_driver::registered_backends()
+    let registration = vyre_runtime::registered_backends()
         .expect("valid backend registry")
         .iter()
         .find(|registration| registration.id == vyre_driver_metal::METAL_BACKEND_ID)

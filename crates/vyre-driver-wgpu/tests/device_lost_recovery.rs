@@ -6,7 +6,7 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_driver::VyreBackend;
+use vyre_runtime::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 
 #[test]
@@ -36,6 +36,6 @@ fn device_lost_recovery_round_trip() {
     // The backend must dispatch successfully after recovery.
     let program = vyre::Program::empty();
     let _ = backend
-        .dispatch(&program, &[], &vyre_driver::DispatchConfig::default())
+        .dispatch(&program, &[], &vyre_runtime::DispatchConfig::default())
         .expect("Fix: dispatch must succeed after device recovery");
 }

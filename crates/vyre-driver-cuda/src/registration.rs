@@ -1,5 +1,5 @@
 use smallvec::SmallVec;
-use vyre_driver::{BackendError, DispatchConfig, Resource, VyreBackend};
+use vyre_runtime::{BackendError, DispatchConfig, Resource, VyreBackend};
 use vyre_foundation::ir::Program;
 
 use crate::aot_launcher;
@@ -11,7 +11,7 @@ use crate::materializer;
 use crate::target_compiler;
 use crate::{CUDA_BACKEND_ID, CUDA_TARGET_ID};
 
-/// CUDA implementation of [`vyre_driver::DeviceBuffer`]. Wraps a
+/// CUDA implementation of [`vyre_runtime::DeviceBuffer`]. Wraps a
 /// [`backend::CudaResidentBuffer`] handle so consumers can hold a
 /// `Box<dyn DeviceBuffer>` against the CUDA backend without naming
 /// `CudaResidentBuffer` directly.
@@ -28,7 +28,7 @@ pub(crate) struct CudaDeviceBuffer {
     handle: backend::CudaResidentBuffer,
 }
 
-impl vyre_driver::DeviceBuffer for CudaDeviceBuffer {
+impl vyre_runtime::DeviceBuffer for CudaDeviceBuffer {
     fn backend_id(&self) -> &'static str {
         self.backend_id
     }
@@ -147,7 +147,7 @@ impl CudaBackendRegistration {
 
     fn resolve_read_ranges(
         &self,
-        read_ranges: &[vyre_driver::ResidentReadRange<'_>],
+        read_ranges: &[vyre_runtime::ResidentReadRange<'_>],
     ) -> Result<ResolvedReadRanges, BackendError> {
         let mut handles = SmallVec::<[CudaResidentBuffer; 8]>::new();
         let mut concrete_readbacks =
@@ -174,7 +174,7 @@ impl CudaBackendRegistration {
 
     fn resolve_step_handle_sets(
         &self,
-        steps: &[vyre_driver::ResidentDispatchStep<'_>],
+        steps: &[vyre_runtime::ResidentDispatchStep<'_>],
         field: &'static str,
     ) -> Result<SmallVec<[SmallVec<[crate::backend::CudaResidentBuffer; 8]>; 8]>, BackendError>
     {
@@ -189,7 +189,7 @@ impl CudaBackendRegistration {
 
     fn resolve_repeated_step_handle_sets(
         &self,
-        steps: &[vyre_driver::ResidentDispatchStep<'_>],
+        steps: &[vyre_runtime::ResidentDispatchStep<'_>],
         repeat_count: usize,
     ) -> Result<SmallVec<[SmallVec<[crate::backend::CudaResidentBuffer; 8]>; 8]>, BackendError>
     {
@@ -210,7 +210,7 @@ impl CudaBackendRegistration {
     }
 
     fn concrete_resident_steps<'program: 'handles, 'handles>(
-        steps: &[vyre_driver::ResidentDispatchStep<'program>],
+        steps: &[vyre_runtime::ResidentDispatchStep<'program>],
         handle_sets: &'handles [SmallVec<[crate::backend::CudaResidentBuffer; 8]>],
         field: &'static str,
     ) -> Result<SmallVec<[crate::backend::CudaResidentDispatchStep<'handles>; 8]>, BackendError>
@@ -248,7 +248,7 @@ impl CudaBackendRegistration {
         &self,
         program: &Program,
     ) -> Result<(), BackendError> {
-        if vyre_driver::grid_sync::contains_grid_sync(program) && !self.supports_grid_sync() {
+        if vyre_runtime::grid_sync::contains_grid_sync(program) && !self.supports_grid_sync() {
             return Err(BackendError::UnsupportedFeature {
                 name: "cuda_native_grid_sync_lowering (MemoryOrdering::GridSync requires explicit split routing or native cooperative-grid barrier lowering)"
                     .to_string(),
@@ -268,7 +268,7 @@ impl CudaBackendRegistration {
         let required = vyre_foundation::program_caps::scan(program);
         vyre_foundation::program_caps::check_backend_capabilities(
             CUDA_BACKEND_ID,
-            &vyre_driver::validation::ProgramValidationCaps::from_backend(self).support(),
+            &vyre_runtime::validation::ProgramValidationCaps::from_backend(self).support(),
             &required,
         )
         .map_err(|error| BackendError::InvalidProgram {
@@ -278,7 +278,7 @@ impl CudaBackendRegistration {
 
     fn validate_resident_steps_for_dispatch(
         &self,
-        steps: &[vyre_driver::ResidentDispatchStep<'_>],
+        steps: &[vyre_runtime::ResidentDispatchStep<'_>],
     ) -> Result<(), BackendError> {
         for step in steps {
             self.validate_program_for_dispatch(step.program)?;
@@ -287,7 +287,7 @@ impl CudaBackendRegistration {
     }
 }
 
-impl vyre_driver::sealed::Sealed for CudaBackendRegistration {}
+impl vyre_runtime::sealed::Sealed for CudaBackendRegistration {}
 
 impl VyreBackend for CudaBackendRegistration {
     fn id(&self) -> &'static str {
@@ -303,7 +303,7 @@ impl VyreBackend for CudaBackendRegistration {
         program: &Program,
         inputs: &[Vec<u8>],
         config: &DispatchConfig,
-    ) -> Result<Box<dyn vyre_driver::PendingDispatch>, BackendError> {
+    ) -> Result<Box<dyn vyre_runtime::PendingDispatch>, BackendError> {
         self.validate_program_for_dispatch(program)?;
         self.inner.dispatch_async(program, inputs, config)
     }
@@ -313,7 +313,7 @@ impl VyreBackend for CudaBackendRegistration {
         program: &Program,
         inputs: &[&[u8]],
         config: &DispatchConfig,
-    ) -> Result<Box<dyn vyre_driver::PendingDispatch>, BackendError> {
+    ) -> Result<Box<dyn vyre_runtime::PendingDispatch>, BackendError> {
         self.validate_program_for_dispatch(program)?;
         self.inner.dispatch_borrowed_async(program, inputs, config)
     }
@@ -335,7 +335,7 @@ impl VyreBackend for CudaBackendRegistration {
         program: &Program,
         inputs: &[&[u8]],
         config: &DispatchConfig,
-        outputs: &mut vyre_driver::OutputBuffers,
+        outputs: &mut vyre_runtime::OutputBuffers,
     ) -> Result<(), BackendError> {
         self.validate_program_for_dispatch(program)?;
         self.inner
@@ -348,7 +348,7 @@ impl VyreBackend for CudaBackendRegistration {
         program: &Program,
         inputs: &[&[u8]],
         config: &DispatchConfig,
-    ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
+    ) -> Result<vyre_runtime::TimedDispatchResult, BackendError> {
         self.validate_program_for_dispatch(program)?;
         self.inner.dispatch_borrowed_timed(program, inputs, config)
     }
@@ -362,7 +362,7 @@ impl VyreBackend for CudaBackendRegistration {
     fn allocate_device_buffer(
         &self,
         byte_len: usize,
-    ) -> Result<Box<dyn vyre_driver::DeviceBuffer>, BackendError> {
+    ) -> Result<Box<dyn vyre_runtime::DeviceBuffer>, BackendError> {
         let handle = self.inner.allocate_resident(byte_len)?;
         Ok(Box::new(CudaDeviceBuffer {
             backend_id: CUDA_BACKEND_ID,
@@ -372,7 +372,7 @@ impl VyreBackend for CudaBackendRegistration {
 
     fn upload_device_buffer(
         &self,
-        buffer: &mut dyn vyre_driver::DeviceBuffer,
+        buffer: &mut dyn vyre_runtime::DeviceBuffer,
         bytes: &[u8],
     ) -> Result<(), BackendError> {
         let backend_id = buffer.backend_id().to_string();
@@ -390,7 +390,7 @@ impl VyreBackend for CudaBackendRegistration {
 
     fn download_device_buffer(
         &self,
-        buffer: &dyn vyre_driver::DeviceBuffer,
+        buffer: &dyn vyre_runtime::DeviceBuffer,
     ) -> Result<Vec<u8>, BackendError> {
         let cuda_buf = buffer
             .as_any()
@@ -406,7 +406,7 @@ impl VyreBackend for CudaBackendRegistration {
 
     fn free_device_buffer(
         &self,
-        buffer: Box<dyn vyre_driver::DeviceBuffer>,
+        buffer: Box<dyn vyre_runtime::DeviceBuffer>,
     ) -> Result<(), BackendError> {
         let backend_id = buffer.backend_id().to_string();
         let handle = buffer
@@ -428,8 +428,8 @@ impl VyreBackend for CudaBackendRegistration {
     fn dispatch_with_device_buffers(
         &self,
         program: &Program,
-        inputs: &[&dyn vyre_driver::DeviceBuffer],
-        outputs: &mut [&mut dyn vyre_driver::DeviceBuffer],
+        inputs: &[&dyn vyre_runtime::DeviceBuffer],
+        outputs: &mut [&mut dyn vyre_runtime::DeviceBuffer],
         config: &DispatchConfig,
     ) -> Result<(), BackendError> {
         self.validate_program_for_dispatch(program)?;
@@ -438,12 +438,12 @@ impl VyreBackend for CudaBackendRegistration {
         // Outputs are bound by Resource::Resident as well  -  the kernel
         // writes results in-place into the device-resident buffers; the
         // caller reads them via download_device_buffer afterwards.
-        vyre_driver::validate_buffer_ownership(self.id(), inputs.iter().copied())?;
-        vyre_driver::validate_buffer_ownership(
+        vyre_runtime::validate_buffer_ownership(self.id(), inputs.iter().copied())?;
+        vyre_runtime::validate_buffer_ownership(
             self.id(),
             outputs
                 .iter()
-                .map(|b| &**b as &dyn vyre_driver::DeviceBuffer),
+                .map(|b| &**b as &dyn vyre_runtime::DeviceBuffer),
         )?;
         let resource_capacity =
             inputs
@@ -579,7 +579,7 @@ impl VyreBackend for CudaBackendRegistration {
         program: &Program,
         resources: &[Resource],
         config: &DispatchConfig,
-    ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
+    ) -> Result<vyre_runtime::TimedDispatchResult, BackendError> {
         self.validate_program_for_dispatch(program)?;
         let handles = self.inner.resident_handles_from_resources(resources)?;
         self.inner
@@ -591,7 +591,7 @@ impl VyreBackend for CudaBackendRegistration {
         program: &Program,
         resources: &[Resource],
         config: &DispatchConfig,
-    ) -> Result<Box<dyn vyre_driver::PendingDispatch>, BackendError> {
+    ) -> Result<Box<dyn vyre_runtime::PendingDispatch>, BackendError> {
         self.validate_program_for_dispatch(program)?;
         let handles = self.inner.resident_handles_from_resources(resources)?;
         self.inner
@@ -600,8 +600,8 @@ impl VyreBackend for CudaBackendRegistration {
 
     fn dispatch_resident_sequence_read_ranges_into(
         &self,
-        steps: &[vyre_driver::ResidentDispatchStep<'_>],
-        read_ranges: &[vyre_driver::ResidentReadRange<'_>],
+        steps: &[vyre_runtime::ResidentDispatchStep<'_>],
+        read_ranges: &[vyre_runtime::ResidentReadRange<'_>],
         outputs: &mut [&mut Vec<u8>],
     ) -> Result<(), BackendError> {
         self.validate_resident_steps_for_dispatch(steps)?;
@@ -634,10 +634,10 @@ impl VyreBackend for CudaBackendRegistration {
 
     fn dispatch_resident_repeated_sequence_read_ranges_into(
         &self,
-        prefix_steps: &[vyre_driver::ResidentDispatchStep<'_>],
-        repeated_steps: &[vyre_driver::ResidentDispatchStep<'_>],
+        prefix_steps: &[vyre_runtime::ResidentDispatchStep<'_>],
+        repeated_steps: &[vyre_runtime::ResidentDispatchStep<'_>],
         repeat_count: u32,
-        read_ranges: &[vyre_driver::ResidentReadRange<'_>],
+        read_ranges: &[vyre_runtime::ResidentReadRange<'_>],
         outputs: &mut [&mut Vec<u8>],
     ) -> Result<(), BackendError> {
         self.validate_resident_steps_for_dispatch(prefix_steps)?;
@@ -687,7 +687,7 @@ impl VyreBackend for CudaBackendRegistration {
             )
     }
 
-    fn pipeline_cache_snapshot(&self) -> Option<vyre_driver::PipelineCacheSnapshot> {
+    fn pipeline_cache_snapshot(&self) -> Option<vyre_runtime::PipelineCacheSnapshot> {
         Some(self.inner.pipeline_cache_snapshot())
     }
 
@@ -832,7 +832,7 @@ impl VyreBackend for CudaBackendRegistration {
         self.inner.device_memory_bytes()
     }
 
-    fn device_profile(&self) -> vyre_driver::DeviceProfile {
+    fn device_profile(&self) -> vyre_runtime::DeviceProfile {
         let mut profile = self.inner.caps.to_device_profile();
         profile.supports_tensor_cores = self.supports_tensor_cores();
         profile.supports_indirect_dispatch = self.supports_indirect_dispatch();
@@ -911,12 +911,12 @@ pub fn cuda_factory() -> Result<Box<dyn VyreBackend>, BackendError> {
 /// Op-support set  -  CUDA supports every op the foundation IR defines
 /// plus hardware intrinsics. Populated at runtime by the conform runner.
 pub fn cuda_supported_ops() -> &'static std::collections::HashSet<vyre_foundation::ir::OpId> {
-    vyre_driver::default_supported_ops_with_trap()
+    vyre_runtime::default_supported_ops_with_trap()
 }
 
 pub(crate) fn cuda_semantic_operations(
 ) -> &'static std::collections::HashSet<vyre_foundation::ir::OpId> {
-    vyre_driver::dialect_only_supported_ops()
+    vyre_runtime::dialect_only_supported_ops()
 }
 
 /// Backend id submitted into the registry by the CUDA driver.
@@ -925,7 +925,7 @@ pub fn registered_backend_id() -> Option<&'static str> {
     Some(CUDA_BACKEND_ID)
 }
 
-vyre_driver::register_backend! {
+vyre_runtime::register_backend! {
     id: CUDA_BACKEND_ID,
     target_id: CUDA_TARGET_ID,
     payload_format: Some(target_compiler::CUDA_TARGET_FORMAT),
@@ -938,7 +938,7 @@ vyre_driver::register_backend! {
     rank: 5,
 }
 inventory::submit! {
-    vyre_driver::AotLauncherEmitter {
+    vyre_runtime::AotLauncherEmitter {
         target: CUDA_TARGET_ID,
         emit: aot_launcher::emit_launcher,
     }

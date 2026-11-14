@@ -4,8 +4,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Mutex, MutexGuard};
 
 use metal::{Buffer, Device, MTLResourceOptions, NSUInteger};
-use vyre_driver::resident_transfer_fusion::{ResidentTransferInterval, ResidentTransferView};
-use vyre_driver::{
+use vyre_runtime::resident_transfer_fusion::{ResidentTransferInterval, ResidentTransferView};
+use vyre_runtime::{
     BackendError, Binding, BindingPlan, BindingRole, ResidentHandle, ResidentOwner, Resource,
 };
 

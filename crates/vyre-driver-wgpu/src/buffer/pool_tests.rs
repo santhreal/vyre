@@ -117,7 +117,7 @@ fn acquire_release_reuses_power_of_two_classes() {
     let arc = crate::runtime::cached_device()
         .expect("Fix: GPU device is required for persistent buffer pool test");
     let (device, queue) = &*arc;
-    let config = vyre_driver::DispatchConfig::default();
+    let config = vyre_runtime::DispatchConfig::default();
     let pool = BufferPool::new(device.clone(), queue.clone(), &config);
     for len in 1..=1000 {
         let handle = pool
@@ -141,7 +141,7 @@ fn pooled_reuse_updates_logical_element_count() {
     let arc = crate::runtime::cached_device()
         .expect("Fix: GPU device is required for persistent buffer pool test");
     let (device, queue) = &*arc;
-    let config = vyre_driver::DispatchConfig::default();
+    let config = vyre_runtime::DispatchConfig::default();
     let pool = BufferPool::new(device.clone(), queue.clone(), &config);
     let usage = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST;
 
@@ -181,7 +181,7 @@ fn allocation_identity_follows_reuse_and_is_never_reassigned() {
     let retaining = BufferPool::new(
         device.clone(),
         queue.clone(),
-        &vyre_driver::DispatchConfig::default(),
+        &vyre_runtime::DispatchConfig::default(),
     );
     let first = retaining
         .acquire(64, usage)
@@ -202,7 +202,7 @@ fn allocation_identity_follows_reuse_and_is_never_reassigned() {
         "a reacquired allocation must keep its identity so cached bind groups hit"
     );
 
-    let mut evicting_config = vyre_driver::DispatchConfig::default();
+    let mut evicting_config = vyre_runtime::DispatchConfig::default();
     evicting_config.max_output_bytes = Some(0);
     let evicting = BufferPool::new(device.clone(), queue.clone(), &evicting_config);
     let mut seen = std::collections::HashSet::new();
@@ -233,7 +233,7 @@ fn tiering_acquire_release_is_nonblocking_under_contention() {
     let arc = crate::runtime::cached_device()
         .expect("Fix: GPU device is required for persistent buffer pool test");
     let (device, queue) = &*arc;
-    let config = vyre_driver::DispatchConfig::default();
+    let config = vyre_runtime::DispatchConfig::default();
     let pool = BufferPool::with_tiering(
         device.clone(),
         queue.clone(),
@@ -293,7 +293,7 @@ proptest! {
         let arc = crate::runtime::cached_device()
             .expect("Fix: GPU device is required for persistent buffer pool test");
         let (device, queue) = &*arc;
-        let config = vyre_driver::DispatchConfig::default();
+        let config = vyre_runtime::DispatchConfig::default();
         let pool = BufferPool::new(device.clone(), queue.clone(), &config);
 
         let usage_a = wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST;

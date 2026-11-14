@@ -156,7 +156,7 @@ impl StreamShardAllocator {
             least_loaded.push(Reverse(ShardHeapEntry { cost: 0, device }));
         }
         let mut per_device_cost = Vec::new();
-        vyre_driver::allocation::try_reserve_vec_to_capacity(&mut per_device_cost, gpu_capacity)
+        vyre_runtime::allocation::try_reserve_vec_to_capacity(&mut per_device_cost, gpu_capacity)
             .map_err(|_| StreamShardError::AllocationFailed {
                 label: "per-device cost vector",
             })?;

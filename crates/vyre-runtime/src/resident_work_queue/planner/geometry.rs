@@ -1,6 +1,6 @@
 //! Megakernel launch geometry helpers.
 
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use super::grid::cached_geometry_from_slots;
 use super::sizing::ResidentSizingPolicy;

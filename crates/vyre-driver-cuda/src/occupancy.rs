@@ -51,7 +51,7 @@
 //! [`crate::occupancy::cooperative_thread_residency_block_limit`] clamps by the reported block cap:
 //! without it the cooperative preflight admits grids the driver then refuses.
 
-use vyre_driver::validation::blocks_per_compute_unit;
+use vyre_runtime::validation::blocks_per_compute_unit;
 
 use crate::device::CudaDeviceCaps;
 

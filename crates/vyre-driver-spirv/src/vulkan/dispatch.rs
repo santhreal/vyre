@@ -2,7 +2,7 @@
 
 use ash::vk;
 
-use vyre_driver::{BackendError, BindingPlan};
+use vyre_runtime::{BackendError, BindingPlan};
 use vyre_foundation::ir::{BufferAccess, Program};
 
 use super::bindings::{
@@ -64,7 +64,7 @@ pub(crate) unsafe fn dispatch_program(
     spv_words: &[u32],
     inputs: &[&[u8]],
     input_order: InputOrder<'_>,
-    config: &vyre_driver::DispatchConfig,
+    config: &vyre_runtime::DispatchConfig,
 ) -> Result<Vec<Vec<u8>>, BackendError> {
     BackendError::reject_blocked_contraction(
         program,

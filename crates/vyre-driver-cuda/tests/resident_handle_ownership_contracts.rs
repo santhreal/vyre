@@ -18,7 +18,7 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_driver::{BackendError, Resource, VyreBackend};
+use vyre_runtime::{BackendError, Resource, VyreBackend};
 use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration};
 
 fn acquire() -> CudaBackendRegistration {

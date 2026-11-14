@@ -19,7 +19,7 @@ fn non_apple_acquire_fails_actionably() {
 #[cfg(not(any(target_os = "macos", target_os = "ios")))]
 #[test]
 fn non_apple_build_registers_a_compiler_facet_and_no_materializer() {
-    let registrations = vyre_driver::registered_backends().expect("valid backend registry");
+    let registrations = vyre_runtime::registered_backends().expect("valid backend registry");
     let registration = registrations
         .iter()
         .find(|registration| registration.id == METAL_BACKEND_ID)
@@ -48,18 +48,18 @@ fn apple_acquire_registers_dispatch_backend() {
     );
     assert_eq!(backend.id(), METAL_BACKEND_ID);
     assert!(
-        vyre_driver::registered_backends()
+        vyre_runtime::registered_backends()
             .expect("valid backend registry")
             .iter()
             .any(|registration| registration.id == METAL_BACKEND_ID),
         "Fix: Apple Metal builds must submit a real backend registration."
     );
     assert!(
-        vyre_driver::backend_dispatches(METAL_BACKEND_ID).expect("valid backend registry"),
+        vyre_runtime::backend_dispatches(METAL_BACKEND_ID).expect("valid backend registry"),
         "Fix: Apple Metal registration must declare live dispatch capability."
     );
     assert_eq!(
-        vyre_driver::backend_precedence(METAL_BACKEND_ID)
+        vyre_runtime::backend_precedence(METAL_BACKEND_ID)
             .expect("valid backend registry"),
         25,
         "Fix: Metal precedence must stay above portable fallbacks only after live native dispatch exists."
@@ -108,7 +108,7 @@ fn apple_device_profile_reports_live_metal_limits() {
     );
     assert_eq!(
         profile.timing_quality,
-        vyre_driver::DeviceTimingQuality::HostEnqueueWait,
+        vyre_runtime::DeviceTimingQuality::HostEnqueueWait,
         "Fix: Metal profile must classify timing as host enqueue/wait until device timestamps are implemented."
     );
     assert!(

@@ -48,7 +48,7 @@ fn every_op_passes_the_witness_lens() {
 /// A device result that disagrees with the reference fails parity, and the
 /// reference value is not handed back in its place.
 ///
-/// WHY: the deleted `vyre-driver::shadow` path could evaluate a user program on
+/// WHY: the deleted `vyre-runtime::shadow` path could evaluate a user program on
 /// the host and return that, so a wrong device answer could be masked by a
 /// right host one. Nothing may substitute now: a divergence is a refusal.
 ///

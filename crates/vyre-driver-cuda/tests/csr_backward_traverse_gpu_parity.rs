@@ -5,7 +5,7 @@
 use crate::harness;
 
 use harness::{bytes_u32, csr_traversal_inputs, with_live_backend};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_libs::graph::csr_backward_traverse::csr_backward_traverse;
 use vyre_libs::graph::program_graph::ProgramGraphShape;
 use vyre_reference::composition_witness::csr_backward_traverse_witness;

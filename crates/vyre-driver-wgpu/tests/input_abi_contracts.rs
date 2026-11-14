@@ -2,7 +2,7 @@
 //!
 //! One answer decides which declarations a caller fills:
 //! `BufferDecl::consumes_host_input`. The neutral half of that contract, what
-//! `BindingPlan` accepts and how it refuses, belongs to `vyre-driver` and is
+//! `BindingPlan` accepts and how it refuses, belongs to `vyre-runtime` and is
 //! proved there. What is WGPU here is that a live dispatch agrees with the
 //! reference interpreter on the same programs.
 

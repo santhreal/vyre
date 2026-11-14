@@ -116,7 +116,7 @@ pub fn capture_environment() -> std::io::Result<EnvironmentData> {
         })?;
     let mut linked_dispatch_backends = Vec::new();
     for backend in registered_backends {
-        if vyre_driver::backend_dispatches(backend.id).map_err(|error| {
+        if vyre_runtime::backend_dispatches(backend.id).map_err(|error| {
             std::io::Error::other(format!("backend registry startup failed: {error}"))
         })? {
             linked_dispatch_backends.push(backend.id);
@@ -133,7 +133,7 @@ pub fn capture_environment() -> std::io::Result<EnvironmentData> {
     // closes. So an acquired backend is a usable device, and the arm that used
     // to exclude `cpu-ref` from that conclusion had nothing left to exclude.
     for backend in linked_dispatch_backends {
-        match vyre_driver::acquire(backend) {
+        match vyre_runtime::acquire(backend) {
             Ok(_) => {
                 usable_gpu_backend = true;
                 features.push(format!("backend.usable.{backend}"));

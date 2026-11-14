@@ -5,7 +5,7 @@
 
 use ash::vk;
 
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use super::device::VulkanDevice;
 
@@ -67,7 +67,7 @@ pub(super) fn output_readback(
             ),
         }
     })?;
-    let layout = vyre_driver::output_binding_layout_parts(
+    let layout = vyre_runtime::output_binding_layout_parts(
         buffer.binding(),
         &buffer.name,
         &buffer.element,
@@ -168,7 +168,7 @@ pub(super) fn bind_trap_sidecar(
                 ),
             });
         }
-        let byte_len = vyre_driver::trap_record::TRAP_RECORD_BYTES;
+        let byte_len = vyre_runtime::trap_record::TRAP_RECORD_BYTES;
         let vk_byte_len = vk::DeviceSize::try_from(byte_len).map_err(|_| {
             BackendError::new(
                 "Vulkan trap sidecar length exceeds vk::DeviceSize. Fix: keep TRAP_RECORD_BYTES within the device size ABI.".to_string(),
@@ -206,7 +206,7 @@ pub(super) unsafe fn read_trap_record(
 ) -> Result<Option<BackendError>, BackendError> {
     // SAFETY: Safe FFI / low-level operation verified and audited for Release compliance.
     let bytes = unsafe { map_binding_bytes(device, binding) }?;
-    let Some(record) = vyre_driver::trap_record::decode_trap_record(&bytes)? else {
+    let Some(record) = vyre_runtime::trap_record::decode_trap_record(&bytes)? else {
         return Ok(None);
     };
     Ok(Some(BackendError::new(format!(

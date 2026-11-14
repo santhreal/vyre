@@ -1,14 +1,14 @@
 //! The host input ABI contract every concrete driver answers on a device.
 //!
 //! `BufferDecl::consumes_host_input` is the single definition of which
-//! declarations a caller fills. `vyre-driver` proves the neutral half against
+//! declarations a caller fills. `vyre-runtime` proves the neutral half against
 //! `BindingPlan`; this is the device half, where a live backend and the
 //! reference interpreter must accept and refuse the same input counts for the
 //! same program. Both halves read one program set and one canonical input
 //! builder, stated here, so a backend suite states which backend it runs and
 //! nothing else.
 
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, MemoryKind, Node, Program};
 use vyre_reference::value::Value;
 

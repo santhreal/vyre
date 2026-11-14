@@ -3,7 +3,7 @@ use super::RecordedDispatch;
 use crate::allocation::{reserve_smallvec_to_capacity, reserve_vec_to_capacity};
 use smallvec::SmallVec;
 use std::sync::Arc;
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 pub(crate) fn submit_recorded_dispatch(
     mut recorded: RecordedDispatch,

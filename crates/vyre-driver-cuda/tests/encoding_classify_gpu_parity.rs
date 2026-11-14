@@ -6,7 +6,7 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_libs::text::{
     encoding_classify, ENCODING_CLASSIFY_WORKGROUP_SIZE, ENC_ASCII, ENC_BINARY, ENC_ISO8859_1,
     ENC_UTF16LE, ENC_UTF8,

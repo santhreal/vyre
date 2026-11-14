@@ -340,7 +340,7 @@ fn first_param_is_program(after_name: &str) -> bool {
 /// list's closing paren and the body's opening brace, `where` clause included.
 ///
 /// Reading the whole signature instead is what misclassified
-/// `vyre_driver::self_optimizer_bench::report_scaling`, which returns `()` and
+/// `vyre_runtime::self_optimizer_bench::report_scaling`, which returns `()` and
 /// takes a `fn(Program, &dyn SemanticExecutor) -> Program` callback: the arrow
 /// in the parameter type was read as the function's own return type.
 fn return_type_window(after_name: &str) -> Option<&str> {
@@ -512,7 +512,7 @@ mod tests {
     /// WHY: the enumerator used to search the WHOLE signature for `-> Program`,
     /// so a function returning `()` was reported as an unregistered builder as
     /// soon as one of its parameters was a callback returning a `Program`. That
-    /// misfire had `vyre-driver`'s closure gate red on a function that builds
+    /// misfire had `vyre-runtime`'s closure gate red on a function that builds
     /// nothing. The arrow only counts in return position.
     ///
     /// Not caught: a builder hidden behind a type alias (`-> MyProgram` where

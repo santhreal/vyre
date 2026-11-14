@@ -2,7 +2,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, LazyLock, Weak};
 
 use dashmap::DashMap;
-use vyre_driver::{BackendError, ResidentHandle, ResidentOwner};
+use vyre_runtime::{BackendError, ResidentHandle, ResidentOwner};
 
 use super::{GpuBufferHandle, GpuBufferInner};
 

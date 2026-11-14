@@ -300,7 +300,7 @@ fn grid_verdict_is_order_invariant_where_the_workgroup_verdict_flips() {
 /// The grid builder is what flips the driver's cooperative-launch gate
 /// from closed to open.
 ///
-/// `vyre_driver::grid_sync::contains_grid_sync` is the FIRST condition in
+/// `vyre_runtime::grid_sync::contains_grid_sync` is the FIRST condition in
 /// the backend's cooperative-launch fit check, and it short-circuits to
 /// `false` before any device property is consulted. A program built from
 /// `persistent_fixpoint` contains only workgroup-scope barriers, so the
@@ -336,17 +336,17 @@ fn grid_builder_opens_the_driver_cooperative_launch_gate_the_workgroup_builder_c
     );
 
     assert!(
-        vyre_driver::grid_sync::contains_grid_sync(&grid),
+        vyre_runtime::grid_sync::contains_grid_sync(&grid),
         "the grid builder must satisfy the driver's grid-sync predicate or the cooperative \
          launch path is never even asked about the device"
     );
     assert!(
-        !vyre_driver::grid_sync::contains_grid_sync(&workgroup),
+        !vyre_runtime::grid_sync::contains_grid_sync(&workgroup),
         "the single-workgroup builder must NOT satisfy it: that refusal is what keeps its \
          racing termination protocol off a multi-group dispatch"
     );
     assert_eq!(
-        vyre_driver::grid_sync::try_split_on_grid_sync(&grid)
+        vyre_runtime::grid_sync::try_split_on_grid_sync(&grid)
             .expect("Fix: the fixture program must split at its grid-sync fences")
             .len(),
         2 * max_iterations as usize + 1,

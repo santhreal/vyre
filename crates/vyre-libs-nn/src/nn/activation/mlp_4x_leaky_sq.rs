@@ -24,7 +24,7 @@ const OUTPUT_PROJECTION_OP_ID: &str = "vyre-libs::nn::mlp_4x_leaky_sq::output_pr
 /// The gate is load-bearing and its absence is a silent wrong answer, not a
 /// crash. The span is not the caller's to choose: `HIDDEN_SCRATCH` is a
 /// workgroup binding, which makes the program shared, and a shared program is
-/// dispatched across the WIDEST NON-SHARED binding (`vyre-driver`
+/// dispatched across the WIDEST NON-SHARED binding (`vyre-runtime`
 /// `dispatch_element_count_for_program`). That widest binding is `w1` at
 /// `model_dim * hidden_dim`, never the `model_dim` the body walks, so any
 /// realistic weight matrix already yields a many-workgroup grid.

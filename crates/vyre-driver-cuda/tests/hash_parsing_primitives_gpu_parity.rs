@@ -9,7 +9,7 @@ mod hash_parsing_fnv;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use std::num::NonZeroU32;
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_libs::hash::crc32::{crc32_chunk_program, crc32_pair_reduce_program};
 use vyre_libs::hash::hypervector::hypervector_xor_bind;

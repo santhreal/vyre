@@ -3,7 +3,7 @@
 
 use std::ffi::c_void;
 
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use crate::backend::pinned_allocations::HostTransferAllocations;
 use crate::backend::resident_upload_fusion::ResidentUploadCopy;

@@ -21,8 +21,8 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_driver::grid_sync::dispatch_resident_grid_sync_fixpoint_into;
-use vyre_driver::{BindingPlan, BindingRole, DispatchConfig};
+use vyre_runtime::grid_sync::dispatch_resident_grid_sync_fixpoint_into;
+use vyre_runtime::{BindingPlan, BindingRole, DispatchConfig};
 use vyre_driver_cuda::cuda_factory;
 use vyre_libs::reduce::grid_stride_tree;
 

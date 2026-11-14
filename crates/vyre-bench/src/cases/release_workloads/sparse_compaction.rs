@@ -214,7 +214,7 @@ mod tests {
         let program = sparse_output_compaction_count_program();
         let input_lengths = [(SPARSE_ITEMS as usize) * 4];
 
-        let plan = vyre_driver::BindingPlan::from_input_lengths(&program, &input_lengths)
+        let plan = vyre_runtime::BindingPlan::from_input_lengths(&program, &input_lengths)
             .expect("Fix: sparse compaction release workload inputs must match Program ABI.");
         assert_eq!(plan.input_indices, [1]);
         assert_eq!(

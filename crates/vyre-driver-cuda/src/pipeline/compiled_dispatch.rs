@@ -5,14 +5,14 @@
 //! grid-sync split.
 
 use smallvec::SmallVec;
-use vyre_driver::{BackendError, CompiledPipeline, DispatchConfig, OutputBuffers, Resource};
+use vyre_runtime::{BackendError, CompiledPipeline, DispatchConfig, OutputBuffers, Resource};
 
 use crate::backend::staging_reserve::{reserve_smallvec, reserved_vec, resize_vec_slots};
 use crate::numeric::CUDA_NUMERIC;
 use crate::pipeline::{
     require_compiled_launch_shape, CudaCompiledPipeline, CudaPipelineExecutionStrategy,
 };
-use vyre_driver::input_identity::exact_input_key;
+use vyre_runtime::input_identity::exact_input_key;
 
 impl CudaCompiledPipeline {
     /// Whether this launch must take the host-orchestrated grid-sync split.
@@ -30,7 +30,7 @@ impl CudaCompiledPipeline {
         inputs: &[&[u8]],
         config: &DispatchConfig,
     ) -> Result<bool, BackendError> {
-        if !vyre_driver::grid_sync::contains_grid_sync(&self.program) {
+        if !vyre_runtime::grid_sync::contains_grid_sync(&self.program) {
             return Ok(false);
         }
         self.backend
@@ -54,7 +54,7 @@ impl CudaCompiledPipeline {
         inputs: &[Resource],
         config: &DispatchConfig,
     ) -> Result<bool, BackendError> {
-        if !vyre_driver::grid_sync::contains_grid_sync(&self.program) {
+        if !vyre_runtime::grid_sync::contains_grid_sync(&self.program) {
             return Ok(false);
         }
         self.backend
@@ -67,7 +67,7 @@ impl CudaCompiledPipeline {
         &self,
         inputs: &[Resource],
         config: &DispatchConfig,
-    ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
+    ) -> Result<vyre_runtime::TimedDispatchResult, BackendError> {
         self.backend
             .dispatch_resident_with_grid_sync_split_timed(&self.program, inputs, config)
     }
@@ -92,7 +92,7 @@ impl CudaCompiledPipeline {
         for (inputs, item_outputs) in batches.iter().zip(outputs.iter_mut()) {
             let split = self.dispatch_resident_grid_sync_split_timed(inputs, config)?;
             device_ns_by_item.push(split.device_ns);
-            vyre_driver::replace_output_buffers_preserving_slots(split.outputs, item_outputs);
+            vyre_runtime::replace_output_buffers_preserving_slots(split.outputs, item_outputs);
         }
         Ok(())
     }
@@ -107,7 +107,7 @@ impl CompiledPipeline for CudaCompiledPipeline {
         &self,
         inputs: &[&[u8]],
         config: &DispatchConfig,
-    ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
+    ) -> Result<vyre_runtime::TimedDispatchResult, BackendError> {
         let _profiler_range =
             crate::profiler::cuda_profiler_range(crate::profiler::CUDA_PIPELINE_DISPATCH_RANGE);
         require_compiled_launch_shape(&self.compiled_config, config)?;
@@ -160,7 +160,7 @@ impl CompiledPipeline for CudaCompiledPipeline {
         self.backend
             .telemetry
             .record_timed_dispatch(wall_ns, device_ns, None, None);
-        Ok(vyre_driver::TimedDispatchResult::device_timed(
+        Ok(vyre_runtime::TimedDispatchResult::device_timed(
             outputs, wall_ns, device_ns,
         ))
     }
@@ -169,7 +169,7 @@ impl CompiledPipeline for CudaCompiledPipeline {
         &self,
         inputs: &[Resource],
         config: &DispatchConfig,
-    ) -> Result<vyre_driver::TimedDispatchResult, BackendError> {
+    ) -> Result<vyre_runtime::TimedDispatchResult, BackendError> {
         let _profiler_range =
             crate::profiler::cuda_profiler_range(crate::profiler::CUDA_PIPELINE_DISPATCH_RANGE);
         require_compiled_launch_shape(&self.compiled_config, config)?;
@@ -196,7 +196,7 @@ impl CompiledPipeline for CudaCompiledPipeline {
             self.backend
                 .telemetry
                 .record_timed_dispatch(wall_ns, None, None, None);
-            return Ok(vyre_driver::TimedDispatchResult::host_timed(
+            return Ok(vyre_runtime::TimedDispatchResult::host_timed(
                 outputs, wall_ns,
             ));
         }
@@ -243,7 +243,7 @@ impl CompiledPipeline for CudaCompiledPipeline {
             wait_ns,
             device_ns,
         );
-        Ok(vyre_driver::TimedDispatchResult::split_timed(
+        Ok(vyre_runtime::TimedDispatchResult::split_timed(
             outputs, wall_ns, device_ns, enqueue_ns, wait_ns,
         ))
     }

@@ -21,8 +21,8 @@
 
 use std::collections::BTreeMap;
 
-use vyre_driver::BackendRegistration;
-use vyre_driver::{BindingSet, BoundResource, Resource};
+use vyre_runtime::BackendRegistration;
+use vyre_runtime::{BindingSet, BoundResource, Resource};
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
     ShapeDim, ValueContract, ValueLifetime,
@@ -193,14 +193,14 @@ pub fn copy_lane_artifact(access: BufferAccess) -> Artifact {
 /// discovery paths, and each caller used only one of them. A backend that
 /// answered one and not the other satisfied every test that existed.
 pub fn registration(backend_id: &str) -> &'static BackendRegistration {
-    let enumerated = vyre_driver::registered_backends()
+    let enumerated = vyre_runtime::registered_backends()
         .expect("backend registry must build. Fix: correct the duplicate or malformed registration the driver crates publish")
         .iter()
         .find(|candidate| candidate.id == backend_id)
         .unwrap_or_else(|| {
             panic!("Fix: link the driver crate that registers backend `{backend_id}`")
         });
-    let by_id = vyre_driver::backend_registration(backend_id).unwrap_or_else(|error| {
+    let by_id = vyre_runtime::backend_registration(backend_id).unwrap_or_else(|error| {
         panic!("Fix: backend `{backend_id}` is enumerated but its id lookup failed: {error}")
     });
     assert!(
@@ -581,7 +581,7 @@ pub fn assert_resident_batch_rejects_host_bindings(
 }
 
 /// The device materializer a backend registers.
-fn materializer_for(backend_id: &str) -> Box<dyn vyre_driver::ArtifactMaterializer> {
+fn materializer_for(backend_id: &str) -> Box<dyn vyre_runtime::ArtifactMaterializer> {
     registration(backend_id)
         .materializer()
         .unwrap_or_else(|error| {

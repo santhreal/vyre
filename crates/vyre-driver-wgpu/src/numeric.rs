@@ -1,4 +1,4 @@
-use vyre_driver::numeric::BackendNumericPolicy;
+use vyre_runtime::numeric::BackendNumericPolicy;
 
 /// Single WGPU numeric-boundary policy.
 ///

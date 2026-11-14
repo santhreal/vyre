@@ -2,7 +2,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::Instant;
 
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use crate::buffer::staging::StagingBufferPool;
 

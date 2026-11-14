@@ -8,10 +8,11 @@ license.workspace = true
 authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
-description = "Persistent megakernel + io_uring zero-copy streaming runtime for vyre typed programs"
-keywords = ["gpu", "io-uring", "megakernel", "nvme", "vyre"]
-categories = ["asynchronous", "hardware-support", "api-bindings"]
+description = "Backend contracts, driver registry, artifact execution, resident work queues and zero-copy IO for vyre typed programs"
+keywords = ["gpu", "runtime", "megakernel", "io-uring", "vyre"]
+categories = ["compilers", "hardware-support", "asynchronous"]
 documentation = "https://docs.rs/vyre-runtime"
+exclude = ["**/SKILL.md"]
 
 [package.metadata.docs.rs]
 all-features = true
@@ -20,50 +21,63 @@ rustdoc-args = ["--cfg", "docsrs"]
 [features]
 default = []
 subgroup-ops = []
-# The megakernel planner's program builders, each a vyre-libs composition.
-# Named `self-substrate-adapters` until the crate it was named for,
-# vyre-self-substrate, became vyre-pass-engine; the feature never depended on
-# that crate, so the name described nothing.
+# Cache invalidation, substrate telemetry and the megakernel planner's program
+# builders, each a vyre-libs composition. Without it those entry points fail
+# closed rather than fall back to a reference path.
 libs-compositions = [
     "dep:vyre-libs",
     "vyre-libs/analysis",
     "vyre-libs/encoding",
-    "vyre-libs/solvers",
     "vyre-libs/math",
+    "vyre-libs/reasoning",
+    "vyre-libs/solvers",
+    "vyre-libs/telemetry",
 ]
+# Elementwise parity-gate scaffolding, used only by the concrete backends'
+# tests. Off by default so a published build does not carry test scaffolding.
+test-fixtures = []
 # `dep:` and not a bare name: a bare optional dependency also publishes a
-# feature of its own, so `remote-cache = ["ureq"]` made `--features ureq` a
-# second, undeclared way to turn the same code on.
+# feature of its own.
 remote-cache = ["dep:ureq"]
 # Opt-in NVMe passthrough via `IORING_OP_URING_CMD` (Linux kernel 6.0+).
 uring-cmd-nvme = []
 
 [dependencies]
-vyre-driver.workspace = true
-vyre-libs = { workspace = true, optional = true }
 vyre-foundation.workspace = true
 vyre-megakernel.workspace = true
+vyre-libs = { workspace = true, optional = true }
 vyre-spec.workspace = true
-thiserror.workspace = true
-tracing.workspace = true
-blake3.workspace = true
-bytemuck.workspace = true
-rustc-hash.workspace = true
-smallvec.workspace = true
-ureq = { workspace = true, optional = true }
 serde.workspace = true
 serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+rustc-hash.workspace = true
+smallvec.workspace = true
+blake3.workspace = true
+bytemuck.workspace = true
+inventory.workspace = true
+toml.workspace = true
+dashmap.workspace = true
+fs2.workspace = true
+ureq = { workspace = true, optional = true }
+
 [target.'cfg(target_os = "linux")'.dependencies]
 libc.workspace = true
 
 [dev-dependencies]
-vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests", "driver-artifact-contracts"] }
+vyre-test-support = { workspace = true, features = [
+    "ir-fixtures",
+    "semantic-requests",
+    "driver-contracts",
+    "driver-artifact-contracts",
+] }
+# integration tests assert against these crates' public APIs
+vyre = { workspace = true, default-features = false }
+vyre-driver-reference = { workspace = true }
+vyre-reference = { workspace = true }
+vyre-primitives = { workspace = true, features = ["hardware"] }
 tempfile.workspace = true
-serde_json.workspace = true
 proptest.workspace = true
-
-[target.'cfg(target_os = "linux")'.dev-dependencies]
-libc.workspace = true
 
 [package.metadata.vyre]
 publication_class = "internal-engine"
@@ -75,3 +89,33 @@ workspace = true
 [[test]]
 name = "all_tests"
 path = "tests/all_tests.rs"
+
+# Isolated: each submits a deliberate duplicate into the link-time operation
+# and backend registries, which are process-global and populated before `main`.
+# The duplicate is the subject of the assertion, so a binary carrying either
+# one starts with a registry every other test in it would read as corrupt.
+[[test]]
+name = "backend_registry_duplicate_provider"
+path = "tests/backend_registry_duplicate_provider.rs"
+
+[[test]]
+name = "gap_duplicate_op_id"
+path = "tests/gap_duplicate_op_id.rs"
+
+# Isolated: each asserts what the registry reports when this binary links no
+# concrete backend. `backend_registry` reads it as empty and
+# `reference_oracle_is_never_implicit` requires that no implicit choice returns
+# a host oracle. One test registering a backend to exercise its own contract
+# would make both observations describe a different registry.
+[[test]]
+name = "backend_registry"
+path = "tests/backend_registry.rs"
+
+[[test]]
+name = "reference_oracle_is_never_implicit"
+path = "tests/reference_oracle_is_never_implicit.rs"
+
+[[test]]
+name = "all_tests_libs_compositions"
+path = "tests/all_tests_libs_compositions.rs"
+required-features = ["libs-compositions"]

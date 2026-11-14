@@ -36,7 +36,7 @@ default = []
 device-tests = []
 
 [dependencies]
-vyre-driver = { workspace = true }
+vyre-runtime = { workspace = true }
 vyre-foundation = { workspace = true }
 vyre-megakernel = { workspace = true }
 vyre-lower = { workspace = true }
@@ -49,7 +49,7 @@ serde_json.workspace = true
 [dev-dependencies]
 toml = { workspace = true }
 # Parity-gate scaffolding shared by the concrete backends' tests.
-vyre-driver = { workspace = true, features = ["test-fixtures"] }
+vyre-runtime = { workspace = true, features = ["test-fixtures"] }
 
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies]
 metal.workspace = true
@@ -58,7 +58,7 @@ metal.workspace = true
 vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
 # The differential suite compares native Metal against wgpu-on-Metal on one
 # Apple GPU, so the second backend has to be in the same binary for
-# `vyre_driver::acquire("wgpu")` to find a registration.
+# `vyre_runtime::acquire("wgpu")` to find a registration.
 vyre-driver-wgpu = { workspace = true }
 
 [[test]]

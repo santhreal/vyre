@@ -8,7 +8,7 @@ use crate::pipeline::{BufferBindingInfo, OutputBindingLayout};
 use smallvec::SmallVec;
 use std::sync::Arc;
 use std::time::Instant;
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 use vyre_emit::naga::program::{TrapTag, TRAP_SIDECAR_WORDS};
 
 mod bind_groups;
@@ -108,7 +108,7 @@ impl<'a> RecordAndReadback<'a> {
         dispatch_arena: &'a crate::DispatchArena,
         inputs: &'a [&'a [u8]],
         workgroup_count: [u32; 3],
-        config: &vyre_driver::DispatchConfig,
+        config: &vyre_runtime::DispatchConfig,
         timestamp_profile: bool,
         labels: DispatchLabels,
     ) -> Self {
@@ -192,7 +192,7 @@ fn record_dispatch_unsubmitted_impl(
     // also ignored a trailing slot instead of rejecting it. One artifact ABI is
     // documented, so one shape is admitted and every other count is named.
     //
-    // The count sentence matches `vyre_driver::BindingPlan::validate_inputs`,
+    // The count sentence matches `vyre_runtime::BindingPlan::validate_inputs`,
     // which is what cuda refuses a wrong count through, so a caller reads one
     // sentence whichever backend rejected the list.
     let input_slot_count = request.inputs.len();
@@ -257,7 +257,7 @@ fn record_dispatch_unsubmitted_impl(
                 })
                 .transpose()?;
             if let Some(words) = resolved_words {
-                request.workgroup_count = vyre_driver::infer_launch_grid(
+                request.workgroup_count = vyre_runtime::infer_launch_grid(
                     words,
                     launch.workgroup_shape,
                     launch.max_per_axis,
@@ -274,7 +274,7 @@ fn record_dispatch_unsubmitted_impl(
     // rejected inside the recorded command buffer, where the rejection is a
     // validation abort rather than an error this call can return, so it has to be
     // caught before anything is recorded.
-    request.workgroup_count = vyre_driver::admit_dispatch_grid(
+    request.workgroup_count = vyre_runtime::admit_dispatch_grid(
         request.workgroup_count,
         [request
             .device_queue
@@ -583,7 +583,7 @@ fn record_dispatch_unsubmitted_impl(
 ///
 /// A writable buffer declared without `.with_count(n)` has `count == 0`, which
 /// the IR defines as runtime-sized: its element count is whatever the caller
-/// passed for it. `vyre_driver::dynamic_element_count_from_bytes` is the one rule
+/// passed for it. `vyre_runtime::dynamic_element_count_from_bytes` is the one rule
 /// for deriving that count, and the CPU reference and CUDA already size such a
 /// buffer through it, so applying it here is what puts WGPU on the same answer.
 ///
@@ -602,7 +602,7 @@ fn resolve_runtime_sized_outputs(
     input_idx_by_binding: &binding_lookup::BindingLookup,
 ) -> Result<Arc<[OutputBindingLayout]>, BackendError> {
     let mut resolved = Vec::new();
-    vyre_driver::allocation::try_reserve_vec_to_capacity(&mut resolved, output_bindings.len())
+    vyre_runtime::allocation::try_reserve_vec_to_capacity(&mut resolved, output_bindings.len())
         .map_err(|error| {
             BackendError::new(format!(
                 "runtime-sized output resolution could not reserve {} layout slot(s): {error}. Fix: reduce the program's writable binding fanout.",
@@ -630,7 +630,7 @@ fn resolve_runtime_sized_outputs(
                     info.name, info.binding
                 ))
             })?;
-        let count = vyre_driver::dynamic_element_count_from_bytes(&info.element, bytes.len())
+        let count = vyre_runtime::dynamic_element_count_from_bytes(&info.element, bytes.len())
             .ok_or_else(|| {
                 BackendError::new(format!(
                     "writable buffer `{}` (binding {}) is runtime-sized and was supplied {} byte(s), which do not resolve to a whole element count for `{}`. Fix: declare it with .with_count(n), or supply a whole number of elements.",
@@ -640,7 +640,7 @@ fn resolve_runtime_sized_outputs(
                     info.element
                 ))
             })?;
-        resolved.push(vyre_driver::output_binding_layout_parts(
+        resolved.push(vyre_runtime::output_binding_layout_parts(
             info.binding,
             &info.name,
             &info.element,
@@ -663,6 +663,6 @@ fn padded_wgpu_usize(size: usize, label: &'static str) -> Result<usize, BackendE
 /// submission, or readback mapping fails.
 pub(crate) fn record_and_readback(
     request: RecordAndReadback<'_>,
-) -> Result<vyre_driver::OutputBuffers, BackendError> {
+) -> Result<vyre_runtime::OutputBuffers, BackendError> {
     record_and_submit_async(request)?.await_result()
 }

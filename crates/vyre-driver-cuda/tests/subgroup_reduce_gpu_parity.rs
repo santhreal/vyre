@@ -18,7 +18,7 @@ use crate::harness;
 
 use harness::{bytes_f32, bytes_u32, with_live_backend};
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 
 const LANES: u32 = 32;
 

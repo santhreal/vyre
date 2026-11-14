@@ -6,7 +6,7 @@ use crate::harness;
 use harness::acquire_live_backend as live_backend;
 use harness::bytes_u32;
 
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_libs::bitset::zero::bitset_zero;
 
 #[test]

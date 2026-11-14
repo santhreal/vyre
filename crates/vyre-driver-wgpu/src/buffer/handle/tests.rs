@@ -1,5 +1,5 @@
 use super::*;
-use vyre_driver::ResidentOwner;
+use vyre_runtime::ResidentOwner;
 
 /// The mapped-at-creation upload fast path (the StagingBelt replacement)
 /// must produce a buffer whose contents byte-for-byte equal the input across

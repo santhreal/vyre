@@ -6,7 +6,7 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_libs::math::submodular_greedy::{argmax_of_marginals, NO_WINNER};
 use vyre_reference::composition_witness::argmax_of_marginals_witness as argmax_of_marginals_cpu;
 

@@ -22,7 +22,6 @@ use std::fs;
 /// routing, artifact, or autoroute path.
 const RECORDED_ORACLE_LINKERS: &[&str] = &[
     "vyre-driver-reference",
-    "vyre-conform",
     "vyre-test-support",
     "vyre-bench",
 ];
@@ -34,13 +33,12 @@ const RECORDED_ORACLE_LINKERS: &[&str] = &[
 const PRODUCTION_ROUTING_CRATES: &[&str] = &[
     "vyre",
     "vyre-compiler",
-    "vyre-driver",
+    "vyre-runtime",
     "vyre-driver-metal",
     "vyre-driver-wgpu",
     "vyre-driver-spirv",
     "vyre-driver-cuda",
     "vyre-megakernel",
-    "vyre-runtime",
     "vyre-aot",
     "vyre-lower",
     "vyre-emit",
@@ -115,7 +113,7 @@ fn the_oracle_declares_no_backend_and_no_driver() {
 
     let backends: Vec<&String> = deps
         .iter()
-        .filter(|dep| dep.starts_with("vyre-driver") || dep.starts_with("vyre-emit"))
+        .filter(|dep| dep.starts_with("vyre-runtime") || dep.starts_with("vyre-emit"))
         .collect();
 
     assert!(

@@ -7,7 +7,7 @@
 //! different allocation policy.
 
 use smallvec::{Array, SmallVec};
-use vyre_driver::{reservation_policy::ReservationPolicy, BackendError};
+use vyre_runtime::{reservation_policy::ReservationPolicy, BackendError};
 
 pub(crate) fn reserve_vec<T>(
     vec: &mut Vec<T>,

@@ -54,10 +54,10 @@ where
     ///
     /// # Errors
     ///
-    /// Returns [`vyre_driver::BackendError`] if default LRU backing storage
+    /// Returns [`vyre_runtime::BackendError`] if default LRU backing storage
     /// cannot be reserved.
     #[inline]
-    pub(crate) fn try_new() -> Result<Self, vyre_driver::BackendError> {
+    pub(crate) fn try_new() -> Result<Self, vyre_runtime::BackendError> {
         Self::try_with_reserved_capacity(DEFAULT_INTRUSIVE_LRU_CAPACITY)
     }
 
@@ -85,12 +85,12 @@ where
     ///
     /// # Errors
     ///
-    /// Returns [`vyre_driver::BackendError`] if LRU backing storage cannot be
+    /// Returns [`vyre_runtime::BackendError`] if LRU backing storage cannot be
     /// reserved.
     #[inline]
     pub(crate) fn try_with_reserved_capacity(
         capacity: usize,
-    ) -> Result<Self, vyre_driver::BackendError> {
+    ) -> Result<Self, vyre_runtime::BackendError> {
         let capacity = capacity.max(1);
         let mut nodes = Vec::new();
         reserve_vec_to_capacity(
@@ -346,10 +346,10 @@ impl AccessTracker {
     ///
     /// # Errors
     ///
-    /// Returns [`vyre_driver::BackendError`] if tracker backing storage cannot
+    /// Returns [`vyre_runtime::BackendError`] if tracker backing storage cannot
     /// be reserved.
     #[inline]
-    pub fn try_new() -> Result<Self, vyre_driver::BackendError> {
+    pub fn try_new() -> Result<Self, vyre_runtime::BackendError> {
         Ok(Self {
             lru: IntrusiveLru::try_new()?,
             tick: 0,

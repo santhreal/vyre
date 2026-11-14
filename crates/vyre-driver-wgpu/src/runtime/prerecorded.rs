@@ -3,7 +3,7 @@
 use std::sync::{Arc, Mutex};
 
 use smallvec::SmallVec;
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use crate::buffer::GpuBufferHandle;
 use crate::pipeline::binding::{accepts_params_handle, clear_outputs_for_bound, validate_handle};
@@ -52,11 +52,11 @@ impl PrerecordedDispatch {
     ///
     /// Returns a backend error when this command buffer was already submitted.
     pub fn replay(&self, queue: &wgpu::Queue) -> Result<wgpu::SubmissionIndex, BackendError> {
-        let command_buffer = vyre_driver::lock_policy::govern_mutex(
+        let command_buffer = vyre_runtime::lock_policy::govern_mutex(
             &self.cb,
             "wgpu_prerecorded",
             "cb",
-            vyre_driver::lock_policy::RecoveryClass::DeviceContextFatal,
+            vyre_runtime::lock_policy::RecoveryClass::DeviceContextFatal,
         )?
             .take()
             .ok_or_else(|| {
@@ -87,7 +87,7 @@ impl PrerecordedDispatch {
             ))
         })?;
         let mut bytes = Vec::new();
-        vyre_driver::allocation::try_reserve_vec_to_capacity(&mut bytes, byte_capacity).map_err(
+        vyre_runtime::allocation::try_reserve_vec_to_capacity(&mut bytes, byte_capacity).map_err(
             |source| {
                 BackendError::new(format!(
                     "pre-recorded output readback could not reserve {byte_capacity} byte(s): {source}. Fix: shard the GPU output before readback."
@@ -152,7 +152,7 @@ impl WgpuPipeline {
         )?;
 
         let mut handles = Vec::new();
-        vyre_driver::allocation::try_reserve_vec_to_capacity(&mut handles, bound.len()).map_err(
+        vyre_runtime::allocation::try_reserve_vec_to_capacity(&mut handles, bound.len()).map_err(
             |source| {
                 BackendError::new(format!(
                     "pre-recorded dispatch handle retention could not reserve {} handle slot(s): {source}. Fix: split bound resources before recording.",
@@ -162,7 +162,7 @@ impl WgpuPipeline {
         )?;
         handles.extend(bound.iter().map(|(_, handle)| (*handle).clone()));
         let mut output_handles = Vec::new();
-        vyre_driver::allocation::try_reserve_vec_to_capacity(&mut output_handles, outputs.len())
+        vyre_runtime::allocation::try_reserve_vec_to_capacity(&mut output_handles, outputs.len())
             .map_err(|source| {
                 BackendError::new(format!(
                     "pre-recorded output handle retention could not reserve {} output slot(s): {source}. Fix: split output resources before recording.",

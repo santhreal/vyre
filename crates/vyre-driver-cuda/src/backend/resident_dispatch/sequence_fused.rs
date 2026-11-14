@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 use rustc_hash::FxHashMap;
 use smallvec::SmallVec;
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use crate::backend::allocations::DispatchAllocations;
 use crate::backend::dispatch::CudaBackend;
@@ -142,7 +142,7 @@ impl CudaBackend {
             "resident sequence repeated step indices",
         )?;
         let prefix_step_handle_count = prefix_steps.iter().try_fold(0usize, |total, step| {
-            vyre_driver::accounting::checked_add_usize_lazy(
+            vyre_runtime::accounting::checked_add_usize_lazy(
                 total,
                 step.handles.len(),
                 || BackendError::InvalidProgram {
@@ -155,7 +155,7 @@ impl CudaBackend {
             0
         } else {
             repeated_steps.iter().try_fold(0usize, |total, step| {
-                vyre_driver::accounting::checked_add_usize_lazy(
+                vyre_runtime::accounting::checked_add_usize_lazy(
                     total,
                     step.handles.len(),
                     || BackendError::InvalidProgram {

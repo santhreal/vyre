@@ -6,7 +6,7 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_libs::fixpoint::bitset_fixpoint::bitset_fixpoint;
 use vyre_libs::pattern::REGION_DEDUP_WORKGROUP_SIZE;
 use vyre_libs::pattern::{dedup_regions_cluster_program, dedup_regions_flag_program};

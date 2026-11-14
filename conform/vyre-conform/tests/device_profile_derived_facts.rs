@@ -90,7 +90,7 @@ fn a_workgroup_a_device_admits_fits_the_invocation_limit_it_reports() {
 ///
 /// A backend the host cannot acquire reports nothing to check; the acquisition
 /// refusal is covered where acquisition is the subject.
-fn live_profiles() -> Vec<(&'static str, vyre_driver::DeviceProfile)> {
+fn live_profiles() -> Vec<(&'static str, vyre_runtime::DeviceProfile)> {
     let backends = semantic_execution_backends()
         .expect("the registry initializes in a binary that links concrete drivers");
     assert!(

@@ -1,6 +1,6 @@
 use smallvec::SmallVec;
-use vyre_driver::input_identity::ExactInputKey;
-use vyre_driver::{BackendError, DispatchConfig, OutputBuffers};
+use vyre_runtime::input_identity::ExactInputKey;
+use vyre_runtime::{BackendError, DispatchConfig, OutputBuffers};
 
 use crate::backend::cuda_graph_replay::CudaGraphReplayInputState;
 use crate::backend::resident_dispatch::output_disjoint_prefix;

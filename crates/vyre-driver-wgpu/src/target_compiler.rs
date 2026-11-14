@@ -1,5 +1,5 @@
-use vyre_driver::target_dialect::{EmittedDialectModule, TargetDialect};
-use vyre_driver::BackendError;
+use vyre_runtime::target_dialect::{EmittedDialectModule, TargetDialect};
+use vyre_runtime::BackendError;
 use vyre_megakernel::{SelectedLowering, TargetCompileError, TargetCompiler, TargetProfile};
 
 use crate::WGPU_BACKEND_ID;

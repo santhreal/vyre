@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use vyre_driver::OutputBindingLayout;
-use vyre_driver::{IndirectDispatch, OutputLayout};
+use vyre_runtime::OutputBindingLayout;
+use vyre_runtime::{IndirectDispatch, OutputLayout};
 use vyre_emit::naga::program::TrapTag;
 use vyre_foundation::execution_plan::ExecutionPlan;
 

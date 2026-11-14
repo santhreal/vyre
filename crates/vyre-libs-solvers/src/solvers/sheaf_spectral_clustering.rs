@@ -204,7 +204,7 @@ pub fn dominant_spectrum_fixed_via_with_scratch_into(
 
     let program =
         sheaf_laplacian_eigenvalue("restriction_diag", "v", "lambda", n_nodes, d, iterations);
-    // Canonical dispatch input contract (the REAL backend's, per vyre-driver `role_for_buffer`): one
+    // Canonical dispatch input contract (the REAL backend's, per vyre-runtime `role_for_buffer`): one
     // input per INPUT-CONSUMING buffer. `ReadOnly` (Input), plain `ReadWrite` (InputOutput, whose
     // zero/initial contents the caller supplies), `Uniform`: in buffer order. The eigenvalue kernel
     // declares four such buffers: `restriction_diag` RO (0), `v` RW (1), `lambda` RW (2), `one_fp_buf`

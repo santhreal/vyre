@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 use std::thread;
 
 use vyre::ir::Program;
-use vyre_driver::self_optimizer_bench::report_scaling;
+use vyre_runtime::self_optimizer_bench::report_scaling;
 use vyre_driver_cuda::{registered_backend_id, CUDA_BACKEND_ID};
 use vyre_megakernel::{
     CompileObjective, Digest, ExternalFacts, ObjectiveMetric, SearchBudget,
@@ -41,7 +41,7 @@ fn cuda_scaling_bench_gpu_vs_cpu_pipeline() {
 fn body() {
     let _ = registered_backend_id();
     let registration =
-        vyre_driver::backend_registration(CUDA_BACKEND_ID).expect("registered CUDA backend");
+        vyre_runtime::backend_registration(CUDA_BACKEND_ID).expect("registered CUDA backend");
     let device = registration.acquire().expect("live CUDA backend");
     let executor = RegisteredSemanticExecutor::new(registration);
     let policy = SemanticExecutionPolicy::new(

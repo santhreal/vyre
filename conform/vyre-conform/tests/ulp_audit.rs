@@ -150,7 +150,7 @@ fn adversarial_value_requires_ulp(value: f32) -> bool {
     value.is_finite() && value.abs() > f32::MIN_POSITIVE && value.abs() < f32::MAX
 }
 
-fn build_registered_backend() -> &'static vyre_driver::BackendRegistration {
+fn build_registered_backend() -> &'static vyre_runtime::BackendRegistration {
     vyre_conform::production::live_test_backend().expect(
         "Fix: a dispatch-capable backend must be registered for ULP audit. \
          Link a concrete driver crate into the test binary.",

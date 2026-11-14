@@ -9,7 +9,7 @@ use std::sync::{Arc, Barrier};
 
 use crate::harness;
 use harness::selected_adapter;
-use vyre_driver::VyreBackend;
+use vyre_runtime::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 
 #[test]
@@ -90,7 +90,7 @@ fn reported_workgroup_ceiling_is_what_the_backend_can_launch() {
         .dispatch_borrowed(
             &at_ceiling,
             &[&harness::add_one_input(words)],
-            &vyre_driver::DispatchConfig::default(),
+            &vyre_runtime::DispatchConfig::default(),
         )
         .expect("Fix: a launch at the reported workgroup ceiling must reach the device");
     assert_eq!(
@@ -104,7 +104,7 @@ fn reported_workgroup_ceiling_is_what_the_backend_can_launch() {
         let refused = shared.dispatch_borrowed(
             &above,
             &[&harness::add_one_input(words)],
-            &vyre_driver::DispatchConfig::default(),
+            &vyre_runtime::DispatchConfig::default(),
         );
         assert!(
             refused.is_err(),

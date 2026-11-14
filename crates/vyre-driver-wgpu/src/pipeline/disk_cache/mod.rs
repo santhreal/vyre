@@ -7,7 +7,7 @@ mod tests;
 
 use std::path::Path;
 
-use vyre_driver::{BackendError, DispatchConfig};
+use vyre_runtime::{BackendError, DispatchConfig};
 use vyre_foundation::ir::Program;
 use vyre_foundation::serial::wire::framing::WIRE_FORMAT_VERSION;
 
@@ -48,7 +48,7 @@ pub(crate) fn load_or_compile_disk_wgsl(
     let fingerprint = adapter_fingerprint(adapter_info);
 
     let norm_digest =
-        vyre_driver::try_normalized_program_cache_digest(program).map_err(|error| {
+        vyre_runtime::try_normalized_program_cache_digest(program).map_err(|error| {
             BackendError::new(format!("WGSL disk pipeline cache digest failed: {error}"))
         })?;
     let cache_key = wgsl_cache_key(&norm_digest, &fingerprint, config);
@@ -144,7 +144,7 @@ fn persist_disk_wgsl(
         program_abi_version: u32::from(WIRE_FORMAT_VERSION),
         naga_version: std::borrow::Cow::Borrowed(NAGA_VERSION),
         wgsl_lowering_contract: std::borrow::Cow::Borrowed(WGSL_LOWERING_CONTRACT),
-        policy: vyre_driver::dispatch_policy_cache_string(config),
+        policy: vyre_runtime::dispatch_policy_cache_string(config),
         wgsl_blake3: blake3_hex(wgsl.as_bytes()),
     };
     persist_bytes(dir, wgsl_path, meta_path, wgsl.as_bytes(), &metadata)
@@ -167,7 +167,7 @@ fn wgsl_metadata_matches(
         && metadata.program_abi_version == u32::from(WIRE_FORMAT_VERSION)
         && metadata.naga_version == NAGA_VERSION
         && metadata.wgsl_lowering_contract == WGSL_LOWERING_CONTRACT
-        && metadata.policy == vyre_driver::dispatch_policy_cache_string(config)
+        && metadata.policy == vyre_runtime::dispatch_policy_cache_string(config)
         && metadata.wgsl_blake3 == blake3_hex(wgsl.as_bytes())
 }
 

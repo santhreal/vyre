@@ -1,6 +1,6 @@
-use vyre_driver::validation::LaunchGeometryLimits;
-use vyre_driver::{resolve_launch_workgroup_for_geometry, LaunchGeometry};
-use vyre_driver::{BackendError, DispatchConfig};
+use vyre_runtime::validation::LaunchGeometryLimits;
+use vyre_runtime::{resolve_launch_workgroup_for_geometry, LaunchGeometry};
+use vyre_runtime::{BackendError, DispatchConfig};
 use vyre_foundation::ir::Program;
 
 pub(super) fn wgpu_effective_dispatch_config(
@@ -64,7 +64,7 @@ fn wgpu_launch_element_count_for_tuning(program: &Program) -> Result<u32, Backen
     if program.output_buffer_indices().is_empty() {
         return Ok(0);
     }
-    let layouts = vyre_driver::output_binding_layouts(program)?;
+    let layouts = vyre_runtime::output_binding_layouts(program)?;
     let word_count = layouts
         .first()
         .map(|layout| layout.word_count)

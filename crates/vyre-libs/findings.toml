@@ -157,7 +157,7 @@ boilerplate, which is hostile to the library contract.
 """
 fix_plan = """
 Option A (preferred): make Region a recognized structural node
-in vyre-driver's capability set  -  validator skips it, dispatch
+in vyre-runtime's capability set  -  validator skips it, dispatch
 path runs optimize() before validation. Region becomes
 capability-neutral (any backend dispatching a program
 containing Region implicitly inlines).

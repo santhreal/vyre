@@ -26,7 +26,7 @@
 //! | future `vyre-libs::sci::poisson` | Poisson / Laplace solvers |
 //! | future `vyre-libs::sci::diffusion` | diffusion / heat equation |
 //! | future `vyre-libs::ml::pde_emulator` | physics-informed NN training |
-//! | `vyre-driver` multilevel scheduling | IR-graph contraction levels match V-cycle levels; apply the same smoother as the dispatch scheduler smoother |
+//! | `vyre-runtime` multilevel scheduling | IR-graph contraction levels match V-cycle levels; apply the same smoother as the dispatch scheduler smoother |
 
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region};
 

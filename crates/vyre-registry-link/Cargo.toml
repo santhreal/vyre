@@ -23,7 +23,7 @@ workspace = true
 # its registrations in a linked binary. A consumer enables the features naming
 # the registries it reads and the drivers it legitimately links.
 [dependencies]
-vyre-driver = { workspace = true }
+vyre-runtime = { workspace = true }
 vyre-foundation = { workspace = true }
 # The level-stage registry has one source per level, and a source whose
 # object file is dropped leaves its level with no verifier. These two own

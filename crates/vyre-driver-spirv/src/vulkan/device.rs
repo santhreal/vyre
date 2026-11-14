@@ -7,7 +7,7 @@ use ash::vk;
 
 use std::sync::{Arc, LazyLock, Mutex, MutexGuard, PoisonError};
 
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 /// Owned Vulkan compute context.
 pub(crate) struct VulkanDevice {

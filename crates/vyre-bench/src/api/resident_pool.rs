@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use vyre::ir::Program;
-use vyre_driver::DispatchConfig;
-use vyre_driver::{ArtifactMaterializer, BackendError, OutputBuffers, Resource};
+use vyre_runtime::DispatchConfig;
+use vyre_runtime::{ArtifactMaterializer, BackendError, OutputBuffers, Resource};
 
 use crate::api::case::{BenchContext, BenchError};
 use crate::api::metric::elapsed_ns;
@@ -494,11 +494,11 @@ mod tests {
     /// A materializer that refuses every resident upload, so an attempted upload
     /// is observable as an error and a skipped one as `Ok`.
     struct RefusingMaterializer {
-        device: vyre_driver::materialize::MaterializerDevice,
+        device: vyre_runtime::materialize::MaterializerDevice,
     }
 
-    impl vyre_driver::ArtifactMaterializer for RefusingMaterializer {
-        fn device(&self) -> &dyn vyre_driver::Device {
+    impl vyre_runtime::ArtifactMaterializer for RefusingMaterializer {
+        fn device(&self) -> &dyn vyre_runtime::Device {
             &self.device
         }
 
@@ -506,7 +506,7 @@ mod tests {
             &self,
             _artifact: &vyre::compiler::Artifact,
             _payload: &vyre::compiler::TargetPayload,
-        ) -> Result<Box<dyn vyre_driver::ArtifactInstance>, BackendError> {
+        ) -> Result<Box<dyn vyre_runtime::ArtifactInstance>, BackendError> {
             Err(BackendError::UnsupportedFeature {
                 name: "materialize".to_string(),
                 backend: "refusing".to_string(),
@@ -517,8 +517,8 @@ mod tests {
     fn pool_with_one_empty_set() -> ResidentInputPool {
         let profile = vyre::compiler::TargetProfile::new("refusing", 1, [64, 1, 1], 64, 1_024, 0)
             .expect("Fix: the fixture target profile must be valid.");
-        let device = vyre_driver::materialize::MaterializerDevice::acquire(
-            vyre_driver::materialize::DeviceSpec {
+        let device = vyre_runtime::materialize::MaterializerDevice::acquire(
+            vyre_runtime::materialize::DeviceSpec {
                 backend: "refusing",
                 device: "refusing-device".to_string(),
                 format_extension: "refusing",

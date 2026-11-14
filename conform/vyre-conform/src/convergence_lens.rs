@@ -5,7 +5,7 @@
 
 use crate::lens::fixpoint::current_score;
 use vyre::ir::{BufferAccess, Program};
-use vyre_driver::BackendRegistration;
+use vyre_runtime::BackendRegistration;
 use vyre_reference::value::Value;
 
 use crate::ProductionSession;

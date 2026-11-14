@@ -20,7 +20,7 @@ use crate::cases::harness::{
 };
 use std::collections::BTreeMap;
 use std::time::Instant;
-use vyre_driver::self_optimizer_bench::{timed_cpu_pipeline_on_oracle_stack, wide_program};
+use vyre_runtime::self_optimizer_bench::{timed_cpu_pipeline_on_oracle_stack, wide_program};
 use vyre_foundation::ir::Program;
 use vyre_megakernel::{
     CompileObjective, Digest, ExternalFacts, ObjectiveMetric, SearchBudget, SemanticExecutionPolicy,
@@ -141,7 +141,7 @@ fn measure(
     let host_us = timed_cpu_pipeline_on_oracle_stack(prepared.program.clone());
     let host_ns = u64::try_from(host_us.saturating_mul(1000)).unwrap_or(u64::MAX);
     let host_optimized =
-        vyre_driver::self_optimizer_bench::cpu_pipeline_on_oracle_stack(prepared.program.clone());
+        vyre_runtime::self_optimizer_bench::cpu_pipeline_on_oracle_stack(prepared.program.clone());
 
     let outputs = dispatch(ctx, &device_optimized, "device-optimized")?;
     let baseline_outputs = dispatch(ctx, &host_optimized, "host-optimized")?;

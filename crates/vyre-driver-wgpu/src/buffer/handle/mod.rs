@@ -10,7 +10,7 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
 
-use vyre_driver::{BackendError, ResidentHandle};
+use vyre_runtime::{BackendError, ResidentHandle};
 
 pub(crate) use self::align::{aligned_len, aligned_len_u64, write_padded};
 pub(crate) use self::pending::PendingGpuBufferReadback;

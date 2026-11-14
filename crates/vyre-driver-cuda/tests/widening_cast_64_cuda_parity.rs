@@ -25,10 +25,10 @@
 use crate::harness;
 use harness::live_backend;
 
-use vyre_driver::parity_harness::{
+use vyre_runtime::parity_harness::{
     dispatch_single_output, elementwise_program, u64_words, ParityInput,
 };
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{DataType, Expr};
 use vyre_test_support::cast_parity::{
@@ -46,7 +46,7 @@ fn run(backend: &CudaBackend, src_ty: DataType, target64: DataType, words: &[u32
     let buffers = vec![ParityInput::packed(
         "src",
         src_ty,
-        vyre_driver::parity_harness::u32_bytes(words),
+        vyre_runtime::parity_harness::u32_bytes(words),
     )];
     let count = words.len() as u32;
     let program = elementwise_program(target64.clone(), &buffers, count, &|loads| {

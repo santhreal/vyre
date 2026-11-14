@@ -477,7 +477,7 @@ pub fn sinkhorn_clustering_via_with_scratch_into(
     }
 
     let program = sinkhorn_clustering_program(m, n, d, iters, eps);
-    // Real-backend dispatch-input contract (vyre-driver `role_for_buffer`): one input per
+    // Real-backend dispatch-input contract (vyre-runtime `role_for_buffer`): one input per
     // INPUT-CONSUMING buffer in buffer order, the four read-only inputs `region_features` (0),
     // `cluster_centroids` (1), `region_weights` (2), `cluster_capacities` (3), then the two plain-RW
     // dual-scaling scratch buffers `u` (4), `v` (5, zero-init). `out_assignments` (binding 6) is a

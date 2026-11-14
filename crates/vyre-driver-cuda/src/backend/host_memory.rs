@@ -3,7 +3,7 @@
 use std::ffi::c_void;
 
 use cudarc::driver::sys::{CUresult, CU_MEMHOSTALLOC_PORTABLE, CU_MEMHOSTREGISTER_PORTABLE};
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use super::allocations::cuda_check;
 
@@ -26,7 +26,7 @@ fn validate_nonzero_host_range(
             ),
         });
     }
-    vyre_driver::accounting::checked_add_u64_usize_offset_lazy(
+    vyre_runtime::accounting::checked_add_u64_usize_offset_lazy(
         ptr,
         byte_len,
         || {

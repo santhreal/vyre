@@ -1,15 +1,15 @@
 #[cfg(any(target_os = "macos", target_os = "ios"))]
-use vyre_driver::{ArtifactMaterializer, BackendError};
+use vyre_runtime::{ArtifactMaterializer, BackendError};
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 mod native {
     use std::sync::Arc;
 
-    use vyre_driver::materialize::{
+    use vyre_runtime::materialize::{
         self, DeviceSpec, ExecutableModule, InstanceCore, MaterializedInstance, MaterializerDevice,
         ResidentInstance,
     };
-    use vyre_driver::{
+    use vyre_runtime::{
         ArtifactInstance, ArtifactMaterializer, BackendError, BindingSet, DispatchConfig, Resource,
         Submission, TimedDispatchResult, VyreBackend,
     };
@@ -26,7 +26,7 @@ mod native {
     }
 
     impl ArtifactMaterializer for MetalMaterializer {
-        vyre_driver::materializer_passthrough!();
+        vyre_runtime::materializer_passthrough!();
 
         fn materialize(
             &self,
@@ -79,7 +79,7 @@ mod native {
         program: Arc<Program>,
         module: MetalTargetModule,
         config: DispatchConfig,
-        plan: vyre_driver::BindingPlan,
+        plan: vyre_runtime::BindingPlan,
     }
 
     struct MetalArtifactInstance {
@@ -89,12 +89,12 @@ mod native {
     }
 
     impl ExecutableModule for MetalExecutableModule {
-        vyre_driver::executable_module!();
+        vyre_runtime::executable_module!();
     }
 
     impl ArtifactInstance for MetalArtifactInstance {
-        vyre_driver::artifact_instance_identity!();
-        vyre_driver::artifact_instance_unreported_resources!();
+        vyre_runtime::artifact_instance_identity!();
+        vyre_runtime::artifact_instance_unreported_resources!();
 
         fn submit(&self, bindings: BindingSet) -> Result<Box<dyn Submission>, BackendError> {
             self.submit_routed(bindings, || {

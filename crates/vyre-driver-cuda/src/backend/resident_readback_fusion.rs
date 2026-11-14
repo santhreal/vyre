@@ -2,13 +2,13 @@
 //!
 //! The interval coalescing policy is backend-neutral. This module preserves the
 //! CUDA domain names used by resident IO/dispatch while delegating the actual
-//! fusion algorithm to `vyre-driver`.
+//! fusion algorithm to `vyre-runtime`.
 
-use vyre_driver::resident_transfer_fusion::{
+use vyre_runtime::resident_transfer_fusion::{
     fuse_resident_transfer_intervals, FusedResidentTransfers, ResidentTransferInterval,
     ResidentTransferView,
 };
-use vyre_driver::{BackendError, ResidentHandle};
+use vyre_runtime::{BackendError, ResidentHandle};
 
 use super::resident::ResidentBufferView;
 
@@ -51,7 +51,7 @@ pub(crate) fn resident_readback_copy(
     byte_offset: usize,
     byte_len: usize,
 ) -> Result<ResidentReadbackCopy, BackendError> {
-    vyre_driver::accounting::checked_usize_byte_range_end_lazy(
+    vyre_runtime::accounting::checked_usize_byte_range_end_lazy(
         byte_offset,
         byte_len,
         view.byte_len,
@@ -74,7 +74,7 @@ pub(crate) fn resident_readback_copy(
     let src = if byte_len == 0 {
         0
     } else {
-        vyre_driver::accounting::checked_add_u64_usize_offset_lazy(
+        vyre_runtime::accounting::checked_add_u64_usize_offset_lazy(
             view.ptr,
             byte_offset,
             || {
@@ -190,7 +190,7 @@ pub(crate) fn validate_fused_resident_readbacks(
 #[cfg(test)]
 mod tests {
     use smallvec::smallvec;
-    use vyre_driver::resident_transfer_fixtures::{
+    use vyre_runtime::resident_transfer_fixtures::{
         assert_fused_transfers_preserve_requests, generated_transfer_requests,
     };
 

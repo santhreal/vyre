@@ -1,4 +1,4 @@
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use super::launch::reserve_target_capacity;
 

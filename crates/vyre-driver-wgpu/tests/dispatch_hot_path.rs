@@ -19,8 +19,8 @@ use harness::{acquire_live_backend as live_backend, add_one_program};
 
 use std::sync::{Mutex, MutexGuard};
 use std::time::{Duration, Instant};
-use vyre_driver::CompiledPipeline;
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::CompiledPipeline;
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 static HOT_PATH_TEST_LOCK: Mutex<()> = Mutex::new(());
 

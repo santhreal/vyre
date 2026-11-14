@@ -104,7 +104,7 @@ fn acquire_cuda_resident_execution() -> (
     // submits.
     let backend = vyre_driver_cuda::registered_device().expect("registered CUDA device generation");
     let registration =
-        vyre_driver::backend_registration(CUDA_BACKEND_ID).expect("registered CUDA backend");
+        vyre_runtime::backend_registration(CUDA_BACKEND_ID).expect("registered CUDA backend");
     let device = registration.acquire().expect("live CUDA backend");
     let executor = RegisteredSemanticExecutor::new(registration);
     let policy = SemanticExecutionPolicy::new(
@@ -375,7 +375,7 @@ fn cuda_persistent_pipeline_scaling_bench_body() {
 fn cuda_resident_pipeline_reports_graph_dispatched_kernel_launches() {
     let (_backend, executor, policy) = acquire_cuda_resident_execution();
     let registration =
-        vyre_driver::backend_registration(CUDA_BACKEND_ID).expect("registered CUDA backend");
+        vyre_runtime::backend_registration(CUDA_BACKEND_ID).expect("registered CUDA backend");
     let registered = registration
         .acquire()
         .expect("registered CUDA device facet");

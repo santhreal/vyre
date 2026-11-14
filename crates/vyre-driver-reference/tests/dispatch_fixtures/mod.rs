@@ -1,4 +1,4 @@
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_driver_reference::CpuRefEvaluator;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 

@@ -287,9 +287,9 @@ impl PipelineCacheStore for DiskCache {
 }
 
 fn flush_paths(paths: &[PathBuf]) -> io::Result<()> {
-    vyre_driver::durable_fanout::sync_paths_and_parents(
+    vyre_runtime::durable_fanout::sync_paths_and_parents(
         paths,
-        vyre_driver::durable_fanout::into_io_error,
+        vyre_runtime::durable_fanout::into_io_error,
     )
 }
 

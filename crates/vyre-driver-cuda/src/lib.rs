@@ -1,6 +1,6 @@
 //! # vyre-driver-cuda  -  CUDA/PTX backend for vyre
 //!
-//! Implements [`VyreBackend`](vyre_driver::VyreBackend) via the CUDA driver API through `cudarc`.
+//! Implements [`VyreBackend`](vyre_runtime::VyreBackend) via the CUDA driver API through `cudarc`.
 //! Translates vyre `Program` IR into PTX kernels, loads them through
 //! the CUDA driver JIT, and dispatches on NVIDIA GPUs.
 //!
@@ -54,7 +54,7 @@ pub mod profiler;
 /// CUDA backend registration and device-buffer substrate adapter.
 pub(crate) mod registration;
 mod stream;
-// Neutral policies are imported from `vyre-driver`; CUDA exports only concrete behavior.
+// Neutral policies are imported from `vyre-runtime`; CUDA exports only concrete behavior.
 /// A fixed synthetic device envelope for context-free estimator tests. Not a
 /// live probe: never derive a hardware decision from it.
 pub mod synthetic_device_caps;

@@ -222,7 +222,7 @@ pub fn bellman_tn_order_via_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[4], dst);
     write_u32_slice_le_bytes(&mut scratch.inputs[5], weight);
     // Dispatch SPAN, not edge count. The relaxation needs a lane per EDGE but the
-    // fixpoint's compare-and-publish step needs a lane per NODE, and `vyre-driver`
+    // fixpoint's compare-and-publish step needs a lane per NODE, and `vyre-runtime`
     // spans the largest declared non-shared binding for an atomic-carrying
     // program. Sizing the grid off `n_edges` alone leaves every node past the
     // launch width with no lane to publish it whenever `n_nodes` exceeds

@@ -21,7 +21,7 @@
 //! ```
 //!
 //! The conservative cap is `max_shared_memory_bytes = 48 * 1024` in
-//! `crates/vyre-driver/src/device_profile.rs`. `head_dim = 128` is the standard MLA
+//! `crates/vyre-runtime/src/device_profile.rs`. `head_dim = 128` is the standard MLA
 //! size, so the interesting case is the one real models use.
 //!
 //! These tests answer the question the arithmetic alone cannot: does the
@@ -37,7 +37,7 @@
 use crate::harness;
 
 use harness::{live_dispatcher, reference_outputs};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_foundation::ir::Program;
 use vyre_libs::nn::attention::mla_decode;
 
@@ -48,7 +48,7 @@ const WORKGROUP_LANES: u32 = 64;
 /// Score tile edge pinned inside `mla_decode`.
 const TILE_SIZE: u32 = 64;
 
-/// Conservative shared-memory cap from `crates/vyre-driver/src/device_profile.rs`.
+/// Conservative shared-memory cap from `crates/vyre-runtime/src/device_profile.rs`.
 const CONSERVATIVE_SHARED_MEMORY_CAP: u32 = 48 * 1024;
 
 /// Small fixed problem dims, chosen so only `head_dim` moves between cases.
@@ -306,7 +306,7 @@ fn mla_decode_head_dim_128_over_cap_refuses_naming_bytes_and_cap() {
     assert!(
         error.contains(&CONSERVATIVE_SHARED_MEMORY_CAP.to_string()),
         "refusal must name the {CONSERVATIVE_SHARED_MEMORY_CAP} byte cap, which is the \
-         conservative figure in crates/vyre-driver/src/device_profile.rs. If a device reports a \
+         conservative figure in crates/vyre-runtime/src/device_profile.rs. If a device reports a \
          different per-workgroup static limit, update that profile rather than loosening \
          this. Got: {error}"
     );

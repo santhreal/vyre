@@ -58,8 +58,8 @@ pub(crate) fn supports_subgroup_ops(enabled: &EnabledFeatures) -> bool {
 pub(crate) fn subgroup_caps_for_adapter(
     features: wgpu::Features,
     limits: &wgpu::Limits,
-) -> vyre_driver::SubgroupCaps {
-    vyre_driver::SubgroupCaps::from_feature_range(
+) -> vyre_runtime::SubgroupCaps {
+    vyre_runtime::SubgroupCaps::from_feature_range(
         features.contains(wgpu::Features::SUBGROUP),
         features.contains(wgpu::Features::SUBGROUP_VERTEX),
         limits.min_subgroup_size,
@@ -69,8 +69,8 @@ pub(crate) fn subgroup_caps_for_adapter(
 
 /// Shared subgroup capability record from the created device feature set.
 #[inline]
-pub(crate) fn subgroup_caps(enabled: &EnabledFeatures) -> vyre_driver::SubgroupCaps {
-    vyre_driver::SubgroupCaps::from_feature_range(
+pub(crate) fn subgroup_caps(enabled: &EnabledFeatures) -> vyre_runtime::SubgroupCaps {
+    vyre_runtime::SubgroupCaps::from_feature_range(
         enabled.subgroup,
         false,
         enabled.min_subgroup_size,

@@ -4,8 +4,8 @@
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use vyre_driver::accounting::rebasing_atomic_next_u64;
-use vyre_driver::BackendError;
+use vyre_runtime::accounting::rebasing_atomic_next_u64;
+use vyre_runtime::BackendError;
 
 use super::cache_key::PtxSourceCacheKey;
 

@@ -6,10 +6,10 @@ use dashmap::DashMap;
 
 use cudarc::driver::CudaContext;
 use smallvec::SmallVec;
-use vyre_driver::validation::ValidationCache;
-use vyre_driver::SpeculationMode;
-use vyre_driver::{resolve_fixpoint_iterations, BackendError, DispatchConfig, LaunchPlan};
-use vyre_driver::{BindingPlan, BindingRole, ReadOnlyAliasCheck};
+use vyre_runtime::validation::ValidationCache;
+use vyre_runtime::SpeculationMode;
+use vyre_runtime::{resolve_fixpoint_iterations, BackendError, DispatchConfig, LaunchPlan};
+use vyre_runtime::{BindingPlan, BindingRole, ReadOnlyAliasCheck};
 use vyre_foundation::ir::Program;
 use vyre_megakernel::EmittedResources;
 
@@ -163,7 +163,7 @@ impl CudaBackend {
         program: &Program,
         config: &DispatchConfig,
     ) -> Result<bool, BackendError> {
-        if vyre_driver::grid_sync::contains_grid_sync(program) {
+        if vyre_runtime::grid_sync::contains_grid_sync(program) {
             if !self.hardware_supports_grid_sync() {
                 return Err(BackendError::UnsupportedFeature {
                     name: format!(
@@ -375,7 +375,7 @@ impl CudaBackend {
 
     pub(crate) fn resident_handles_from_resources(
         &self,
-        resources: &[vyre_driver::Resource],
+        resources: &[vyre_runtime::Resource],
     ) -> Result<SmallVec<[CudaResidentBuffer; 8]>, BackendError> {
         self.resident_store.handles_from_resources(resources)
     }
@@ -383,14 +383,14 @@ impl CudaBackend {
     /// Resolve a dispatch resource list into mixed resident/borrowed bindings.
     pub(crate) fn resident_bindings_from_resources<'a>(
         &self,
-        resources: &'a [vyre_driver::Resource],
+        resources: &'a [vyre_runtime::Resource],
     ) -> Result<SmallVec<[CudaDispatchBinding<'a>; 8]>, BackendError> {
         self.resident_store.bindings_from_resources(resources)
     }
 
     pub(crate) fn resident_handle_from_resource(
         &self,
-        resource: &vyre_driver::Resource,
+        resource: &vyre_runtime::Resource,
     ) -> Result<CudaResidentBuffer, BackendError> {
         self.resident_store.handle_from_resource(resource)
     }
@@ -493,7 +493,7 @@ impl CudaBackend {
         prepared: &CudaDispatchPlan,
         globals: &ModuleGlobals,
     ) -> Result<Option<(u64, usize)>, BackendError> {
-        if !prepared.cooperative || !vyre_driver::grid_sync::contains_grid_sync(program) {
+        if !prepared.cooperative || !vyre_runtime::grid_sync::contains_grid_sync(program) {
             return Ok(None);
         }
         match globals.grid_barrier {
@@ -567,7 +567,7 @@ impl CudaBackend {
 
     /// Compiled module cache counters for honest compile telemetry.
     #[must_use]
-    pub fn pipeline_cache_snapshot(&self) -> vyre_driver::PipelineCacheSnapshot {
+    pub fn pipeline_cache_snapshot(&self) -> vyre_runtime::PipelineCacheSnapshot {
         self.module_cache.snapshot()
     }
 
@@ -641,15 +641,15 @@ impl CudaBackend {
     }
 
     /// Snapshot the driver-tier observability surface
-    /// ([`vyre_driver::observability::DriverObservability`]) plus the
+    /// ([`vyre_runtime::observability::DriverObservability`]) plus the
     /// cuda module-cache count as a single backend metric.
     ///
     /// Operators scrape this in addition to per-substrate Prometheus
     /// counters when correlating substrate activity with backend
     /// resource usage.
     #[must_use]
-    pub fn observability_snapshot(&self) -> vyre_driver::observability::DriverObservability {
-        vyre_driver::observability::DriverObservability::snapshot()
+    pub fn observability_snapshot(&self) -> vyre_runtime::observability::DriverObservability {
+        vyre_runtime::observability::DriverObservability::snapshot()
     }
 
     /// PTX disk-cache directory path. Reuses the shared on-disk pipeline-cache

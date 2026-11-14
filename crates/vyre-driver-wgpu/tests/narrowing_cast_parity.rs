@@ -15,10 +15,10 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_driver::parity_harness::{
+use vyre_runtime::parity_harness::{
     dispatch_single_output, elementwise_program, u32_words, ParityInput,
 };
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::ir::{DataType, Expr};
 use vyre_test_support::cast_parity::{NarrowingCase, NARROWING_CASES, NARROWING_INPUTS};

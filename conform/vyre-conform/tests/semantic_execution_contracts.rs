@@ -545,7 +545,7 @@ fn every_registered_operation_reconciles_outputs_under_grid_sync_cuts() {
             Ok(artifact) => artifact,
             Err(_) => continue,
         };
-        let projection = vyre_driver::materialize::project_resources(&artifact);
+        let projection = vyre_runtime::materialize::project_resources(&artifact);
         let expected_artifact_values: BTreeSet<_> = expected
             .iter()
             .map(|val| {

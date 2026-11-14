@@ -59,7 +59,7 @@ use crate::harness::{bytes_f32, f32_bytes};
 use proptest::prelude::*;
 use std::sync::LazyLock;
 use vyre::ir::{Expr, Program, UnOp};
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::fp_expansion::expand_strict_transcendentals;
 use vyre_foundation::fp_parity::{
@@ -81,7 +81,7 @@ fn backend() -> &'static WgpuBackend {
 /// transcendental.
 fn strict() -> DispatchConfig {
     // `DispatchConfig` is non-exhaustive, so a struct expression cannot name it
-    // from outside `vyre-driver`. Mutating the default is the documented shape.
+    // from outside `vyre-runtime`. Mutating the default is the documented shape.
     let mut config = DispatchConfig::default();
     config.float_lowering = FloatLoweringMode::StrictIeee;
     config

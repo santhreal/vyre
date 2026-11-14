@@ -19,7 +19,7 @@ mod sequence_readback_contracts;
 use harness::{bytes_u32, u32_bytes};
 use resident_lane_fixture::*;
 
-use vyre_driver::{DispatchConfig, Resource, VyreBackend};
+use vyre_runtime::{DispatchConfig, Resource, VyreBackend};
 use vyre_driver_cuda::{
     CudaBackend, CudaBackendRegistration, CudaResidentBuffer, CudaTelemetrySnapshot,
 };

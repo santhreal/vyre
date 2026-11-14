@@ -5,7 +5,7 @@
 //! severity, compiler level, structured cause chain, retry class, corrective action).
 
 use vyre_aot::CompileError;
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 use vyre_foundation::diagnostics::{
     CauseKind, CompilerLevel, DiagnosticStage, RetryClass, Severity, ToDiagnostic,
 };

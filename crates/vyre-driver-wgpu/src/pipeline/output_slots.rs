@@ -1,6 +1,6 @@
 //! WGPU wrapper around backend-neutral output-slot resizing.
 
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 pub(crate) fn resize_vec_with<T, F>(
     vec: &mut Vec<T>,
@@ -11,7 +11,7 @@ pub(crate) fn resize_vec_with<T, F>(
 where
     F: FnMut() -> T,
 {
-    vyre_driver::output_slots::resize_vec_with(
+    vyre_runtime::output_slots::resize_vec_with(
         vec,
         len,
         make,
@@ -26,7 +26,7 @@ where
 mod tests {
     use super::resize_vec_with;
 
-    /// The neutral resize policy is proved in `vyre_driver::output_slots`. What
+    /// The neutral resize policy is proved in `vyre_runtime::output_slots`. What
     /// belongs here is the only thing this wrapper decides: which backend and
     /// which corrective action a failed reservation names. A verbatim copy of
     /// the policy test used to sit here and asserted neither.

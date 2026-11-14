@@ -9,7 +9,7 @@
 //!     returns `BackendError::UnsupportedFeature` instead of silently falling
 //!     back. Hardware-fail mode is the explicit, structured signal the runtime
 //!     needs to make the kernel-split-fallback decision in
-//!     `vyre_driver::grid_sync::dispatch_with_grid_sync_split`.
+//!     `vyre_runtime::grid_sync::dispatch_with_grid_sync_split`.
 //!
 //! These tests require a CUDA device. Backend acquisition failure is a test
 //! failure on the GPU-required Vyre test hosts.
@@ -18,7 +18,7 @@
 
 use crate::harness;
 use harness::{add_one_program, bytes_u32, u32_bytes};
-use vyre_driver::{grid_sync, BackendError, DispatchConfig};
+use vyre_runtime::{grid_sync, BackendError, DispatchConfig};
 use vyre_driver_cuda::occupancy::cooperative_thread_residency_block_limit;
 use vyre_driver_cuda::{cuda_factory, CudaBackend};
 use vyre_foundation::ir::MemoryOrdering;

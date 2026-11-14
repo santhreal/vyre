@@ -15,7 +15,7 @@ use harness::{
 
 use std::time::{Duration, Instant};
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 use vyre_driver_wgpu::WgpuBackend;
 
 // ------------------------------------------------------------------

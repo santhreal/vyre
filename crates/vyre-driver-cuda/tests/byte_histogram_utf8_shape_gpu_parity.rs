@@ -7,7 +7,7 @@ use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
 use vyre::ir::{BufferAccess, DataType, Program};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_libs::text::{byte_histogram_256, byte_histogram_256_u8, utf8_shape_counts};
 use vyre_reference::composition_witness::{
     byte_histogram_witness as reference_byte_histogram,

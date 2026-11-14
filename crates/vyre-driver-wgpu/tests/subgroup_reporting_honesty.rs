@@ -11,7 +11,7 @@
 use crate::harness;
 use harness::{selected_adapter, shared_live_backend as live_backend, SUBGROUP_PROBE_WGSL};
 
-use vyre_driver::VyreBackend;
+use vyre_runtime::VyreBackend;
 use vyre_foundation::validate::BackendValidationCapabilities;
 
 // ------------------------------------------------------------------

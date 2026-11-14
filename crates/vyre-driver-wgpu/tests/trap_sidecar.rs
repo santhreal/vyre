@@ -2,7 +2,7 @@
 
 #![cfg(feature = "device-tests")]
 
-use vyre_driver::VyreBackend;
+use vyre_runtime::VyreBackend;
 use vyre_driver_wgpu::WgpuBackend;
 use vyre_primitives::wire::pack_u32_slice as pack_words;
 
@@ -17,7 +17,7 @@ fn inflate_fixed_huffman_reports_wgpu_trap_tag() {
         .dispatch(
             &program,
             &[input, len_sidecar],
-            &vyre_driver::DispatchConfig::default(),
+            &vyre_runtime::DispatchConfig::default(),
         )
         .expect_err("Fix: BTYPE=1 must propagate Node::Trap through WGPU.");
     let message = error.to_string();

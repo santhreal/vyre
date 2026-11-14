@@ -28,7 +28,7 @@ fn reserve_probe_vec<T>(
     vec: &mut Vec<T>,
     additional: usize,
     context: &'static str,
-) -> Result<(), vyre_driver::BackendError> {
+) -> Result<(), vyre_runtime::BackendError> {
     crate::staging_reserve::reserve_backend_vec(vec, additional, context)
-        .map_err(|error| vyre_driver::BackendError::new(error.to_string()))
+        .map_err(|error| vyre_runtime::BackendError::new(error.to_string()))
 }

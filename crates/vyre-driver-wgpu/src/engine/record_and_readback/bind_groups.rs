@@ -3,7 +3,7 @@ use super::{GpuBuffers, RecordAndReadback};
 use crate::allocation::{padded_wgpu_u64, reserve_smallvec_to_capacity};
 use smallvec::SmallVec;
 use std::sync::Arc;
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 pub(super) fn build_bind_groups(
     device: &wgpu::Device,

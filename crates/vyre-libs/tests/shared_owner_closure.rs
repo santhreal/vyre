@@ -33,7 +33,7 @@ const SUBJECT_CRATE: &str = "vyre-libs";
 /// The crate that owns the one ceiling division from a lane count to a grid.
 ///
 /// Nothing here reaches it: launch geometry is derived below admission by
-/// `vyre_driver::infer_dispatch_grid`, which is the only remaining caller class.
+/// `vyre_runtime::infer_dispatch_grid`, which is the only remaining caller class.
 /// The name stays because the meta gate resolves both crate directories.
 const OWNER_CRATE: &str = "vyre-primitives";
 
@@ -367,7 +367,7 @@ fn launch_shaped_declaration(lines: &[&str], index: usize) -> Option<(&'static s
 /// declares a cache-sized destination, so a published grid sized from the widest
 /// buffer fired one lane per cache element on every decode step. The span is a
 /// property of the program's own guard, so `vyre_foundation::guarded_logical_span`
-/// reads it, and target lowering and `vyre_driver::infer_dispatch_grid` narrow to
+/// reads it, and target lowering and `vyre_runtime::infer_dispatch_grid` narrow to
 /// it. Nothing below admission needs an operation to publish a number.
 ///
 /// Does NOT catch geometry returned under a name this signature does not match,
@@ -383,7 +383,7 @@ fn no_operation_publishes_launch_geometry() {
 
     assert!(
         offenders.is_empty(),
-        "Fix: these declarations publish a launch grid out of an operation. A caller that passes one back overrides the domain the program's guard admits. Delete the declaration and let `vyre_driver::infer_dispatch_grid` derive the launch, or assert `vyre_foundation::guarded_logical_span` where the shape is the contract:\n  {}",
+        "Fix: these declarations publish a launch grid out of an operation. A caller that passes one back overrides the domain the program's guard admits. Delete the declaration and let `vyre_runtime::infer_dispatch_grid` derive the launch, or assert `vyre_foundation::guarded_logical_span` where the shape is the contract:\n  {}",
         offenders.join("\n  ")
     );
 }

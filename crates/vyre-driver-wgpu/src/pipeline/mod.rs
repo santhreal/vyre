@@ -27,14 +27,14 @@ use std::time::Instant;
 
 use rustc_hash::FxHashSet;
 use smallvec::SmallVec;
-use vyre_driver::allocation::reserve_hash_set_to_capacity;
+use vyre_runtime::allocation::reserve_hash_set_to_capacity;
 #[cfg(test)]
-pub(crate) use vyre_driver::enforce_actual_output_budget;
-use vyre_driver::BackendLayoutFingerprint;
-use vyre_driver::{admit_dispatch_grid, find_indirect_dispatch, infer_launch_grid};
-pub(crate) use vyre_driver::{element_size_bytes, OutputBindingLayout};
-pub use vyre_driver::{output_layout_from_program, IndirectDispatch, OutputLayout};
-use vyre_driver::{BackendError, DispatchConfig, LaunchGeometry};
+pub(crate) use vyre_runtime::enforce_actual_output_budget;
+use vyre_runtime::BackendLayoutFingerprint;
+use vyre_runtime::{admit_dispatch_grid, find_indirect_dispatch, infer_launch_grid};
+pub(crate) use vyre_runtime::{element_size_bytes, OutputBindingLayout};
+pub use vyre_runtime::{output_layout_from_program, IndirectDispatch, OutputLayout};
+use vyre_runtime::{BackendError, DispatchConfig, LaunchGeometry};
 use vyre_emit::naga::program::TrapTag;
 use vyre_foundation::execution_plan::{self, ExecutionPlan};
 use vyre_foundation::ir::Program;
@@ -247,7 +247,7 @@ impl WgpuPipeline {
             if program.output_buffer_indices().is_empty() && !trap_tags.is_empty() {
                 Arc::from([])
             } else {
-                vyre_driver::output_binding_layouts(program)?.into()
+                vyre_runtime::output_binding_layouts(program)?.into()
             };
         let output = output_bindings.first().map_or(
             OutputLayout {
@@ -421,7 +421,7 @@ impl WgpuPipeline {
         }
 
         let compiled_artifact = Arc::new(CachedPipelineArtifact {
-            id: format!("wgpu:{}", vyre_driver::hex_short(&artifact_key.hash)),
+            id: format!("wgpu:{}", vyre_runtime::hex_short(&artifact_key.hash)),
             pipeline: Arc::new(pipeline),
             bind_group_layouts,
             bind_group_cache: Arc::new(BindGroupCache::default()),
@@ -667,11 +667,11 @@ pub fn host_input_slots(
 /// Decode a trap sidecar readback into this backend's refusal.
 ///
 /// The record layout and the short-readback refusal live in
-/// [`vyre_driver::trap_record`]; only the wording and the tag lookup are this
+/// [`vyre_runtime::trap_record`]; only the wording and the tag lookup are this
 /// backend's. A short readback is a refusal, not a "no trap", so the error is
 /// returned rather than mapped to `None`.
 pub(crate) fn trap_error_from_sidecar(bytes: &[u8], trap_tags: &[TrapTag]) -> Option<BackendError> {
-    match vyre_driver::trap_record::decode_trap_record(bytes) {
+    match vyre_runtime::trap_record::decode_trap_record(bytes) {
         Err(error) => Some(error),
         Ok(None) => None,
         Ok(Some(record)) => {

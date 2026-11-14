@@ -6,7 +6,7 @@
 use crate::harness;
 
 use harness::{bytes_u32, u32_bytes, with_live_backend};
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_libs::math::bigint_add_carry::{
     bigint_add_carry, BIGINT_ADD_CARRY_WORKGROUP_SIZE, BINDING_A_IN, BINDING_B_IN,
     BINDING_CARRY_PARTIAL_OUT, BINDING_SUM_PARTIAL_OUT,

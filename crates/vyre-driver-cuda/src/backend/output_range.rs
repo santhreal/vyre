@@ -1,4 +1,4 @@
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 use vyre_foundation::ir::BufferDecl;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

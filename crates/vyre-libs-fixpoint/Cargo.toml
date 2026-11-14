@@ -37,7 +37,7 @@ vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-reference = { workspace = true }
 # The grid-contract suite asserts the emitted wave structure through the
 # neutral grid-sync split the driver states.
-vyre-driver = { workspace = true }
+vyre-runtime = { workspace = true }
 
 [[test]]
 name = "all_tests"

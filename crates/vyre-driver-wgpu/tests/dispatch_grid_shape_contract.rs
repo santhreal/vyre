@@ -6,7 +6,7 @@ use crate::harness;
 use harness::acquire_live_backend as live_backend;
 
 use vyre::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_driver::{DispatchConfig, VyreBackend};
+use vyre_runtime::{DispatchConfig, VyreBackend};
 
 fn two_dimensional_program() -> Program {
     Program::wrapped(
@@ -133,7 +133,7 @@ fn a_grid_at_the_device_ceiling_is_admitted() {
         grid[axis] = ceiling;
         let mut config = DispatchConfig::default();
         config.grid_override = Some(grid);
-        vyre_driver::validation::validate_program_for_backend(&backend, &program, &config)
+        vyre_runtime::validation::validate_program_for_backend(&backend, &program, &config)
             .unwrap_or_else(|error| {
                 let axis_name = ["x", "y", "z"][axis];
                 panic!(

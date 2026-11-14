@@ -173,7 +173,7 @@ pub fn is_reference_output(decl: &vyre_foundation::ir::BufferDecl) -> bool {
 /// The other half of the interpreter's ABI: the oracle consumes exactly
 /// one `Value` per matching decl, in `Program::buffers` order.
 ///
-/// The rule itself is `BufferDecl::consumes_host_input`, which `vyre_driver`'s
+/// The rule itself is `BufferDecl::consumes_host_input`, which `vyre_runtime`'s
 /// binding-role mapping and every backend also read, so the oracle asks for the
 /// same list a device dispatch asks for. This function used to spell the rule
 /// out as `access() != Workgroup && !is_backend_allocated_output()`, which

@@ -1,7 +1,7 @@
 //! PTX code generation from vyre `Program` IR.
 
 mod descriptor_gate;
-use vyre_driver::DispatchConfig;
+use vyre_runtime::DispatchConfig;
 use vyre_foundation::ir::Program;
 use vyre_foundation::optimizer::AdapterCaps;
 

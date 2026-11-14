@@ -4,11 +4,11 @@
 use std::sync::atomic::{AtomicU32, AtomicU64, AtomicUsize, Ordering};
 
 use smallvec::SmallVec;
-use vyre_driver::accounting::{
+use vyre_runtime::accounting::{
     checked_atomic_add_usize_with_order, checked_atomic_sub_usize as checked_sub_usize,
     pinning_atomic_increment_u32, pinning_atomic_increment_u64,
 };
-use vyre_driver::BackendError;
+use vyre_runtime::BackendError;
 
 use crate::backend::staging_reserve::reserve_smallvec;
 
@@ -98,7 +98,7 @@ where
     K: Copy,
 {
     let (n, k) = retention_problem_size(gains.len(), retain_after_eviction, cache_label)?;
-    let retention = match vyre_driver::cache_eviction::try_select_retention_set(gains, n, k) {
+    let retention = match vyre_runtime::cache_eviction::try_select_retention_set(gains, n, k) {
         Ok(retention) => retention,
         Err(error) => {
             tracing::error!("{cache_label} eviction could not allocate retention state: {error}");
