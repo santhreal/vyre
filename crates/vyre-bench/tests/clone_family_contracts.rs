@@ -145,14 +145,12 @@ const FAMILY_CASE_IDS: &[&str] = &[
 /// blake3 over the compact JSON surface of every `FAMILY_CASE_IDS` member.
 /// Regenerate only with a recorded decision about what changed and why.
 ///
-/// Last changed when `runtime.megakernel.condition.64k` traded its 100x ratio
-/// over the pinned CPU baseline for a 24000 ns device active-time ceiling: the
-/// ratio needed the kernel to read 2 MiB at 3.4 TB/s on a 912 GB/s device, so
-/// no release device could meet it. Before that, every contract gained a
-/// `device_bounds` list and `runtime.megakernel.dispatch.256` took a ceiling in
-/// place of a ratio over a host simulator faster than one launch.
+/// Last changed when six clone-family workloads (`dataflow.ifds.skewed.step.1m`,
+/// `foundation.attention.64`, `foundation.dfa_match.256k`, `foundation.matmul.256`,
+/// `foundation.stencil3.u32.1m`, and `primitives.graph.csr_skewed_frontier.1m`)
+/// enrolled in `SuiteKind::Megakernel`.
 const FAMILY_SURFACE_DIGEST: &str =
-    "218665766771e513af050d031e05ff6cdf447efd2ffa5e83800b6c0a9b07f01c";
+    "aebb1a3c58a8103df28b51da96332a85170f77233969eea3b108cd51ce714306";
 
 /// The pinned ids the registry only publishes on Linux.
 ///

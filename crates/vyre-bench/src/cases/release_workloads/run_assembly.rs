@@ -22,10 +22,11 @@ pub(super) fn resident_reset_transfer_accounting(
     )
 }
 
-pub(super) fn bench_run_from_timed_with_accounting(
+pub(super) fn bench_run_from_timed_precomputed(
     timed: vyre_runtime::TimedDispatchResult,
     input_bytes: u64,
-    baseline_outputs: Vec<Vec<u8>>,
+    baseline_output_bytes: u64,
+    baseline_outputs: Option<Vec<Vec<u8>>>,
     baseline_wall: u64,
     custom_name: &str,
     custom_value: u32,
@@ -56,10 +57,10 @@ pub(super) fn bench_run_from_timed_with_accounting(
         baseline_metrics: Some(reference_metrics(
             baseline_wall,
             input_bytes,
-            baseline_outputs.iter().map(Vec::len).sum::<usize>() as u64,
+            baseline_output_bytes,
         )),
         outputs: timed.outputs,
-        baseline_outputs: Some(baseline_outputs),
+        baseline_outputs,
     })
 }
 

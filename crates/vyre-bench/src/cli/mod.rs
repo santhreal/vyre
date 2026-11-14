@@ -115,32 +115,6 @@ enum Commands {
         #[arg(long, default_value = "dashboard")]
         output: String,
     },
-    /// Print the release workload matrix.
-    ///
-    /// This command prints and never writes. The committed
-    /// `release/evidence/benchmarks/release-workload-matrix.json` has one
-    /// producer, the `release-workload-matrix` gate, which stamps a provenance
-    /// head this serialization does not carry.
-    ReleaseMatrix {
-        #[arg(long, default_value = "table")]
-        format: String,
-        #[arg(long)]
-        enforce: bool,
-    },
-    /// Measure the whole-application evidence suite on this host's device.
-    ///
-    /// Every record is written from submissions an acquired dispatch device
-    /// completed. A host with no such device writes nothing and exits nonzero.
-    /// This is the only producer of the whole-application evidence artifacts,
-    /// and the directory it writes is the one named on the command line.
-    WholeAppEvidence {
-        #[arg(long)]
-        output: String,
-        #[arg(long)]
-        backend: Option<String>,
-        #[arg(long, default_value_t = 30)]
-        measured_samples: usize,
-    },
     EvolveServer,
 }
 
@@ -154,7 +128,15 @@ where
     I: IntoIterator<Item = T>,
     T: Into<std::ffi::OsString> + Clone,
 {
-    let cli = Cli::parse_from(args);
+    let mut argv: Vec<std::ffi::OsString> = args.into_iter().map(Into::into).collect();
+    if argv
+        .get(1)
+        .and_then(|arg| arg.to_str())
+        .is_some_and(|arg| arg.starts_with('-') && !matches!(arg, "-h" | "--help" | "-V" | "--version"))
+    {
+        argv.insert(1, std::ffi::OsString::from("run"));
+    }
+    let cli = Cli::parse_from(argv);
     match &cli.command {
         Commands::Run {
             suite,
@@ -282,32 +264,6 @@ where
         Commands::List { format } => list_cases(format)?,
         Commands::Explain { id } => explain_case(id)?,
         Commands::Dashboard { output } => generate_dashboard(output)?,
-        Commands::ReleaseMatrix { format, enforce } => {
-            let registry = crate::registry::collect_all();
-            let matrix = crate::release_matrix::build_release_matrix(&registry);
-            print!(
-                "{}",
-                crate::release_matrix::render_release_matrix(&matrix, format)?
-            );
-            if *enforce {
-                crate::release_matrix::enforce_release_matrix(&matrix)?;
-            }
-        }
-        Commands::WholeAppEvidence {
-            output,
-            backend,
-            measured_samples,
-        } => {
-            let written = crate::workloads::write_whole_application_evidence_artifacts(
-                std::path::Path::new(output),
-                backend.as_deref(),
-                *measured_samples,
-            )
-            .map_err(|error| anyhow::anyhow!("{error}"))?;
-            for path in &written {
-                println!("whole_app_evidence_written path={}", path.display());
-            }
-        }
         Commands::EvolveServer => evolve_server::run_evolve_server()?,
     }
     Ok(())

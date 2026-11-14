@@ -8,10 +8,12 @@ pub(crate) static TRANSPOSE: MicroCase = MicroCase {
     name: "Transpose 512x512",
     summary: "Dense f32 matrix transpose with coalesced reads and strided writes",
     tags: &["memory-bound", "layout"],
+    suites: &[],
     contract: None,
     program,
     fixture,
     reference,
+    reference_probe: None,
     work: MicroWork::Flops(512 * 512),
 };
 

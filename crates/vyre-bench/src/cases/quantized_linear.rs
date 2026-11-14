@@ -43,6 +43,7 @@ const SUITES: &[SuiteKind] = &[
     SuiteKind::Gpu,
     SuiteKind::Deep,
     SuiteKind::Honest,
+    SuiteKind::Megakernel,
 ];
 
 fn digest64(bytes: &[u8]) -> u64 {
@@ -350,12 +351,82 @@ impl BenchCase for QuantizedLinear4BitAffineGrouped {
                 ..Default::default()
             }),
             outputs,
-            baseline_outputs: Some(vec![prepared.baseline_output.clone()]),
+            baseline_outputs: ctx
+                .include_baseline_outputs
+                .then(|| vec![prepared.baseline_output.clone()]),
         })
     }
 
     fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {
         run.verify_f32_outputs_with_ulp(8)
+    }
+
+    fn verify_reference_parity(
+        &self,
+        ctx: &BenchContext,
+        _prepared: &PreparedCase,
+    ) -> Result<bool, BenchError> {
+        let (in_dim, out_dim, group_size, batch_size) = (64u32, 16u32, 64u32, 2u32);
+        let spec = vyre_libs::nn::linear::QuantizedLinear4BitSpec::affine_grouped(
+            in_dim, out_dim, group_size,
+        );
+        let program = vyre_libs::nn::linear::linear_4bit_affine_grouped_batched_typed(
+            &spec, batch_size, "x", "w", "scale", "zp", "b", "out",
+        )
+        .map_err(BenchError::ExecutionFailed)?;
+        let packed_words = (in_dim / 8) * out_dim;
+        let group_count = in_dim.div_ceil(group_size);
+        let sidecar_words = group_count * out_dim;
+        let x: Vec<f32> = (0..in_dim).map(|k| (k % 17) as f32).collect();
+        let mut packed = vec![0u32; packed_words as usize];
+        for block in 0..(in_dim / 8) {
+            for out in 0..out_dim {
+                let mut word = 0u32;
+                for lane in 0..8 {
+                    let k = block * 8 + lane;
+                    let nibble = (k
+                        .wrapping_mul(3)
+                        .wrapping_add(out.wrapping_mul(5))
+                        .wrapping_add(7))
+                        & 0xF;
+                    word |= nibble << (lane * 4);
+                }
+                packed[(block * out_dim + out) as usize] = word;
+            }
+        }
+        let mut scale = vec![0.5f32; sidecar_words as usize];
+        let mut zero_point = vec![0u32; sidecar_words as usize];
+        for group in 0..group_count {
+            for out in 0..out_dim {
+                let idx = (group * out_dim + out) as usize;
+                scale[idx] = 0.25 * (((group + out) & 3) + 1) as f32;
+                zero_point[idx] = (group.wrapping_mul(3).wrapping_add(out)) & 0x7;
+            }
+        }
+        let bias: Vec<f32> = (0..out_dim).map(|out| (out & 7) as f32).collect();
+        let expected_item: Vec<f32> = (0..out_dim as usize)
+            .map(|out| {
+                let mut acc = bias[out];
+                for k in 0..in_dim as usize {
+                    let word = packed[(k / 8) * out_dim as usize + out];
+                    let nibble = ((word >> ((k % 8) * 4)) & 0xF) as f32;
+                    let sidecar_idx = (k / group_size as usize) * out_dim as usize + out;
+                    acc += x[k] * ((nibble - zero_point[sidecar_idx] as f32) * scale[sidecar_idx]);
+                }
+                acc
+            })
+            .collect();
+        let batched_x = x.repeat(batch_size as usize);
+        let inputs = vec![
+            f32_bytes(&batched_x),
+            u32_bytes(&packed),
+            f32_bytes(&scale),
+            u32_bytes(&zero_point),
+            f32_bytes(&bias),
+        ];
+        let expected = vec![f32_bytes(&expected_item).repeat(batch_size as usize)];
+        ctx.reference
+            .verify_f32_ulp(&program, &inputs, &expected, 8)
     }
 
     fn bytes_touched(&self, prepared: &PreparedCase) -> (u64, u64) {

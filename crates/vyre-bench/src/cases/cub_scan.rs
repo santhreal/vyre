@@ -156,12 +156,12 @@ impl BenchCase for CubScanBench {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let program = prepared_as::<Program>(prepared, CUB_SCAN_CASE)?.clone();
+        let program = prepared_as::<Program>(prepared, CUB_SCAN_CASE)?;
         let inputs = vec![vyre_primitives::wire::pack_u32_slice(&host_input())];
         let input_bytes = inputs.iter().map(Vec::len).sum::<usize>() as u64;
 
         let timed = ctx
-            .dispatch_timed(&program, &inputs, &ctx.dispatch_config)
+            .dispatch_timed(program, &inputs, &ctx.dispatch_config)
             .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
         let scanned_bytes = timed.outputs.last().map_or(0, Vec::len) as u64;
         let checksum = checksum_of(&timed.outputs)?;

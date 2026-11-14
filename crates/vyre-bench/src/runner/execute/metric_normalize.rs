@@ -44,6 +44,11 @@ pub(super) fn normalize_benchmark_evidence_metrics(
             .entry("active_time_ns".to_string())
             .or_insert(active_time);
     }
+    if !metrics.contains_key("batch_item_wall_ns") {
+        if let Some(wall) = metrics.get("wall_ns").cloned() {
+            metrics.insert("batch_item_wall_ns".to_string(), wall);
+        }
+    }
     if let (Some(input), Some(output)) = (
         metrics.get("host_to_device_bytes").cloned(),
         metrics.get("device_to_host_bytes").cloned(),

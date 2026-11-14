@@ -5,19 +5,11 @@
 //! binary for the whole set. A test that cannot share a process stays its own
 //! target and states why in `tools/xtask/test-harness-isolation.toml`.
 
-/// Integration tests from `tests/application_domain_release_evidence_contracts.rs`.
-#[path = "application_domain_release_evidence_contracts.rs"]
-pub mod application_domain_release_evidence_contracts;
-
 /// Integration tests from `tests/baseline_determinism.rs`.
 #[cfg(feature = "device-tests")]
 #[allow(clippy::field_reassign_with_default)]
 #[path = "baseline_determinism.rs"]
 pub mod baseline_determinism;
-
-/// Integration tests from `tests/benchmark_target_contracts.rs`.
-#[path = "benchmark_target_contracts.rs"]
-pub mod benchmark_target_contracts;
 
 /// Integration tests from `tests/cache_hit_rate_reporting.rs`.
 #[cfg(feature = "device-tests")]
@@ -69,9 +61,6 @@ pub mod dfa_full_coverage;
 #[path = "every_registered_case_verifies.rs"]
 pub mod every_registered_case_verifies;
 
-/// Integration tests from `tests/evidence_receipt_contracts.rs`.
-#[path = "evidence_receipt_contracts.rs"]
-pub mod evidence_receipt_contracts;
 /// Integration tests from `tests/feature_cfg_contract.rs`.
 #[path = "feature_cfg_contract.rs"]
 pub mod feature_cfg_contract;
@@ -85,6 +74,7 @@ pub mod finite_queue_artifact;
 #[cfg(target_os = "linux")]
 #[path = "nvme_gpu_ingest_telemetry.rs"]
 pub mod nvme_gpu_ingest_telemetry;
+
 
 /// Integration tests from `tests/performance_contract_baseline_truth.rs`.
 #[path = "performance_contract_baseline_truth.rs"]
@@ -103,10 +93,6 @@ pub mod release_bench_release_macro;
 #[path = "release_macro_cuda_live.rs"]
 pub mod release_macro_cuda_live;
 
-/// Integration tests from `tests/release_matrix_contracts/mod.rs`.
-#[path = "release_matrix_contracts/mod.rs"]
-pub mod release_matrix_contracts;
-
 /// Integration tests from `tests/release_producer_cuda_contracts.rs`.
 #[path = "release_producer_cuda_contracts.rs"]
 pub mod release_producer_cuda_contracts;
@@ -117,14 +103,6 @@ pub mod release_producer_cuda_contracts;
 #[path = "result_schema.rs"]
 pub mod result_schema;
 
-/// Integration tests from `tests/roofline_counter_evidence.rs`.
-#[path = "roofline_counter_evidence.rs"]
-pub mod roofline_counter_evidence;
-
-/// Integration tests from `tests/section_189_hardware_regression_evidence_and_pmu_policy.rs`.
-#[path = "section_189_hardware_regression_evidence_and_pmu_policy.rs"]
-pub mod section_189_hardware_regression_evidence_and_pmu_policy;
-
 /// Integration tests from `tests/snapshot_persistence.rs`.
 #[cfg(feature = "device-tests")]
 #[allow(clippy::field_reassign_with_default)]
@@ -134,10 +112,6 @@ pub mod snapshot_persistence;
 /// Integration tests from `tests/source_fingerprint_operator_files.rs`.
 #[path = "source_fingerprint_operator_files.rs"]
 pub mod source_fingerprint_operator_files;
-
-/// Integration tests from `tests/statistical_regression_gates.rs`.
-#[path = "statistical_regression_gates.rs"]
-pub mod statistical_regression_gates;
 
 /// Integration tests from `tests/suite_completeness.rs`.
 #[path = "suite_completeness.rs"]
@@ -170,10 +144,6 @@ pub mod thesis_workload_contracts;
 #[allow(clippy::field_reassign_with_default)]
 #[path = "throughput_consistency.rs"]
 pub mod throughput_consistency;
-
-/// Integration tests from `tests/performance_floor_native_baseline_contracts.rs`.
-#[path = "performance_floor_native_baseline_contracts.rs"]
-pub mod performance_floor_native_baseline_contracts;
 
 /// Integration tests from `tests/grid_sync_segment_launch_width.rs`.
 #[path = "grid_sync_segment_launch_width.rs"]

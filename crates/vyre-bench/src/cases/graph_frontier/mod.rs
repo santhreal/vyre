@@ -143,7 +143,9 @@ impl BenchCase for GraphFrontierStep {
                 ..Default::default()
             }),
             outputs: timed.outputs,
-            baseline_outputs: Some(vec![prepared.baseline_output.clone()]),
+            baseline_outputs: ctx
+                .include_baseline_outputs
+                .then(|| vec![prepared.baseline_output.clone()]),
         })
     }
 

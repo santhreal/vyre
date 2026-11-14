@@ -14,6 +14,10 @@ pub fn print_report(
         println!("{}", generate_json_report(report)?);
         return Ok(());
     }
+    if !roofline_only && report.suite == "megakernel" {
+        print_megakernel_report(report);
+        return Ok(());
+    }
 
     if roofline_only {
         println!(
@@ -115,6 +119,74 @@ pub fn print_report(
     );
     println!("{}", summary_line(&report.summary));
     Ok(())
+}
+
+fn print_megakernel_report(report: &ReportSchema) {
+    println!(
+        "{:<38} | {:<8} | {:<12} | {:<13} | {:<14} | {:<12} | {:<8} | {:<10} | {:<10}",
+        "Workload",
+        "Status",
+        "Wall p50(ns)",
+        "Active p50(ns)",
+        "Batch/item(ns)",
+        "Compile(ns)",
+        "Allocs",
+        "Alloc(B)",
+        "Parity"
+    );
+    println!(
+        "---------------------------------------------------------------------------------------------------------------------------------------------------"
+    );
+    for case in &report.cases {
+        let fmt_stat = |key: &str| {
+            case.metrics
+                .get(key)
+                .map(|stats| stats.p50.to_string())
+                .unwrap_or_else(|| "-".to_string())
+        };
+        let ref_ok = case
+            .metrics
+            .get("reference_parity")
+            .is_some_and(|stats| stats.p50 > 0);
+        let parity = match (&case.correctness, ref_ok) {
+            (crate::api::case::Correctness::Exact, true) => "Exact+Ref".to_string(),
+            (crate::api::case::Correctness::Exact, false) => "Exact".to_string(),
+            (
+                crate::api::case::Correctness::Toleranced {
+                    max_observed_ulp, ..
+                },
+                true,
+            ) => {
+                format!("ULP({max_observed_ulp})+Ref")
+            }
+            (
+                crate::api::case::Correctness::Toleranced {
+                    max_observed_ulp, ..
+                },
+                false,
+            ) => {
+                format!("ULP({max_observed_ulp})")
+            }
+            (crate::api::case::Correctness::Certificate { .. }, _) => "Cert".to_string(),
+            (crate::api::case::Correctness::Invalid { .. }, _) => "INVALID".to_string(),
+        };
+        println!(
+            "{:<38} | {:<8} | {:<12} | {:<13} | {:<14} | {:<12} | {:<8} | {:<10} | {:<10}",
+            case.id,
+            case.status,
+            fmt_stat("wall_ns"),
+            fmt_stat("active_time_ns"),
+            fmt_stat("batch_item_wall_ns"),
+            fmt_stat("compile_ns"),
+            fmt_stat("alloc_count"),
+            fmt_stat("alloc_bytes"),
+            parity
+        );
+    }
+    println!(
+        "---------------------------------------------------------------------------------------------------------------------------------------------------"
+    );
+    println!("{}", summary_line(&report.summary));
 }
 
 /// Render the pass and fail line printed under the case table.

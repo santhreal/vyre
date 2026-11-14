@@ -126,10 +126,11 @@ impl BenchCase for ScanAcIrregularLiterals {
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
         let prepared = prepared_as::<ScanAcIrregularPrepared>(prepared, "irregular AC scan")?;
+        let include_baseline_outputs = ctx.include_baseline_outputs;
         let ctx: &BenchContext = ctx;
 
         let resident_sequence = prepared.resident.as_ref().map(|resident| {
-            move |workgroup: [u32; 3]| -> Result<(Vec<Vec<u8>>, u64), BenchError> {
+            move |workgroup: [u32; 3]| -> Result<(Vec<Vec<u8>>, u64, Option<u64>), BenchError> {
                 let match_output_bytes =
                     match_triples_readback_bytes(prepared.stats.expected_matches)?;
                 dispatch_reset_then_scan(
@@ -179,7 +180,8 @@ impl BenchCase for ScanAcIrregularLiterals {
             prepared.baseline_wall_ns,
             prepared.stats,
             custom,
-            prepared.baseline_outputs.clone(),
+            prepared.baseline_outputs.iter().map(Vec::len).sum::<usize>() as u64,
+            include_baseline_outputs.then(|| prepared.baseline_outputs.clone()),
         ))
     }
 

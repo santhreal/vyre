@@ -70,12 +70,6 @@ pub fn run_suite(registry: &BenchRegistry, suite: &SuiteKind, format: &str) {
         eprintln!("Warning: failed to write chrome trace report: {error}");
     }
 
-    // Write content-addressed evidence store receipts
-    let evidence_dir = std::path::Path::new("release/evidence/benchmarks");
-    if let Err(error) = crate::evidence::record_suite_evidence(&report, Some(evidence_dir)) {
-        eprintln!("Warning: failed to write content-addressed evidence receipts: {error}");
-    }
-
     if let Err(error) = print_report(&report, format, false) {
         eprintln!("failed to render benchmark report: {error}");
         std::process::exit(1);
@@ -158,19 +152,19 @@ pub fn execute_suite(
                     continue;
                 }
             };
-        let preferred_registration =
-            match vyre_runtime::backend_registration(preferred_backend.id()) {
-                Ok(registration) => registration,
-                Err(error) => {
-                    cases_report.push(case_failure(
-                        case,
-                        None,
-                        format!("Backend registration error: {error}"),
-                        case.performance_contract(),
-                    ));
-                    continue;
-                }
-            };
+        let preferred_registration = match vyre_runtime::backend_registration(preferred_backend.id())
+        {
+            Ok(registration) => registration,
+            Err(error) => {
+                cases_report.push(case_failure(
+                    case,
+                    None,
+                    format!("Backend registration error: {error}"),
+                    case.performance_contract(),
+                ));
+                continue;
+            }
+        };
         let materializer = match preferred_registration.materializer() {
             Ok(materializer) => Arc::from(materializer),
             Err(error) => {
@@ -195,6 +189,7 @@ pub fn execute_suite(
             preferred_registration,
             materializer,
             artifact_sessions: Mutex::default(),
+            dispatch_allocs: Default::default(),
             reference: crate::api::case::CpuReference {},
             optimizer: crate::api::case::OptimizerPipeline {},
             scratch: crate::api::case::ScratchPool { buffer: vec![] },
@@ -319,6 +314,7 @@ fn target_samples(suite: &SuiteKind) -> usize {
         SuiteKind::Smoke => 10,
         SuiteKind::Release => 50,
         SuiteKind::Deep => 100,
+        SuiteKind::Megakernel => 30,
         SuiteKind::Gpu
         | SuiteKind::Sweep
         | SuiteKind::CrossBackend
@@ -461,6 +457,7 @@ pub fn evaluate_candidate_headless(
         preferred_registration,
         materializer,
         artifact_sessions: Mutex::default(),
+        dispatch_allocs: Default::default(),
         reference: crate::api::case::CpuReference {},
         optimizer: crate::api::case::OptimizerPipeline {},
         scratch: crate::api::case::ScratchPool { buffer: vec![] },

@@ -1,7 +1,8 @@
 //! Dense 256x256 f32 matrix multiplication.
 
+use crate::api::case::{BenchContext, BenchError};
 use crate::cases::harness::ContractDescription;
-use crate::cases::micro::{MicroCase, MicroWork};
+use crate::cases::micro::{MicroCase, MicroWork, MEGAKERNEL_MICRO_SUITES};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 pub(crate) static MATMUL: MicroCase = MicroCase {
@@ -9,6 +10,7 @@ pub(crate) static MATMUL: MicroCase = MicroCase {
     name: "MatMul 256x256",
     summary: "Dense matrix multiplication 256x256 floats",
     tags: &["compute", "compute-bound"],
+    suites: MEGAKERNEL_MICRO_SUITES,
     contract: Some(ContractDescription::cpu_sota(
         "f32 matmul 256x256",
         "faer",
@@ -18,14 +20,15 @@ pub(crate) static MATMUL: MicroCase = MicroCase {
     program,
     fixture,
     reference,
+    reference_probe: Some(verify_reference_parity),
     work: MicroWork::Flops(2 * 256 * 256 * 256),
 };
 
 fn program() -> Program {
-    let m = 256;
-    let n = 256;
-    let k = 256;
+    program_for(256, 256, 256)
+}
 
+fn program_for(m: u32, n: u32, k: u32) -> Program {
     Program::wrapped(
         vec![
             BufferDecl::storage("A", 0, BufferAccess::ReadOnly, DataType::F32)
@@ -86,10 +89,10 @@ fn program() -> Program {
 }
 
 fn fixture() -> Vec<Vec<u8>> {
-    let m = 256;
-    let n = 256;
-    let k = 256;
+    fixture_for(256, 256, 256)
+}
 
+fn fixture_for(m: usize, n: usize, k: usize) -> Vec<Vec<u8>> {
     let mut a_bytes = vec![0u8; m * k * 4];
     let mut b_bytes = vec![0u8; k * n * 4];
     for i in 0..m * k {
@@ -108,4 +111,14 @@ fn reference(inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
     vec![crate::cases::cpu_baselines::matmul_f32_bytes(
         &inputs[0], &inputs[1], 256, 256, 256,
     )]
+}
+
+fn verify_reference_parity(ctx: &BenchContext) -> Result<bool, BenchError> {
+    let dim = 16usize;
+    let prog = program_for(dim as u32, dim as u32, dim as u32);
+    let inputs = fixture_for(dim, dim, dim);
+    let expected = vec![crate::cases::cpu_baselines::matmul_f32_bytes(
+        &inputs[0], &inputs[1], dim, dim, dim,
+    )];
+    ctx.reference.verify_f32_ulp(&prog, &inputs, &expected, 4)
 }

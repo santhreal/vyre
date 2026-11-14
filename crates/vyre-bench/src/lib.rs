@@ -6,32 +6,24 @@
 //! registry. Reading the registry through that owner is what keeps the driver
 //! object files in the binary, so nothing here names a driver crate for effect.
 
+/// Per-thread heap allocation counter and region snapshots.
+pub use vyre_test_support::alloc_probe;
+
 /// API definitions for external benchmark drivers.
 #[allow(missing_docs)]
 pub mod api;
 /// Reference test cases and standard regression suites.
 #[allow(missing_docs)]
 pub mod cases;
-/// Versioned benchmark protocol and content-addressed evidence store.
-#[allow(missing_docs)]
-pub mod evidence;
 /// Target device capability and telemetry probes.
 #[allow(missing_docs)]
 pub mod probes;
 /// The benchmark registry and metadata catalog.
 #[allow(missing_docs)]
 pub mod registry;
-/// The device class a release measurement may have been taken on.
-pub mod release_floor;
-/// Parity release matrix verification logic.
-#[allow(missing_docs)]
-pub mod release_matrix;
 /// HTML/Markdown report formatting and artifact writing.
 #[allow(missing_docs)]
 pub mod report;
 /// Context and thread coordination for the test runner.
 #[allow(missing_docs)]
 pub mod runner;
-/// Benchmark workloads, native baseline comparisons, and per-cell floor verdicts.
-#[allow(missing_docs)]
-pub mod workloads;

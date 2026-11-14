@@ -169,7 +169,9 @@ pub(crate) fn triplet_measure(
             ..Default::default()
         }),
         outputs,
-        baseline_outputs: Some(vec![prepared.baseline_output.clone()]),
+        baseline_outputs: ctx
+            .include_baseline_outputs
+            .then(|| vec![prepared.baseline_output.clone()]),
     })
 }
 

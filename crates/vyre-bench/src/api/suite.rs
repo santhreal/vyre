@@ -17,6 +17,7 @@ pub enum SuiteKind {
     Adversarial,
     Competition,
     Honest,
+    Megakernel,
     Custom(Arc<str>),
 }
 
@@ -35,6 +36,7 @@ impl std::str::FromStr for SuiteKind {
             "adversarial" => Ok(SuiteKind::Adversarial),
             "competition" => Ok(SuiteKind::Competition),
             "honest" => Ok(SuiteKind::Honest),
+            "megakernel" => Ok(SuiteKind::Megakernel),
             other => Ok(SuiteKind::Custom(Arc::from(other))),
         }
     }
@@ -59,6 +61,7 @@ impl SuiteKind {
             SuiteKind::Adversarial => "adversarial",
             SuiteKind::Competition => "competition",
             SuiteKind::Honest => "honest",
+            SuiteKind::Megakernel => "megakernel",
             SuiteKind::Custom(value) => value,
         }
     }

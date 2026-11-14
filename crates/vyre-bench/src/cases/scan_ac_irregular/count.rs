@@ -20,7 +20,7 @@ use super::baseline::cpu_aho_overlapping_matches;
 use super::haystack::{build_irregular_haystack, pattern_lengths, with_haystack_extent};
 use super::metrics::{scan_ac_count_metric_points, ScanAcStats};
 use super::sample::{dispatch_reset_then_scan, scan_bench_run, take_scan_sample, ResetThenScan};
-use super::{HAYSTACK_BYTES, PATTERNS, SUITES};
+use super::{HAYSTACK_BYTES, PATTERNS};
 
 const COUNT_CANDIDATE_END_MASK_INPUT_INDEX: usize = 3;
 const COUNT_CANDIDATE_SUFFIX2_MASK_INPUT_INDEX: usize = 4;
@@ -40,6 +40,15 @@ const COUNT_SCAN_RESOURCE_INDICES: [usize; 8] = [
 ];
 /// Index of `match_count` inside `COUNT_SCAN_RESOURCE_INDICES`, for readback.
 const COUNT_MATCH_COUNT_RESOURCE_SLOT: usize = 7;
+
+const SUITES: &[SuiteKind] = &[
+    SuiteKind::Smoke,
+    SuiteKind::Release,
+    SuiteKind::Gpu,
+    SuiteKind::Deep,
+    SuiteKind::Honest,
+    SuiteKind::Megakernel,
+];
 
 pub(super) struct ScanAcIrregularCountPrepared {
     pub(super) program: Program,
@@ -116,10 +125,11 @@ impl BenchCase for ScanAcIrregularCount {
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
         let prepared = prepared_as::<ScanAcIrregularCountPrepared>(prepared, "irregular AC count")?;
+        let include_baseline_outputs = ctx.include_baseline_outputs;
         let ctx: &BenchContext = ctx;
 
         let resident_sequence = prepared.resident.as_ref().map(|resident| {
-            move |workgroup: [u32; 3]| -> Result<(Vec<Vec<u8>>, u64), BenchError> {
+            move |workgroup: [u32; 3]| -> Result<(Vec<Vec<u8>>, u64, Option<u64>), BenchError> {
                 dispatch_reset_then_scan(
                     ctx,
                     resident,
@@ -165,12 +175,39 @@ impl BenchCase for ScanAcIrregularCount {
             prepared.baseline_wall_ns,
             prepared.stats,
             custom,
-            vec![prepared.baseline_output.clone()],
+            prepared.baseline_output.len() as u64,
+            include_baseline_outputs.then(|| vec![prepared.baseline_output.clone()]),
         ))
     }
 
     fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {
         run.verify_exact_outputs()
+    }
+
+    fn verify_reference_parity(
+        &self,
+        ctx: &BenchContext,
+        _prepared: &PreparedCase,
+    ) -> Result<bool, BenchError> {
+        let probe_bytes = 4_096;
+        let (haystack, _) = build_irregular_haystack(probe_bytes);
+        let ac = classic_ac_compile(PATTERNS);
+        let expected_match_count = cpu_aho_overlapping_matches(PATTERNS, &haystack)?.len() as u32;
+        let (candidate_end_mask, candidate_suffix2_mask, candidate_suffix3_bloom) =
+            super::scan_ac_candidate_masks(&ac);
+        let program = with_haystack_extent(
+            build_ac_bounded_count_suffix3_prefilter_program(&ac.dfa),
+            probe_bytes,
+        )?;
+        let inputs = scan_ac_count_inputs_with_masks(
+            &ac,
+            &haystack,
+            &candidate_end_mask,
+            &candidate_suffix2_mask,
+            &candidate_suffix3_bloom,
+        );
+        let expected = vec![pack_u32_slice(&[expected_match_count])];
+        ctx.reference.verify_exact(&program, &inputs, &expected)
     }
 }
 

@@ -2,7 +2,10 @@ use crate::api::metric::elapsed_ns;
 use std::{
     borrow::Cow,
     collections::BTreeMap,
-    sync::{Arc, Mutex},
+    sync::{
+        atomic::{AtomicBool, AtomicU64, Ordering},
+        Arc, Mutex,
+    },
     time::Instant,
 };
 
@@ -25,20 +28,104 @@ impl CpuReference {
     ) -> Result<Vec<Vec<u8>>, String> {
         let ref_inputs: Vec<vyre_reference::value::Value> = inputs
             .iter()
-            .map(|b| vyre_reference::value::Value::Bytes(std::sync::Arc::from(b.clone())))
+            .map(|b| vyre_reference::value::Value::Bytes(std::sync::Arc::from(b.as_slice())))
             .collect();
         vyre_reference::ReferenceRequest::standard(prog, &ref_inputs)
             .outputs()
             .map(|values| values.iter().map(|v| v.to_bytes()).collect())
             .map_err(|e| format!("{:?}", e))
     }
+
+    pub fn verify_exact(
+        &self,
+        prog: &vyre::ir::Program,
+        inputs: &[Vec<u8>],
+        expected_outputs: &[Vec<u8>],
+    ) -> Result<bool, crate::api::case::BenchError> {
+        let outputs = self
+            .dispatch(prog, inputs, &DispatchConfig::default())
+            .map_err(crate::api::case::BenchError::ExecutionFailed)?;
+        let run = crate::api::case::BenchRun {
+            metrics: crate::api::metric::BenchMetrics::default(),
+            baseline_metrics: None,
+            outputs,
+            baseline_outputs: Some(expected_outputs.to_vec()),
+        };
+        match run.verify_exact_outputs()? {
+            crate::api::case::Correctness::Exact => Ok(true),
+            other => Err(crate::api::case::BenchError::CorrectnessViolation(format!(
+                "vyre-reference output mismatch: {other:?}"
+            ))),
+        }
+    }
+
+    pub fn verify_f32_ulp(
+        &self,
+        prog: &vyre::ir::Program,
+        inputs: &[Vec<u8>],
+        expected_outputs: &[Vec<u8>],
+        max_ulp: u32,
+    ) -> Result<bool, crate::api::case::BenchError> {
+        let outputs = self
+            .dispatch(prog, inputs, &DispatchConfig::default())
+            .map_err(crate::api::case::BenchError::ExecutionFailed)?;
+        let run = crate::api::case::BenchRun {
+            metrics: crate::api::metric::BenchMetrics::default(),
+            baseline_metrics: None,
+            outputs,
+            baseline_outputs: Some(expected_outputs.to_vec()),
+        };
+        match run.verify_f32_outputs_with_ulp(max_ulp)? {
+            crate::api::case::Correctness::Exact
+            | crate::api::case::Correctness::Toleranced { .. } => Ok(true),
+            other => Err(crate::api::case::BenchError::CorrectnessViolation(format!(
+                "vyre-reference f32 output mismatch: {other:?}"
+            ))),
+        }
+    }
+}
+
+#[derive(Default)]
+pub(crate) struct DispatchAllocAccumulator {
+    allocations: AtomicU64,
+    bytes_allocated: AtomicU64,
+    recorded: AtomicBool,
+}
+
+impl DispatchAllocAccumulator {
+    pub(crate) fn clear(&self) {
+        self.allocations.store(0, Ordering::Relaxed);
+        self.bytes_allocated.store(0, Ordering::Relaxed);
+        self.recorded.store(false, Ordering::Relaxed);
+    }
+
+    pub(crate) fn add(&self, change: crate::alloc_probe::RegionChange) {
+        self.allocations
+            .fetch_add(change.allocations as u64, Ordering::Relaxed);
+        self.bytes_allocated
+            .fetch_add(change.bytes_allocated as u64, Ordering::Relaxed);
+        self.recorded.store(true, Ordering::Relaxed);
+    }
+
+    pub(crate) fn take(&self) -> Option<(u64, u64)> {
+        if !self.recorded.swap(false, Ordering::Relaxed) {
+            return None;
+        }
+        let allocations = self.allocations.swap(0, Ordering::Relaxed);
+        let bytes = self.bytes_allocated.swap(0, Ordering::Relaxed);
+        Some((allocations, bytes))
+    }
 }
 
 #[derive(Default)]
 pub(crate) struct CachedArtifactSessions {
     sessions: BTreeMap<ArtifactSessionKey, CachedArtifact>,
+    backend_signatures: Vec<(usize, String)>,
     last_fingerprint: Option<[u8; 32]>,
+    compile_ns_total: Option<u64>,
 }
+
+type CachedBindingList = Vec<(Vec<vyre_runtime::Resource>, vyre_runtime::BindingSet)>;
 
 /// One compiled benchmark artifact and the storage it produces for itself.
 ///
@@ -52,18 +139,52 @@ pub(crate) struct CachedArtifactSessions {
 pub(crate) struct CachedArtifact {
     session: Arc<vyre_runtime::artifact_admission::ArtifactSession>,
     workspace: Arc<vyre_runtime::artifact_admission::ArtifactWorkspace>,
+    resident_bindings: Arc<Mutex<CachedBindingList>>,
 }
 
-/// A compiled benchmark artifact belongs to one program on one device profile.
+impl CachedArtifact {
+    fn bindings_for(
+        &self,
+        prog: &vyre::ir::Program,
+        resources: &[vyre_runtime::Resource],
+    ) -> Result<vyre_runtime::BindingSet, vyre_runtime::BackendError> {
+        {
+            let cached = self.resident_bindings.lock().map_err(|error| {
+                vyre_runtime::BackendError::new(format!(
+                    "benchmark resident binding cache is poisoned: {error}. Fix: restart the benchmark process after the panic that poisoned binding state."
+                ))
+            })?;
+            if let Some((_, bindings)) =
+                cached.iter().find(|(keys, _)| keys.as_slice() == resources)
+            {
+                return Ok(bindings.clone());
+            }
+        }
+        let bindings =
+            bindings_for_program_resources(&self.session, &self.workspace, prog, resources)?;
+        let mut cached = self.resident_bindings.lock().map_err(|error| {
+            vyre_runtime::BackendError::new(format!(
+                "benchmark resident binding cache is poisoned: {error}. Fix: restart the benchmark process after the panic that poisoned binding state."
+            ))
+        })?;
+        if !cached.iter().any(|(keys, _)| keys.as_slice() == resources) {
+            cached.push((resources.to_vec(), bindings.clone()));
+        }
+        Ok(bindings)
+    }
+}
+
+/// A compiled benchmark artifact belongs to one program on one interned device signature.
 /// Keying on the program alone would serve a session compiled for other device
 /// facts once a caller repoints the context at another backend.
-type ArtifactSessionKey = ([u8; 32], String);
+type ArtifactSessionKey = ([u8; 32], usize);
 
 pub struct BenchContext {
     pub preferred_backend: Arc<dyn VyreBackend>,
     pub preferred_registration: &'static BackendRegistration,
     pub materializer: Arc<dyn vyre_runtime::ArtifactMaterializer>,
     pub(crate) artifact_sessions: Mutex<CachedArtifactSessions>,
+    pub(crate) dispatch_allocs: DispatchAllocAccumulator,
     pub reference: CpuReference,
     pub optimizer: OptimizerPipeline,
     pub scratch: ScratchPool,
@@ -116,22 +237,42 @@ impl BenchContext {
         prog: &vyre::ir::Program,
     ) -> Result<CachedArtifact, vyre_runtime::BackendError> {
         let fingerprint = prog.fingerprint();
-        let key = (
-            fingerprint,
-            crate::report::json::benchmark_device_signature(
-                self.preferred_backend.device_profile(),
-            ),
-        );
+        let backend_ptr = Arc::as_ptr(&self.preferred_backend) as *const () as usize;
         let mut cached = self.artifact_sessions.lock().map_err(|error| {
             vyre_runtime::BackendError::new(format!(
                 "benchmark artifact session cache is poisoned: {error}. Fix: restart the benchmark process after the panic that poisoned compilation state."
             ))
         })?;
+        let sig_index = if let Some(idx) = cached
+            .backend_signatures
+            .iter()
+            .position(|(ptr, _)| *ptr == backend_ptr)
+        {
+            idx
+        } else {
+            let sig = crate::report::json::benchmark_device_signature(
+                self.preferred_backend.device_profile(),
+            );
+            if let Some(idx) = cached
+                .backend_signatures
+                .iter()
+                .position(|(_, existing)| existing == &sig)
+            {
+                cached.backend_signatures.push((backend_ptr, sig));
+                idx
+            } else {
+                let idx = cached.backend_signatures.len();
+                cached.backend_signatures.push((backend_ptr, sig));
+                idx
+            }
+        };
+        let key = (fingerprint, sig_index);
         cached.last_fingerprint = Some(fingerprint);
         if let Some(artifact) = cached.sessions.get(&key) {
             return Ok(artifact.clone());
         }
 
+        let compile_started = Instant::now();
         let request = benchmark_compile_request(prog, self.preferred_backend.device_profile())?;
         let session = Arc::new(
             vyre_runtime::artifact_admission::ArtifactSession::compile_with_materializer(
@@ -146,24 +287,36 @@ impl BenchContext {
                 .allocate_workspace()
                 .map_err(|error| vyre_runtime::BackendError::new(error.to_string()))?,
         );
-        let artifact = CachedArtifact { session, workspace };
+        let compile_ns = elapsed_ns(compile_started);
+        *cached.compile_ns_total.get_or_insert(0) += compile_ns;
+        let artifact = CachedArtifact {
+            session,
+            workspace,
+            resident_bindings: Arc::new(Mutex::new(Vec::new())),
+        };
         cached.sessions.insert(key, artifact.clone());
         Ok(artifact)
     }
     pub(crate) fn take_artifact_session(
         &self,
-    ) -> Result<Option<[u8; 32]>, vyre_runtime::BackendError> {
+    ) -> Result<(Option<[u8; 32]>, Option<u64>), vyre_runtime::BackendError> {
         let mut cached = self.artifact_sessions.lock().map_err(|error| {
             vyre_runtime::BackendError::new(format!(
                 "benchmark artifact session cache is poisoned: {error}. Fix: restart the benchmark process after the panic that poisoned compilation state."
             ))
         })?;
         let fingerprint = cached.last_fingerprint.take();
+        let compile_ns = cached.compile_ns_total.take();
         let retired = std::mem::take(&mut cached.sessions);
+        cached.backend_signatures.clear();
         drop(cached);
         let mut release_failure = None;
         for (_, artifact) in retired {
-            let CachedArtifact { session, workspace } = artifact;
+            let CachedArtifact {
+                session,
+                workspace,
+                resident_bindings: _,
+            } = artifact;
             let Some(workspace) = Arc::into_inner(workspace) else {
                 continue;
             };
@@ -172,11 +325,21 @@ impl BenchContext {
             }
         }
         match release_failure {
-            None => Ok(fingerprint),
+            None => Ok((fingerprint, compile_ns)),
             Some(error) => Err(vyre_runtime::BackendError::new(format!(
                 "benchmark artifact storage was not released: {error}. Fix: release the device before the next measurement so the next artifact allocates from a clean pool."
             ))),
         }
+    }
+
+    fn measure_dispatch_allocs<T>(
+        &self,
+        f: impl FnOnce() -> Result<T, vyre_runtime::BackendError>,
+    ) -> Result<T, vyre_runtime::BackendError> {
+        let region = crate::alloc_probe::Region::new();
+        let result = f();
+        self.dispatch_allocs.add(region.change());
+        result
     }
 
     /// Compile and materialize the benchmark artifact outside measured submissions.
@@ -213,23 +376,25 @@ impl BenchContext {
         _config: &DispatchConfig,
     ) -> Result<vyre_runtime::TimedDispatchResult, vyre_runtime::BackendError> {
         let session = self.artifact_session_for(prog)?;
-        let borrowed_inputs = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
-        let bindings = session
-            .host_bindings(&borrowed_inputs)
-            .map_err(|error| vyre_runtime::BackendError::new(error.to_string()))?;
-        let start = Instant::now();
-        let completion = session
-            .submit_and_wait(bindings)
-            .map_err(|error| vyre_runtime::BackendError::new(error.to_string()))?;
-        let device_ns = completion.device_ns;
-        let outputs = session
-            .program_outputs(prog, completion)
-            .map_err(|error| vyre_runtime::BackendError::new(error.to_string()))?;
-        Ok(vyre_runtime::TimedDispatchResult::device_timed(
-            outputs,
-            elapsed_ns(start),
-            device_ns,
-        ))
+        self.measure_dispatch_allocs(|| {
+            let borrowed_inputs = inputs.iter().map(Vec::as_slice).collect::<Vec<_>>();
+            let bindings = session
+                .host_bindings(&borrowed_inputs)
+                .map_err(|error| vyre_runtime::BackendError::new(error.to_string()))?;
+            let start = Instant::now();
+            let completion = session
+                .submit_and_wait(bindings)
+                .map_err(|error| vyre_runtime::BackendError::new(error.to_string()))?;
+            let device_ns = completion.device_ns;
+            let outputs = session
+                .program_outputs(prog, completion)
+                .map_err(|error| vyre_runtime::BackendError::new(error.to_string()))?;
+            Ok(vyre_runtime::TimedDispatchResult::device_timed(
+                outputs,
+                elapsed_ns(start),
+                device_ns,
+            ))
+        })
     }
     /// Dispatch resident resources and include output readback in wall time.
     pub fn dispatch_resident_timed(
@@ -259,27 +424,28 @@ impl BenchContext {
         include_readback: bool,
     ) -> Result<vyre_runtime::TimedDispatchResult, vyre_runtime::BackendError> {
         let artifact = self.compiled_artifact_for(prog)?;
-        let session = &artifact.session;
-        let bindings =
-            bindings_for_program_resources(session, &artifact.workspace, prog, resources)?;
-        let start = Instant::now();
-        let completion = session
-            .submit_and_wait(bindings)
-            .map_err(|error| vyre_runtime::BackendError::new(error.to_string()))?;
-        let execution_wall_ns = elapsed_ns(start);
-        let device_ns = completion.device_ns;
-        let outputs = session
-            .program_outputs(prog, completion)
-            .map_err(|error| vyre_runtime::BackendError::new(error.to_string()))?;
-        Ok(vyre_runtime::TimedDispatchResult::device_timed(
-            outputs,
-            if include_readback {
-                elapsed_ns(start)
-            } else {
-                execution_wall_ns
-            },
-            device_ns,
-        ))
+        self.measure_dispatch_allocs(|| {
+            let session = &artifact.session;
+            let bindings = artifact.bindings_for(prog, resources)?;
+            let start = Instant::now();
+            let completion = session
+                .submit_and_wait(bindings)
+                .map_err(|error| vyre_runtime::BackendError::new(error.to_string()))?;
+            let execution_wall_ns = elapsed_ns(start);
+            let device_ns = completion.device_ns;
+            let outputs = session
+                .program_outputs(prog, completion)
+                .map_err(|error| vyre_runtime::BackendError::new(error.to_string()))?;
+            Ok(vyre_runtime::TimedDispatchResult::device_timed(
+                outputs,
+                if include_readback {
+                    elapsed_ns(start)
+                } else {
+                    execution_wall_ns
+                },
+                device_ns,
+            ))
+        })
     }
 
     /// Dispatch several resident sets of one program as a single batch.
@@ -296,32 +462,29 @@ impl BenchContext {
     pub fn dispatch_resident_batch_timed(
         &self,
         prog: &vyre::ir::Program,
-        sets: &[&[vyre_runtime::Resource]],
+        sets: &[impl AsRef<[vyre_runtime::Resource]>],
         _config: &DispatchConfig,
     ) -> Result<Vec<(vyre_runtime::OutputBuffers, Option<u64>)>, vyre_runtime::BackendError> {
         let artifact = self.compiled_artifact_for(prog)?;
-        let session = &artifact.session;
-        let mut batches = Vec::with_capacity(sets.len());
-        for resources in sets {
-            batches.push(bindings_for_program_resources(
-                session,
-                &artifact.workspace,
-                prog,
-                resources,
-            )?);
-        }
-        let completions = session
-            .submit_resident_batch_and_wait(batches)
-            .map_err(|error| vyre_runtime::BackendError::new(error.to_string()))?;
-        let mut dispatched = Vec::with_capacity(completions.len());
-        for completion in completions {
-            let device_ns = completion.device_ns;
-            let outputs = session
-                .program_outputs(prog, completion)
+        self.measure_dispatch_allocs(|| {
+            let session = &artifact.session;
+            let mut batches = Vec::with_capacity(sets.len());
+            for resources in sets {
+                batches.push(artifact.bindings_for(prog, resources.as_ref())?);
+            }
+            let completions = session
+                .submit_resident_batch_and_wait(batches)
                 .map_err(|error| vyre_runtime::BackendError::new(error.to_string()))?;
-            dispatched.push((outputs, device_ns));
-        }
-        Ok(dispatched)
+            let mut dispatched = Vec::with_capacity(completions.len());
+            for completion in completions {
+                let device_ns = completion.device_ns;
+                let outputs = session
+                    .program_outputs(prog, completion)
+                    .map_err(|error| vyre_runtime::BackendError::new(error.to_string()))?;
+                dispatched.push((outputs, device_ns));
+            }
+            Ok(dispatched)
+        })
     }
 
     pub fn dispatch_resident_sequence_read_ranges_into(
@@ -331,7 +494,9 @@ impl BenchContext {
         outputs: &mut [&mut Vec<u8>],
     ) -> Result<(), vyre_runtime::BackendError> {
         let (_, bindings, completion) = self.submit_resident_steps(steps)?;
-        copy_typed_read_ranges(&bindings, &completion, read_ranges, outputs)
+        self.measure_dispatch_allocs(|| {
+            copy_typed_read_ranges(&bindings, &completion, read_ranges, outputs)
+        })
     }
 
     pub fn dispatch_resident_sequence_read_ranges_timed_into(
@@ -342,7 +507,9 @@ impl BenchContext {
     ) -> Result<vyre_runtime::ResidentSequenceTiming, vyre_runtime::BackendError> {
         let started = Instant::now();
         let (device_ns, bindings, completion) = self.submit_resident_steps(steps)?;
-        copy_typed_read_ranges(&bindings, &completion, read_ranges, outputs)?;
+        self.measure_dispatch_allocs(|| {
+            copy_typed_read_ranges(&bindings, &completion, read_ranges, outputs)
+        })?;
         Ok(vyre_runtime::ResidentSequenceTiming {
             wall_ns: elapsed_ns(started),
             device_ns,
@@ -373,7 +540,9 @@ impl BenchContext {
                 "resident artifact sequence contains no submissions. Fix: provide a prefix step or a positive repeat count with at least one repeated step.",
             )
         })?;
-        copy_typed_read_ranges(&bindings, &completion, read_ranges, outputs)
+        self.measure_dispatch_allocs(|| {
+            copy_typed_read_ranges(&bindings, &completion, read_ranges, outputs)
+        })
     }
 
     fn submit_resident_steps(
@@ -416,17 +585,14 @@ impl BenchContext {
             }
         }
         let artifact = self.compiled_artifact_for(step.program)?;
-        let session = &artifact.session;
-        let bindings = bindings_for_program_resources(
-            session,
-            &artifact.workspace,
-            step.program,
-            step.resources,
-        )?;
-        let completion = session
-            .submit_and_wait(bindings.clone())
-            .map_err(|error| vyre_runtime::BackendError::new(error.to_string()))?;
-        Ok((bindings, completion))
+        self.measure_dispatch_allocs(|| {
+            let session = &artifact.session;
+            let bindings = artifact.bindings_for(step.program, step.resources)?;
+            let completion = session
+                .submit_and_wait(bindings.clone())
+                .map_err(|error| vyre_runtime::BackendError::new(error.to_string()))?;
+            Ok((bindings, completion))
+        })
     }
 }
 

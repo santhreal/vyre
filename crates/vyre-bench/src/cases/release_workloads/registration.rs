@@ -18,6 +18,14 @@ pub(super) const RELEASE_SUITES: &[crate::api::suite::SuiteKind] = &[
     crate::api::suite::SuiteKind::Honest,
 ];
 
+pub(super) const MEGAKERNEL_RELEASE_SUITES: &[crate::api::suite::SuiteKind] = &[
+    crate::api::suite::SuiteKind::Release,
+    crate::api::suite::SuiteKind::Gpu,
+    crate::api::suite::SuiteKind::Deep,
+    crate::api::suite::SuiteKind::Honest,
+    crate::api::suite::SuiteKind::Megakernel,
+];
+
 pub(super) fn gpu_requirements(input_bytes: u64) -> BenchRequirements {
     BenchRequirements {
         needs_gpu: true,

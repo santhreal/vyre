@@ -60,9 +60,7 @@ pub enum BaselineClass {
 impl BaselineClass {
     /// Every class, in declaration order.
     ///
-    /// The registry in `docs/optimization/BENCH_TARGETS.toml` lists the same
-    /// set, and a test compares the two, so the taxonomy a target may claim is
-    /// the taxonomy the source defines.
+    /// Exhaustive class table in index order.
     pub const ALL: [Self; 3] = [Self::CpuSota, Self::GpuSota, Self::SelfUnoptimized];
 
     /// The name this class carries in the benchmark target registry.
@@ -580,6 +578,9 @@ pub trait BenchCase: Send + Sync {
     }
     fn active_in_suite(&self, suite: &SuiteKind) -> bool {
         let suites = self.suites();
+        if matches!(suite, SuiteKind::Megakernel) {
+            return suites.contains(suite);
+        }
         suites.is_empty() || suites.contains(suite)
     }
     /// GPU micro-benchmark defaults: needs a device, no network, no size floor.
@@ -611,6 +612,13 @@ pub trait BenchCase: Send + Sync {
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError>;
     fn verify(&self, ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError>;
+    fn verify_reference_parity(
+        &self,
+        _ctx: &BenchContext,
+        _prepared: &PreparedCase,
+    ) -> Result<bool, BenchError> {
+        Ok(false)
+    }
     fn bytes_touched(&self, prepared: &PreparedCase) -> (u64, u64) {
         prepared_program(prepared)
             .map(static_program_bytes_touched)

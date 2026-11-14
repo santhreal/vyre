@@ -5,6 +5,7 @@ use crate::api::case::{
 };
 use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
 use crate::api::resident::ResidentInputSet;
+use crate::api::suite::SuiteKind;
 use vyre::ir::{BufferAccess, Program};
 use vyre_libs::reduce::{grid_stride_tree, sum};
 use vyre_runtime::TimedDispatchResult;
@@ -98,6 +99,10 @@ impl BenchCase for ReduceSumBench {
             determinism: DeterminismClass::Deterministic,
             owner_crate: "vyre-bench".to_string(),
         }
+    }
+
+    fn suites(&self) -> &'static [SuiteKind] {
+        crate::cases::micro::MEGAKERNEL_MICRO_SUITES
     }
 
     fn requirements(&self) -> BenchRequirements {
@@ -196,10 +201,12 @@ impl BenchCase for ReduceSumBench {
             small.selected.outputs.last().cloned().unwrap_or_default(),
             large.selected.outputs.last().cloned().unwrap_or_default(),
         ];
-        let baseline_outputs = vec![
-            prepared.small.expected.clone(),
-            prepared.large.expected.clone(),
-        ];
+        let baseline_outputs = ctx.include_baseline_outputs.then(|| {
+            vec![
+                prepared.small.expected.clone(),
+                prepared.large.expected.clone(),
+            ]
+        });
 
         Ok(BenchRun {
             metrics: BenchMetrics {
@@ -252,12 +259,29 @@ impl BenchCase for ReduceSumBench {
                 ..Default::default()
             }),
             outputs,
-            baseline_outputs: Some(baseline_outputs),
+            baseline_outputs,
         })
     }
 
     fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {
         run.verify_exact_outputs()
+    }
+
+    fn verify_reference_parity(
+        &self,
+        ctx: &BenchContext,
+        prepared: &PreparedCase,
+    ) -> Result<bool, BenchError> {
+        let prepared = prepared_as::<ReduceSumPrepared>(prepared, "reduce-sum crossover")?;
+        let expected = vec![prepared.small.expected.clone()];
+        for route in &prepared.small.routes {
+            ctx.reference
+                .verify_exact(&route.program, &route.inputs, &expected)
+                .map_err(|error| {
+                    BenchError::CorrectnessViolation(format!("{}: {error}", route.name))
+                })?;
+        }
+        Ok(true)
     }
 
     fn bytes_touched(&self, _prepared: &PreparedCase) -> (u64, u64) {

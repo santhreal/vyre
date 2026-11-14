@@ -6,6 +6,7 @@
 //! traversal program it expands with, and its metric points.
 
 use crate::api::case::{BenchCase, BenchContext, BenchError, BenchRun, WorkloadClass};
+use crate::api::suite::SuiteKind;
 use crate::cases::frontier_step::{
     dispatch_frontier_step, frontier_step, frontier_step_bytes_touched, frontier_step_run,
     FrontierStep, StepGrid,
@@ -25,11 +26,20 @@ mod tests;
 
 use fixture::{
     build_skewed_csr_fixture, skewed_csr_cpu_oracle, skewed_csr_inputs, SkewedCsrStats,
-    CSR_ALLOW_MASK, CSR_NODE_COUNT, SUITES,
+    CSR_ALLOW_MASK, CSR_NODE_COUNT,
 };
 use metrics::{skewed_csr_baseline_metric_points, skewed_csr_metric_points};
 
 type GraphCsrSkewedPrepared = FrontierStep<SkewedCsrStats>;
+
+const SUITES: &[SuiteKind] = &[
+    SuiteKind::Smoke,
+    SuiteKind::Release,
+    SuiteKind::Gpu,
+    SuiteKind::Deep,
+    SuiteKind::Honest,
+    SuiteKind::Megakernel,
+];
 
 static WORKLOAD: WorkloadDescription = WorkloadDescription {
     id: "primitives.graph.csr_skewed_frontier.1m",
@@ -54,6 +64,7 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
         "graph.frontier.bitset",
         "graph.skewed-degree",
     ],
+    verify_reference: Some(verify_reference_parity),
     ..WorkloadDescription::BASE
 };
 
@@ -130,4 +141,22 @@ fn prepare_skewed_csr_case(
 
 inventory::submit! {
     &CASE as &'static dyn BenchCase
+}
+
+fn verify_reference_parity(
+    ctx: &BenchContext,
+    _prepared: &crate::api::case::PreparedCase,
+) -> Result<bool, BenchError> {
+    let fixture = build_skewed_csr_fixture(128)?;
+    let shape = ProgramGraphShape::new(fixture.stats.node_count, fixture.stats.edge_count);
+    let program = vyre_libs::graph::csr_forward_traverse::csr_forward_traverse(
+        shape,
+        "frontier_in",
+        "frontier_out",
+        CSR_ALLOW_MASK,
+    );
+    let oracle = skewed_csr_cpu_oracle(&fixture);
+    let inputs = skewed_csr_inputs(&fixture);
+    let expected = vec![vyre_primitives::wire::pack_u32_slice(&oracle.output)];
+    ctx.reference.verify_exact(&program, &inputs, &expected)
 }

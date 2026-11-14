@@ -158,6 +158,7 @@ pub(crate) struct WorkloadDescription {
     pub(crate) min_input_bytes: Option<u64>,
     pub(crate) feature_set: &'static [&'static str],
     pub(crate) contract: Option<ContractDescription>,
+    pub(crate) verify_reference: Option<fn(&BenchContext, &PreparedCase) -> Result<bool, BenchError>>,
 }
 
 /// The suites an honest-layer case runs in.
@@ -203,6 +204,7 @@ impl WorkloadDescription {
             min_input_bytes: None,
             feature_set: &[],
             contract,
+            verify_reference: None,
         }
     }
 
@@ -229,6 +231,7 @@ impl WorkloadDescription {
         min_input_bytes: None,
         feature_set: &[],
         contract: None,
+        verify_reference: None,
     };
 }
 
@@ -309,6 +312,9 @@ impl<P: 'static> BenchCase for HarnessCase<P> {
             };
         }
         let suites = self.workload.suites;
+        if matches!(suite, SuiteKind::Megakernel) {
+            return suites.contains(suite);
+        }
         suites.is_empty() || suites.contains(suite)
     }
 
@@ -360,6 +366,17 @@ impl<P: 'static> BenchCase for HarnessCase<P> {
 
     fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {
         (self.ops.verify)(run)
+    }
+
+    fn verify_reference_parity(
+        &self,
+        ctx: &BenchContext,
+        prepared: &PreparedCase,
+    ) -> Result<bool, BenchError> {
+        match self.workload.verify_reference {
+            Some(verify) => verify(ctx, prepared),
+            None => Ok(false),
+        }
     }
 
     fn bytes_touched(&self, prepared: &PreparedCase) -> (u64, u64) {

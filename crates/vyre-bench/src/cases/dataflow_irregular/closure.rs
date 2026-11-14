@@ -227,7 +227,9 @@ fn measure(
             ..Default::default()
         }),
         outputs,
-        baseline_outputs: Some(prepared.baseline_outputs.clone()),
+        baseline_outputs: ctx
+            .include_baseline_outputs
+            .then(|| prepared.baseline_outputs.clone()),
     })
 }
 

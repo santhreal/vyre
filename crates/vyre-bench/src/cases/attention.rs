@@ -4,8 +4,9 @@
 //! simplified proxy that does Q * K^T * V sequentially for the cell, which is
 //! what the CPU reference computes as well.
 
+use crate::api::case::{BenchContext, BenchError};
 use crate::cases::harness::ContractDescription;
-use crate::cases::micro::{MicroCase, MicroWork};
+use crate::cases::micro::{MicroCase, MicroWork, MEGAKERNEL_MICRO_SUITES};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 pub(crate) static ATTENTION: MicroCase = MicroCase {
@@ -13,6 +14,7 @@ pub(crate) static ATTENTION: MicroCase = MicroCase {
     name: "Attention 64x64",
     summary: "Self-Attention QKV block (64 seq, 64 dim)",
     tags: &["compute", "memory-bound"],
+    suites: MEGAKERNEL_MICRO_SUITES,
     contract: Some(ContractDescription::cpu_sota(
         "attention proxy 64x64",
         "rayon",
@@ -22,13 +24,15 @@ pub(crate) static ATTENTION: MicroCase = MicroCase {
     program,
     fixture,
     reference,
+    reference_probe: Some(verify_reference_parity),
     work: MicroWork::Flops(3 * 64 * 64 * 64),
 };
 
 fn program() -> Program {
-    let seq = 64;
-    let dim = 64;
+    program_for(64, 64)
+}
 
+fn program_for(seq: u32, dim: u32) -> Program {
     Program::wrapped(
         vec![
             BufferDecl::storage("Q", 0, BufferAccess::ReadOnly, DataType::F32)
@@ -112,9 +116,10 @@ fn program() -> Program {
 }
 
 fn fixture() -> Vec<Vec<u8>> {
-    let seq = 64;
-    let dim = 64;
+    fixture_for(64, 64)
+}
 
+fn fixture_for(seq: usize, dim: usize) -> Vec<Vec<u8>> {
     let mut q_bytes = vec![0u8; seq * dim * 4];
     let mut k_bytes = vec![0u8; seq * dim * 4];
     let mut v_bytes = vec![0u8; seq * dim * 4];
@@ -134,4 +139,14 @@ fn reference(inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
     vec![crate::cases::cpu_baselines::attention_proxy_f32_bytes(
         &inputs[0], &inputs[1], &inputs[2], 64, 64,
     )]
+}
+
+fn verify_reference_parity(ctx: &BenchContext) -> Result<bool, BenchError> {
+    let (seq, dim) = (8usize, 8usize);
+    let prog = program_for(seq as u32, dim as u32);
+    let inputs = fixture_for(seq, dim);
+    let expected = vec![crate::cases::cpu_baselines::attention_proxy_f32_bytes(
+        &inputs[0], &inputs[1], &inputs[2], seq, dim,
+    )];
+    ctx.reference.verify_f32_ulp(&prog, &inputs, &expected, 4)
 }

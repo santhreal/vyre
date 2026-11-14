@@ -72,6 +72,7 @@ pub(crate) struct FrontierStepSample {
     pub(crate) output_bytes: u64,
     pub(crate) accounting: TransferAccounting,
     pub(crate) resident_used: bool,
+    pub(crate) include_baseline_outputs: bool,
     /// Resolved workgroup width, which the metric points report.
     pub(crate) workgroup_x: u32,
 }
@@ -129,6 +130,7 @@ pub(crate) fn dispatch_frontier_step<S>(
         output_bytes,
         accounting: transfer_accounting(step.input_bytes_total, output_bytes, resident_used),
         resident_used,
+        include_baseline_outputs: ctx.include_baseline_outputs,
         workgroup_x: workgroup[0],
     })
 }
@@ -160,7 +162,9 @@ pub(crate) fn frontier_step_run<S>(
             ..Default::default()
         }),
         outputs: sample.outputs,
-        baseline_outputs: Some(vec![step.baseline_output.clone()]),
+        baseline_outputs: sample
+            .include_baseline_outputs
+            .then(|| vec![step.baseline_output.clone()]),
     }
 }
 

@@ -8,7 +8,8 @@
 //! the GPU version aligns to u32 word boundaries. The needle is therefore
 //! planted only at word-aligned offsets, so both count the same matches.
 
-use crate::cases::micro::{MicroCase, MicroWork};
+use crate::api::case::{BenchContext, BenchError};
+use crate::cases::micro::{MicroCase, MicroWork, MEGAKERNEL_MICRO_SUITES};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 
 /// 256K bytes / 4 bytes per u32.
@@ -19,10 +20,12 @@ pub(crate) static DFA_MATCH: MicroCase = MicroCase {
     name: "DFA Match 256K",
     summary: "Full-coverage word-aligned literal scan over 256K bytes with atomic match counting",
     tags: &["compute", "branching", "atomic"],
+    suites: MEGAKERNEL_MICRO_SUITES,
     contract: None,
     program,
     fixture,
     reference,
+    reference_probe: Some(verify_reference_parity),
     work: MicroWork::Bytes {
         read: WORD_COUNT as u64 * 4,
         written: 4,
@@ -30,21 +33,22 @@ pub(crate) static DFA_MATCH: MicroCase = MicroCase {
 };
 
 fn program() -> Program {
-    // The text buffer has 65536 elements. With workgroup [256,1,1], the driver
-    // infers ceil(65536/256) = 256 workgroups, so 65536 total threads: each
-    // thread checks exactly one word via gid_x().
+    program_for(WORD_COUNT)
+}
+
+fn program_for(word_count: u32) -> Program {
     Program::wrapped(
         vec![
             BufferDecl::output("out_matches", 0, DataType::U32).with_count(1),
             BufferDecl::storage("text", 1, BufferAccess::ReadOnly, DataType::U32)
-                .with_count(WORD_COUNT),
+                .with_count(word_count),
         ],
         [256, 1, 1],
         vec![
             Node::let_bind("idx", Expr::gid_x()),
             Node::if_then(
                 Expr::and(
-                    Expr::lt(Expr::var("idx"), Expr::u32(WORD_COUNT)),
+                    Expr::lt(Expr::var("idx"), Expr::u32(word_count)),
                     Expr::eq(
                         Expr::load("text", Expr::var("idx")),
                         Expr::u32(u32::from_le_bytes(*b"vyre")),
@@ -60,7 +64,11 @@ fn program() -> Program {
 }
 
 fn fixture() -> Vec<Vec<u8>> {
-    let size: usize = WORD_COUNT as usize * 4;
+    fixture_for(WORD_COUNT)
+}
+
+fn fixture_for(word_count: u32) -> Vec<Vec<u8>> {
+    let size: usize = word_count as usize * 4;
     let mut text_bytes = vec![0u8; size];
     for (index, byte) in text_bytes.iter_mut().enumerate() {
         *byte = b'a' + (index % 26) as u8;
@@ -78,4 +86,11 @@ fn reference(inputs: &[Vec<u8>]) -> Vec<Vec<u8>> {
     vec![crate::cases::cpu_baselines::dfa_vyre_match_count_bytes(
         &inputs[0],
     )]
+}
+
+fn verify_reference_parity(ctx: &BenchContext) -> Result<bool, BenchError> {
+    let prog = program_for(1_024);
+    let inputs = fixture_for(1_024);
+    let expected = reference(&inputs);
+    ctx.reference.verify_exact(&prog, &inputs, &expected)
 }

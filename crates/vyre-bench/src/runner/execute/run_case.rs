@@ -91,20 +91,19 @@ pub(super) fn run_case(
         let mut d_samples: BTreeMap<&'static str, Vec<u64>> = BTreeMap::new();
         for sample_index in 0..target_samples {
             let started = Instant::now();
-            let alloc_region = vyre_alloc_probe::Region::new();
+            ctx.dispatch_allocs.clear();
+            let alloc_region = crate::alloc_probe::Region::new();
             ctx.include_baseline_outputs = sample_index == 0;
             let mut run_result = case
                 .run(ctx, prepared)
                 .map_err(|error| format!("Run error on sample {sample_index}: {error}"))?;
-            let allocated = alloc_region.change();
-            run_result
-                .metrics
-                .alloc_bytes
-                .get_or_insert(allocated.bytes_allocated as u64);
-            run_result
-                .metrics
-                .alloc_count
-                .get_or_insert(allocated.allocations as u64);
+            let fallback_allocated = alloc_region.change();
+            let (alloc_count, alloc_bytes) = ctx.dispatch_allocs.take().unwrap_or((
+                fallback_allocated.allocations as u64,
+                fallback_allocated.bytes_allocated as u64,
+            ));
+            run_result.metrics.alloc_bytes.get_or_insert(alloc_bytes);
+            run_result.metrics.alloc_count.get_or_insert(alloc_count);
 
             let (read, written) = case.bytes_touched(prepared);
             if read > 0 || written > 0 {
@@ -196,12 +195,26 @@ pub(super) fn run_case(
             determinism_p50s.push(percentile(&sorted, 50.0));
         }
     }
-    let cached_fingerprint = ctx
+    let (cached_fingerprint, compiled_ns) = ctx
         .take_artifact_session()
         .map_err(|error| error.to_string())?;
     let program_fingerprint = case
         .workload_fingerprint_bytes(prepared)
         .or(cached_fingerprint);
+    let reference_parity = if matches!(suite, SuiteKind::Megakernel) {
+        let verified = case
+            .verify_reference_parity(ctx, prepared)
+            .map_err(|error| format!("vyre-reference parity error: {error}"))?;
+        if !verified {
+            return Err(format!(
+                "megakernel suite case `{}` did not verify parity against vyre-reference",
+                meta.id.0
+            ));
+        }
+        Some(1_u64)
+    } else {
+        None
+    };
 
     let correctness = correctness.ok_or_else(|| {
         "benchmark produced no samples; target sample count must be greater than zero".to_string()
@@ -230,6 +243,19 @@ pub(super) fn run_case(
         metrics
             .entry("cold_wall_ns".to_string())
             .or_insert_with(|| single_sample_stats(cold_wall));
+    }
+    if let Some(compile_ns) = compiled_ns {
+        metrics
+            .entry("compile_ns".to_string())
+            .or_insert_with(|| single_sample_stats(compile_ns));
+        metrics
+            .entry("cold_compile_ns".to_string())
+            .or_insert_with(|| single_sample_stats(compile_ns));
+    }
+    if let Some(parity) = reference_parity {
+        metrics
+            .entry("reference_parity".to_string())
+            .or_insert_with(|| single_sample_stats(parity));
     }
     if let Some(cold) = cold_metrics.as_ref() {
         let cold_pairs: [(&str, Option<u64>); 6] = [

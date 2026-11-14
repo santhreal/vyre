@@ -6,7 +6,7 @@ use super::resident_batch::{
     batch_metric_points, dispatch_batch_or_single, dispatch_single, BatchPlan,
 };
 use super::run_assembly::{
-    bench_run_from_timed_with_accounting, encode_u32_words, resident_reset_transfer_accounting,
+    bench_run_from_timed_precomputed, encode_u32_words, resident_reset_transfer_accounting,
 };
 use super::synthetic_oracle::mixed_release_index;
 use crate::api::case::{
@@ -24,7 +24,8 @@ struct SparseOutputPrepared {
     program: Program,
     inputs: Vec<Vec<u8>>,
     input_bytes_total: u64,
-    expected_count: u32,
+    baseline_row: Vec<u8>,
+    baseline_wall: u64,
     resident_batch: Option<ResidentInputPool>,
 }
 
@@ -85,6 +86,22 @@ impl BenchCase for SparseOutputCompactionCount {
         }
         let inputs = vec![encode_u32_words(&flags)];
         let input_bytes_total = input_bytes_total(&inputs);
+        let (fired_rules, baseline_wall) = timed_reference(|| {
+            let mut fired_rules = Vec::new();
+            for index in 0..SPARSE_ITEMS {
+                if sparse_compaction_flag(index) != 0 {
+                    fired_rules.push(index);
+                }
+            }
+            fired_rules
+        });
+        let cpu_count = fired_rules.len() as u32;
+        if cpu_count != expected_count {
+            return Err(BenchError::CorrectnessViolation(
+                "sparse CPU baseline count disagreed with generator expectation".to_string(),
+            ));
+        }
+        let baseline_row = cpu_count.to_le_bytes().to_vec();
         let resident_batch =
             ResidentInputPool::upload_program_ordered_with_zeroed_outputs_optional(
                 ctx,
@@ -98,7 +115,8 @@ impl BenchCase for SparseOutputCompactionCount {
             program,
             inputs,
             input_bytes_total,
-            expected_count,
+            baseline_row,
+            baseline_wall,
             resident_batch,
         }))
     }
@@ -131,23 +149,9 @@ impl BenchCase for SparseOutputCompactionCount {
             || dispatch_single(ctx, &prepared.program, &prepared.inputs),
         )?;
 
-        let (fired_rules, baseline_wall) = timed_reference(|| {
-            let mut fired_rules = Vec::new();
-            for index in 0..SPARSE_ITEMS {
-                if sparse_compaction_flag(index) != 0 {
-                    fired_rules.push(index);
-                }
-            }
-            fired_rules
-        });
-        let cpu_count = fired_rules.len() as u32;
-        if cpu_count != prepared.expected_count {
-            return Err(BenchError::CorrectnessViolation(
-                "sparse CPU baseline count disagreed with generator expectation".to_string(),
-            ));
-        }
-
-        let baseline_outputs = vec![cpu_count.to_le_bytes().to_vec()];
+        let baseline_outputs = ctx
+            .include_baseline_outputs
+            .then(|| vec![prepared.baseline_row.clone()]);
         let output_bytes = sample.timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
         let logical_bytes_touched = prepared.input_bytes_total.saturating_add(output_bytes);
         let accounting = resident_reset_transfer_accounting(
@@ -157,11 +161,12 @@ impl BenchCase for SparseOutputCompactionCount {
             sample.reset_bytes,
         );
         let mut custom = batch_metric_points("sparse", &sample);
-        let mut run = bench_run_from_timed_with_accounting(
+        let mut run = bench_run_from_timed_precomputed(
             sample.timed,
             prepared.input_bytes_total,
+            prepared.baseline_row.len() as u64,
             baseline_outputs,
-            baseline_wall,
+            prepared.baseline_wall,
             "sparse_items",
             SPARSE_ITEMS,
             logical_bytes_touched,

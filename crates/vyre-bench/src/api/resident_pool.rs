@@ -50,6 +50,13 @@ impl ResidentBatchDispatch {
         if by_item.is_empty() {
             return None;
         }
+        if by_item.len() <= 64 {
+            let mut stack_buf = [0u64; 64];
+            let slice = &mut stack_buf[..by_item.len()];
+            slice.copy_from_slice(by_item);
+            slice.sort_unstable();
+            return Some(batch_median_ns(slice));
+        }
         let mut sorted = by_item.clone();
         sorted.sort_unstable();
         Some(batch_median_ns(&sorted))
@@ -206,10 +213,9 @@ impl ResidentInputPool {
                 self.sets.len()
             )));
         }
-        let mut sets = Vec::with_capacity(batch_len);
-        sets.extend(self.sets[..batch_len].iter().map(Vec::as_slice));
         let started = std::time::Instant::now();
-        let dispatched = ctx.dispatch_resident_batch_timed(program, &sets, config)?;
+        let dispatched =
+            ctx.dispatch_resident_batch_timed(program, &self.sets[..batch_len], config)?;
         let wall_ns_total = elapsed_ns(started);
         let mut outputs = Vec::with_capacity(dispatched.len());
         let mut device_ns_by_item = Some(Vec::with_capacity(dispatched.len()));
@@ -246,18 +252,16 @@ impl ResidentInputPool {
         if payload.is_empty() {
             return Ok(());
         }
-        let mut uploads = Vec::with_capacity(self.sets.len());
         for (set_index, set) in self.sets.iter().enumerate() {
-            let resource = set.get(index).ok_or_else(|| {
-                BenchError::ExecutionFailed(format!(
+            if index >= set.len() {
+                return Err(BenchError::ExecutionFailed(format!(
                     "{context} resident pool set {set_index} is missing resource at index {index}"
-                ))
-            })?;
-            uploads.push((resource, payload));
+                )));
+            }
         }
-        for (resource, bytes) in uploads {
+        for set in &self.sets {
             self.materializer
-                .upload_resident(resource, bytes)
+                .upload_resident(&set[index], payload)
                 .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
         }
         Ok(())

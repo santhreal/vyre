@@ -7,11 +7,12 @@
 //! unit ever differed. Those four are the row, and everything else lives here.
 
 use crate::api::case::{
-    prepared_program, static_program_bytes_touched, BenchCase, BenchContext, BenchError, BenchId,
-    BenchLayer, BenchMetadata, BenchRun, Correctness, DeterminismClass, PerformanceContract,
-    PreparedCase, WorkloadClass,
+    prepared_as, prepared_program, static_program_bytes_touched, BenchCase, BenchContext,
+    BenchError, BenchId, BenchLayer, BenchMetadata, BenchRun, Correctness, DeterminismClass,
+    PerformanceContract, PreparedCase, WorkloadClass,
 };
 use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
+use crate::api::suite::SuiteKind;
 use crate::cases::harness::ContractDescription;
 use vyre_foundation::ir::Program;
 
@@ -30,20 +31,46 @@ pub(crate) enum MicroWork {
 }
 
 /// One micro benchmark: a program, a fixture, a reference, and a work unit.
+pub(crate) const MEGAKERNEL_MICRO_SUITES: &[SuiteKind] = &[
+    SuiteKind::Smoke,
+    SuiteKind::Release,
+    SuiteKind::Deep,
+    SuiteKind::Gpu,
+    SuiteKind::Sweep,
+    SuiteKind::CrossBackend,
+    SuiteKind::Evolve,
+    SuiteKind::Adversarial,
+    SuiteKind::Competition,
+    SuiteKind::Honest,
+    SuiteKind::Megakernel,
+];
+
 pub(crate) struct MicroCase {
     pub(crate) id: &'static str,
     pub(crate) name: &'static str,
     pub(crate) summary: &'static str,
     pub(crate) tags: &'static [&'static str],
+    pub(crate) suites: &'static [SuiteKind],
     /// The CPU-baseline speedup floor, when the case is held to one.
     pub(crate) contract: Option<ContractDescription>,
     /// The IR program, built once during preparation.
     pub(crate) program: fn() -> Program,
-    /// Host input buffers, rebuilt per measured sample.
+    /// Host input buffers, built once during preparation.
     pub(crate) fixture: fn() -> Vec<Vec<u8>>,
     /// The CPU reference the dispatched outputs are compared against.
     pub(crate) reference: fn(&[Vec<u8>]) -> Vec<Vec<u8>>,
+    /// Scaled `vyre-reference` parity probe for `--suite megakernel`.
+    pub(crate) reference_probe: Option<fn(&BenchContext) -> Result<bool, BenchError>>,
     pub(crate) work: MicroWork,
+}
+
+struct MicroPrepared {
+    program: Program,
+    inputs: Vec<Vec<u8>>,
+    input_bytes: u64,
+    reference_outputs: Vec<Vec<u8>>,
+    reference_wall_ns: u64,
+    reference_output_bytes: u64,
 }
 
 impl MicroCase {
@@ -62,10 +89,12 @@ impl MicroCase {
             name,
             summary,
             tags,
+            suites: &[],
             contract: None,
             program,
             fixture,
             reference,
+            reference_probe: None,
             work,
         }
     }
@@ -191,8 +220,33 @@ impl BenchCase for MicroCase {
         self.contract.map(ContractDescription::performance_contract)
     }
 
+    fn suites(&self) -> &'static [SuiteKind] {
+        self.suites
+    }
+
     fn prepare(&self, _ctx: &mut BenchContext) -> Result<PreparedCase, BenchError> {
-        Ok(Box::new((self.program)()))
+        let program = (self.program)();
+        let inputs = (self.fixture)();
+        let input_bytes = inputs.iter().map(Vec::len).sum::<usize>() as u64;
+        let started = std::time::Instant::now();
+        let reference_outputs = (self.reference)(&inputs);
+        let reference_wall_ns = elapsed_ns(started);
+        let reference_output_bytes = reference_outputs.iter().map(Vec::len).sum::<usize>() as u64;
+        Ok(Box::new(MicroPrepared {
+            program,
+            inputs,
+            input_bytes,
+            reference_outputs,
+            reference_wall_ns,
+            reference_output_bytes,
+        }))
+    }
+
+    fn program<'a>(&self, prepared: &'a PreparedCase) -> Option<&'a Program> {
+        prepared
+            .downcast_ref::<MicroPrepared>()
+            .map(|prepared| &prepared.program)
+            .or_else(|| prepared_program(prepared).ok())
     }
 
     fn run(
@@ -200,35 +254,32 @@ impl BenchCase for MicroCase {
         ctx: &mut BenchContext,
         prepared: &mut PreparedCase,
     ) -> Result<BenchRun, BenchError> {
-        let program = prepared_program(prepared)?;
-        let inputs = (self.fixture)();
-        let input_bytes = inputs.iter().map(Vec::len).sum::<usize>() as u64;
-
+        let prepared = prepared_as::<MicroPrepared>(prepared, self.id)?;
         let timed = ctx
-            .dispatch_timed(program, &inputs, &ctx.dispatch_config)
+            .dispatch_timed(&prepared.program, &prepared.inputs, &ctx.dispatch_config)
             .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
         let outputs = timed.outputs;
         let output_bytes = outputs.iter().map(Vec::len).sum::<usize>() as u64;
-
-        let started = std::time::Instant::now();
-        let reference_outputs = (self.reference)(&inputs);
-        let reference_wall_ns = elapsed_ns(started);
-        let reference_output_bytes = reference_outputs.iter().map(Vec::len).sum::<usize>() as u64;
+        let baseline_outputs = if ctx.include_baseline_outputs {
+            Some(prepared.reference_outputs.clone())
+        } else {
+            None
+        };
 
         Ok(BenchRun {
             metrics: self.measured_metrics(
                 timed.wall_ns,
                 timed.device_ns,
-                input_bytes,
+                prepared.input_bytes,
                 output_bytes,
             ),
             baseline_metrics: Some(self.reference_metrics(
-                reference_wall_ns,
-                input_bytes,
-                reference_output_bytes,
+                prepared.reference_wall_ns,
+                prepared.input_bytes,
+                prepared.reference_output_bytes,
             )),
             outputs,
-            baseline_outputs: Some(reference_outputs),
+            baseline_outputs,
         })
     }
 
@@ -236,9 +287,21 @@ impl BenchCase for MicroCase {
         run.verify_exact_outputs()
     }
 
+    fn verify_reference_parity(
+        &self,
+        ctx: &BenchContext,
+        _prepared: &PreparedCase,
+    ) -> Result<bool, BenchError> {
+        match self.reference_probe {
+            Some(probe) => probe(ctx),
+            None => Ok(false),
+        }
+    }
+
     fn bytes_touched(&self, prepared: &PreparedCase) -> (u64, u64) {
         match self.work {
-            MicroWork::Flops(_) => prepared_program(prepared)
+            MicroWork::Flops(_) => self
+                .program(prepared)
                 .map(static_program_bytes_touched)
                 .unwrap_or((0, 0)),
             MicroWork::Bytes { read, written } => (read, written),
@@ -468,10 +531,12 @@ mod tests {
                     name: "probe",
                     summary: "probe",
                     tags: &[],
+                    suites: &[],
                     contract: None,
                     program: || unreachable!("metric assembly never builds the program"),
                     fixture: Vec::new,
                     reference: |_| Vec::new(),
+                    reference_probe: None,
                     work,
                 };
                 let measured =
@@ -524,10 +589,12 @@ mod tests {
             name: "probe",
             summary: "probe",
             tags: &[],
+            suites: &[],
             contract: None,
             program: || unreachable!("byte accounting never builds the program"),
             fixture: Vec::new,
             reference: |_| Vec::new(),
+            reference_probe: None,
             work: MicroWork::Bytes {
                 read: 262_144,
                 written: 4,

@@ -8,13 +8,12 @@
 //! the readback ranges, and the metric points differ, so those are what a case
 //! supplies.
 
-use std::time::Instant;
 
-use vyre_foundation::ir::Program;
 use vyre_runtime::{ResidentDispatchStep, ResidentReadRange};
+use vyre_foundation::ir::Program;
 
 use crate::api::case::{BenchContext, BenchError, BenchRun};
-use crate::api::metric::{elapsed_ns, BenchMetrics, MetricPoint};
+use crate::api::metric::{BenchMetrics, MetricPoint};
 use crate::api::resident::{
     dispatch_program_timed, stated_launch, transfer_accounting, ResidentInputSet,
 };
@@ -62,7 +61,7 @@ pub(super) fn take_scan_sample<F>(
     resident_sequence: Option<F>,
 ) -> Result<ScanSample, BenchError>
 where
-    F: FnOnce([u32; 3]) -> Result<(Vec<Vec<u8>>, u64), BenchError>,
+    F: FnOnce([u32; 3]) -> Result<(Vec<Vec<u8>>, u64, Option<u64>), BenchError>,
 {
     let mut dispatch_config = ctx.dispatch_config.clone();
     let program_workgroup = program.workgroup_size();
@@ -81,11 +80,11 @@ where
     ]);
 
     if let Some(sequence) = resident_sequence {
-        let (outputs, wall_ns) = sequence(program_workgroup)?;
+        let (outputs, wall_ns, dispatch_ns) = sequence(program_workgroup)?;
         return Ok(ScanSample {
             outputs,
             wall_ns,
-            dispatch_ns: None,
+            dispatch_ns,
             resident_used: true,
             device_reset_sequence: true,
             workgroup_x: workgroup[0],
@@ -112,7 +111,7 @@ pub(super) fn dispatch_reset_then_scan(
     workgroup: [u32; 3],
     sequence: ResetThenScan<'_>,
     readback: &[(usize, usize)],
-) -> Result<(Vec<Vec<u8>>, u64), BenchError> {
+) -> Result<(Vec<Vec<u8>>, u64, Option<u64>), BenchError> {
     let ResetThenScan {
         reset_program,
         scan_program,
@@ -164,15 +163,13 @@ pub(super) fn dispatch_reset_then_scan(
         .map(|&(_, byte_len)| Vec::with_capacity(byte_len))
         .collect();
 
-    let started = Instant::now();
-    {
+    let timing = {
         let mut targets: Vec<&mut Vec<u8>> = outputs.iter_mut().collect();
-        ctx.dispatch_resident_sequence_read_ranges_into(&steps, &read_ranges, &mut targets)
-            .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
-    }
-    let wall_ns = elapsed_ns(started);
+        ctx.dispatch_resident_sequence_read_ranges_timed_into(&steps, &read_ranges, &mut targets)
+            .map_err(|error| BenchError::BackendFailed(error.to_string()))?
+    };
 
-    Ok((outputs, wall_ns))
+    Ok((outputs, timing.wall_ns, timing.device_ns))
 }
 
 /// Assemble the `BenchRun` a scan case reports.
@@ -186,7 +183,8 @@ pub(super) fn scan_bench_run(
     baseline_wall_ns: u64,
     stats: ScanAcStats,
     custom: Vec<MetricPoint>,
-    baseline_outputs: Vec<Vec<u8>>,
+    baseline_output_bytes: u64,
+    baseline_outputs: Option<Vec<Vec<u8>>>,
 ) -> BenchRun {
     let output_bytes = sample.outputs.iter().map(Vec::len).sum::<usize>() as u64;
     let accounting = transfer_accounting(input_bytes_total, output_bytes, sample.resident_used);
@@ -205,11 +203,11 @@ pub(super) fn scan_bench_run(
         baseline_metrics: Some(BenchMetrics {
             wall_ns: Some(baseline_wall_ns),
             input_bytes: Some(input_bytes_total),
-            output_bytes: Some(baseline_outputs.iter().map(Vec::len).sum::<usize>() as u64),
+            output_bytes: Some(baseline_output_bytes),
             custom: scan_ac_baseline_metric_points(stats),
             ..Default::default()
         }),
         outputs: sample.outputs,
-        baseline_outputs: Some(baseline_outputs),
+        baseline_outputs,
     }
 }

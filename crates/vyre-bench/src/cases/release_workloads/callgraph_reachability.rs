@@ -1,12 +1,12 @@
 //! Callgraph reachability step release case over a CSR graph, with the linear graph
 //! generator, CPU forward baseline, and witness digest.
 
-use super::registration::{gpu_requirements, RELEASE_SUITES};
+use super::registration::{gpu_requirements, MEGAKERNEL_RELEASE_SUITES};
 use super::resident_batch::{
     batch_metric_points, dispatch_batch_or_single, dispatch_single, BatchPlan,
 };
 use super::run_assembly::{
-    bench_run_from_timed_with_accounting, encode_u32_words, resident_reset_transfer_accounting,
+    bench_run_from_timed_precomputed, encode_u32_words, resident_reset_transfer_accounting,
 };
 use crate::api::case::{
     prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
@@ -26,6 +26,9 @@ struct CallgraphPrepared {
     graph: GraphInputs,
     input_bytes_total: u64,
     output_resource_index: usize,
+    expected_bytes: Vec<u8>,
+    witness_digest: u32,
+    baseline_wall: u64,
     resident_batch: Option<ResidentInputPool>,
 }
 
@@ -61,7 +64,7 @@ impl BenchCase for CallgraphReachabilityStep {
     }
 
     fn suites(&self) -> &'static [crate::api::suite::SuiteKind] {
-        RELEASE_SUITES
+        MEGAKERNEL_RELEASE_SUITES
     }
 
     fn requirements(&self) -> BenchRequirements {
@@ -96,6 +99,29 @@ impl BenchCase for CallgraphReachabilityStep {
                     "callgraph traversal program is missing frontier_out binding".to_string(),
                 )
             })?;
+        let ((expected, witness_digest), baseline_wall) = timed_reference(|| {
+            let mut expected = release_benchmark_csr_forward_baseline(
+                CALLGRAPH_NODES,
+                &graph.edge_offsets,
+                &graph.edge_targets,
+                &graph.edge_kind_mask,
+                &graph.frontier_in,
+                1,
+            );
+            let witness_digest = callgraph_witness_digest(
+                CALLGRAPH_NODES,
+                &graph.edge_offsets,
+                &graph.edge_targets,
+                &graph.edge_kind_mask,
+                &graph.frontier_in,
+                1,
+            );
+            for (out, seed) in expected.iter_mut().zip(graph.frontier_out_seed.iter()) {
+                *out |= *seed;
+            }
+            (expected, witness_digest)
+        });
+        let expected_bytes = encode_u32_words(&expected);
         let resident_batch = ResidentInputPool::upload_optional(
             ctx,
             &graph.inputs,
@@ -108,6 +134,9 @@ impl BenchCase for CallgraphReachabilityStep {
             graph,
             input_bytes_total,
             output_resource_index,
+            expected_bytes,
+            witness_digest,
+            baseline_wall,
             resident_batch,
         }))
     }
@@ -151,30 +180,9 @@ impl BenchCase for CallgraphReachabilityStep {
             || dispatch_single(ctx, &prepared.program, &prepared.graph.inputs),
         )?;
 
-        let graph = &prepared.graph;
-        let ((expected, witness_digest), baseline_wall) = timed_reference(|| {
-            let mut expected = release_benchmark_csr_forward_baseline(
-                CALLGRAPH_NODES,
-                &graph.edge_offsets,
-                &graph.edge_targets,
-                &graph.edge_kind_mask,
-                &graph.frontier_in,
-                1,
-            );
-            let witness_digest = callgraph_witness_digest(
-                CALLGRAPH_NODES,
-                &graph.edge_offsets,
-                &graph.edge_targets,
-                &graph.edge_kind_mask,
-                &graph.frontier_in,
-                1,
-            );
-            for (out, seed) in expected.iter_mut().zip(graph.frontier_out_seed.iter()) {
-                *out |= *seed;
-            }
-            (expected, witness_digest)
-        });
-        let baseline_outputs = vec![encode_u32_words(&expected)];
+        let baseline_outputs = ctx
+            .include_baseline_outputs
+            .then(|| vec![prepared.expected_bytes.clone()]);
         let output_bytes = sample.timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
         let logical_bytes_touched = prepared.input_bytes_total.saturating_add(output_bytes);
         let accounting = resident_reset_transfer_accounting(
@@ -184,11 +192,12 @@ impl BenchCase for CallgraphReachabilityStep {
             sample.reset_bytes,
         );
         let mut custom = batch_metric_points("callgraph", &sample);
-        let mut run = bench_run_from_timed_with_accounting(
+        let mut run = bench_run_from_timed_precomputed(
             sample.timed,
             prepared.input_bytes_total,
+            prepared.expected_bytes.len() as u64,
             baseline_outputs,
-            baseline_wall,
+            prepared.baseline_wall,
             "callgraph_nodes",
             CALLGRAPH_NODES,
             logical_bytes_touched,
@@ -196,7 +205,7 @@ impl BenchCase for CallgraphReachabilityStep {
         )?;
         run.metrics.custom.push(MetricPoint {
             name: "callgraph_witness_digest".to_string(),
-            value: u64::from(witness_digest),
+            value: u64::from(prepared.witness_digest),
         });
         run.metrics.custom.append(&mut custom);
         Ok(run)
@@ -204,6 +213,36 @@ impl BenchCase for CallgraphReachabilityStep {
 
     fn verify(&self, _ctx: &mut BenchContext, run: &BenchRun) -> Result<Correctness, BenchError> {
         run.verify_exact_outputs()
+    }
+
+    fn verify_reference_parity(
+        &self,
+        ctx: &BenchContext,
+        _prepared: &PreparedCase,
+    ) -> Result<bool, BenchError> {
+        let node_count = 128u32;
+        let shape = ProgramGraphShape::new(node_count, node_count - 1);
+        let program = vyre_libs::graph::csr_forward_traverse::csr_forward_traverse(
+            shape,
+            "frontier_in",
+            "frontier_out",
+            1,
+        );
+        let graph = linear_graph_inputs_for(node_count);
+        let mut expected = release_benchmark_csr_forward_baseline(
+            node_count,
+            &graph.edge_offsets,
+            &graph.edge_targets,
+            &graph.edge_kind_mask,
+            &graph.frontier_in,
+            1,
+        );
+        for (out, seed) in expected.iter_mut().zip(graph.frontier_out_seed.iter()) {
+            *out |= *seed;
+        }
+        let expected_outputs = vec![encode_u32_words(&expected)];
+        ctx.reference
+            .verify_exact(&program, &graph.inputs, &expected_outputs)
     }
 }
 
@@ -217,24 +256,30 @@ struct GraphInputs {
 }
 
 fn linear_graph_inputs() -> GraphInputs {
-    let nodes = vec![0; CALLGRAPH_NODES as usize];
-    let mut edge_offsets = Vec::with_capacity(CALLGRAPH_NODES as usize + 1);
-    for node in 0..CALLGRAPH_NODES {
-        edge_offsets.push(node.min(CALLGRAPH_EDGES));
+    linear_graph_inputs_for(CALLGRAPH_NODES)
+}
+
+fn linear_graph_inputs_for(node_count: u32) -> GraphInputs {
+    let edge_count = node_count.saturating_sub(1);
+    let words = node_count.div_ceil(32) as usize;
+    let nodes = vec![0; node_count as usize];
+    let mut edge_offsets = Vec::with_capacity(node_count as usize + 1);
+    for node in 0..node_count {
+        edge_offsets.push(node.min(edge_count));
     }
-    edge_offsets.push(CALLGRAPH_EDGES);
-    let edge_targets: Vec<u32> = (1..CALLGRAPH_NODES).collect();
-    let edge_kind_mask = vec![1; CALLGRAPH_EDGES as usize];
-    let node_tags = vec![0; CALLGRAPH_NODES as usize];
-    let mut frontier_in = vec![u32::MAX; CALLGRAPH_WORDS];
-    let extra_bits = (CALLGRAPH_WORDS as u32 * 32).saturating_sub(CALLGRAPH_NODES);
+    edge_offsets.push(edge_count);
+    let edge_targets: Vec<u32> = (1..node_count).collect();
+    let edge_kind_mask = vec![1; edge_count as usize];
+    let node_tags = vec![0; node_count as usize];
+    let mut frontier_in = vec![u32::MAX; words];
+    let extra_bits = (words as u32 * 32).saturating_sub(node_count);
     if extra_bits > 0 {
         let live_bits = 32 - extra_bits;
         if let Some(last) = frontier_in.last_mut() {
             *last = (1u32 << live_bits) - 1;
         }
     }
-    let frontier_out_seed = vec![0; CALLGRAPH_WORDS];
+    let frontier_out_seed = vec![0; words];
     let inputs = vec![
         encode_u32_words(&nodes),
         encode_u32_words(&edge_offsets),

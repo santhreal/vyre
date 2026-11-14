@@ -13,6 +13,7 @@ pub(super) static CONDITION_EVAL_BATCH: SyntheticCountWorkload = SyntheticCountW
     records: 1_048_576,
     min_speedup_x: 100.0,
     pattern: SyntheticPattern::ConditionEval,
+    megakernel: false,
 };
 
 pub(super) static QUANTIFIED_LOOPS: SyntheticCountWorkload = SyntheticCountWorkload {
@@ -27,6 +28,7 @@ pub(super) static QUANTIFIED_LOOPS: SyntheticCountWorkload = SyntheticCountWorkl
     records: 1_048_576,
     min_speedup_x: 100.0,
     pattern: SyntheticPattern::QuantifiedLoops,
+    megakernel: false,
 };
 
 pub(super) static STRING_BITMAP_SCATTER: SyntheticCountWorkload = SyntheticCountWorkload {
@@ -49,6 +51,7 @@ pub(super) static STRING_BITMAP_SCATTER: SyntheticCountWorkload = SyntheticCount
     // produced.
     min_speedup_x: 25.0,
     pattern: SyntheticPattern::StringBitmapScatter,
+    megakernel: false,
 };
 
 pub(super) static OFFSET_COUNT_AGGREGATION: SyntheticCountWorkload = SyntheticCountWorkload {
@@ -63,6 +66,7 @@ pub(super) static OFFSET_COUNT_AGGREGATION: SyntheticCountWorkload = SyntheticCo
     records: 1_048_576,
     min_speedup_x: 100.0,
     pattern: SyntheticPattern::OffsetCountAggregation,
+    megakernel: false,
 };
 
 pub(super) static ENTROPY_WINDOW: SyntheticCountWorkload = SyntheticCountWorkload {
@@ -77,6 +81,7 @@ pub(super) static ENTROPY_WINDOW: SyntheticCountWorkload = SyntheticCountWorkloa
     records: 1_048_576,
     min_speedup_x: 100.0,
     pattern: SyntheticPattern::EntropyWindow,
+    megakernel: false,
 };
 
 pub(super) static ALIAS_REACHING_DEF: SyntheticCountWorkload = SyntheticCountWorkload {
@@ -91,6 +96,7 @@ pub(super) static ALIAS_REACHING_DEF: SyntheticCountWorkload = SyntheticCountWor
     records: 1_048_576,
     min_speedup_x: 100.0,
     pattern: SyntheticPattern::AliasReachingDef,
+    megakernel: true,
 };
 
 pub(super) static IFDS_WITNESS: SyntheticCountWorkload = SyntheticCountWorkload {
@@ -105,6 +111,7 @@ pub(super) static IFDS_WITNESS: SyntheticCountWorkload = SyntheticCountWorkload 
     records: 1_048_576,
     min_speedup_x: 100.0,
     pattern: SyntheticPattern::IfdsWitness,
+    megakernel: true,
 };
 
 pub(super) static C_AST_TRAVERSAL: SyntheticCountWorkload = SyntheticCountWorkload {
@@ -120,6 +127,7 @@ pub(super) static C_AST_TRAVERSAL: SyntheticCountWorkload = SyntheticCountWorklo
     records: 1_048_576,
     min_speedup_x: 100.0,
     pattern: SyntheticPattern::AstMotifTraversal,
+    megakernel: true,
 };
 
 pub(super) static MEGAKERNEL_QUEUE: SyntheticCountWorkload = SyntheticCountWorkload {
@@ -134,6 +142,7 @@ pub(super) static MEGAKERNEL_QUEUE: SyntheticCountWorkload = SyntheticCountWorkl
     records: 1_048_576,
     min_speedup_x: 100.0,
     pattern: SyntheticPattern::MegakernelQueuedBatch,
+    megakernel: true,
 };
 
 pub(super) static EGRAPH_SATURATION: SyntheticCountWorkload = SyntheticCountWorkload {
@@ -148,6 +157,7 @@ pub(super) static EGRAPH_SATURATION: SyntheticCountWorkload = SyntheticCountWork
     records: 1_048_576,
     min_speedup_x: 100.0,
     pattern: SyntheticPattern::EgraphSaturation,
+    megakernel: false,
 };
 
 static CONDITION_WORKLOADS: [&SyntheticCountWorkload; 2] =

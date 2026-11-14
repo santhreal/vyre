@@ -6,7 +6,7 @@ use super::resident_batch::{
     batch_metric_points, dispatch_batch_or_single, BatchPlan, SingleSample,
 };
 use super::run_assembly::{
-    bench_run_from_timed_with_accounting, encode_u32_words, resident_reset_transfer_accounting,
+    bench_run_from_timed_precomputed, encode_u32_words, resident_reset_transfer_accounting,
 };
 use crate::api::case::{
     prepared_as, BenchCase, BenchContext, BenchError, BenchId, BenchLayer, BenchMetadata,
@@ -26,12 +26,11 @@ pub struct MetadataConditionBatch;
 
 struct MetadataConditionPrepared {
     program: Program,
-    filesize: Vec<u32>,
-    header: Vec<u32>,
-    entropy: Vec<u32>,
     inputs: Vec<Vec<u8>>,
     input_bytes_total: u64,
     expected_count: u32,
+    baseline_row: Vec<u8>,
+    baseline_wall: u64,
     resident: Option<ResidentInputSet>,
     resident_batch: Option<ResidentInputPool>,
 }
@@ -110,6 +109,21 @@ impl BenchCase for MetadataConditionBatch {
             let packed = size_offset | (entropy_offset << 17) | (is_pe << 30);
             packed_records.push(packed);
         }
+        let (cpu_count, baseline_wall) = timed_reference(|| {
+            let mut cpu_count = 0u32;
+            for index in 0..filesize.len() {
+                cpu_count += u32::from(
+                    filesize[index] > 4096 && header[index] == 0x0000_4550 && entropy[index] > 7200,
+                );
+            }
+            cpu_count
+        });
+        if cpu_count != expected {
+            return Err(BenchError::CorrectnessViolation(
+                "metadata CPU baseline count disagreed with generator expectation".to_string(),
+            ));
+        }
+        let baseline_row = cpu_count.to_le_bytes().to_vec();
         let inputs = vec![encode_u32_words(&packed_records)];
         let input_bytes_total = input_bytes_total(&inputs);
         let resident = ResidentInputSet::upload_program_ordered_with_zeroed_outputs_optional(
@@ -128,12 +142,11 @@ impl BenchCase for MetadataConditionBatch {
             )?;
         Ok(Box::new(MetadataConditionPrepared {
             program,
-            filesize,
-            header,
-            entropy,
             inputs,
             input_bytes_total,
             expected_count: expected,
+            baseline_row,
+            baseline_wall,
             resident,
             resident_batch,
         }))
@@ -167,23 +180,9 @@ impl BenchCase for MetadataConditionBatch {
             || dispatch_single_metadata_resident(ctx, prepared),
         )?;
 
-        let (cpu_count, baseline_wall) = timed_reference(|| {
-            let mut cpu_count = 0u32;
-            for index in 0..prepared.filesize.len() {
-                cpu_count += u32::from(
-                    prepared.filesize[index] > 4096
-                        && prepared.header[index] == 0x0000_4550
-                        && prepared.entropy[index] > 7200,
-                );
-            }
-            cpu_count
-        });
-        if cpu_count != prepared.expected_count {
-            return Err(BenchError::CorrectnessViolation(
-                "metadata CPU baseline count disagreed with generator expectation".to_string(),
-            ));
-        }
-        let baseline_outputs = vec![cpu_count.to_le_bytes().to_vec()];
+        let baseline_outputs = ctx
+            .include_baseline_outputs
+            .then(|| vec![prepared.baseline_row.clone()]);
         let output_bytes = sample.timed.outputs.iter().map(Vec::len).sum::<usize>() as u64;
         let accounting = resident_reset_transfer_accounting(
             prepared.input_bytes_total,
@@ -192,22 +191,23 @@ impl BenchCase for MetadataConditionBatch {
             sample.reset_bytes,
         );
         let logical_bytes_touched = (u64::from(METADATA_RECORDS) * 12).saturating_add(output_bytes);
-        let mut custom = vec![
-            MetricPoint {
-                name: "metadata_records".to_string(),
-                value: u64::from(METADATA_RECORDS),
-            },
-            MetricPoint {
-                name: "metadata_expected_matches".to_string(),
-                value: u64::from(prepared.expected_count),
-            },
-        ];
-        custom.append(&mut batch_metric_points("metadata", &sample));
-        let mut run = bench_run_from_timed_with_accounting(
+        let batch_points = batch_metric_points("metadata", &sample);
+        let mut custom = Vec::with_capacity(2 + batch_points.len());
+        custom.push(MetricPoint {
+            name: String::from("metadata_records"),
+            value: u64::from(METADATA_RECORDS),
+        });
+        custom.push(MetricPoint {
+            name: String::from("metadata_expected_matches"),
+            value: u64::from(prepared.expected_count),
+        });
+        custom.extend(batch_points);
+        let mut run = bench_run_from_timed_precomputed(
             sample.timed,
             prepared.input_bytes_total,
+            prepared.baseline_row.len() as u64,
             baseline_outputs,
-            baseline_wall,
+            prepared.baseline_wall,
             "metadata_records",
             METADATA_RECORDS,
             logical_bytes_touched,

@@ -43,6 +43,15 @@ const SUITES: &[SuiteKind] = &[
     SuiteKind::Honest,
 ];
 
+const STEP_SUITES: &[SuiteKind] = &[
+    SuiteKind::Smoke,
+    SuiteKind::Release,
+    SuiteKind::Gpu,
+    SuiteKind::Deep,
+    SuiteKind::Honest,
+    SuiteKind::Megakernel,
+];
+
 type DataflowIfdsSkewedPrepared = FrontierStep<IfdsSkewedStats>;
 
 static WORKLOAD: WorkloadDescription = WorkloadDescription {
@@ -62,10 +71,11 @@ static WORKLOAD: WorkloadDescription = WorkloadDescription {
     layer: BenchLayer::Libs,
     workload: WorkloadClass::Macro,
     owner_crate: "vyre-primitives",
-    suites: SUITES,
+    suites: STEP_SUITES,
     min_vram_bytes: Some(96 * 1024 * 1024),
     min_input_bytes: Some(NODE_COUNT as u64 * 20),
     feature_set: &["dataflow", "ifds", "skewed-csr"],
+    verify_reference: Some(verify_reference_parity),
     ..WorkloadDescription::BASE
 };
 
@@ -138,4 +148,17 @@ fn prepare_ifds_skewed_step(
 
 inventory::submit! {
     &CASE as &'static dyn BenchCase
+}
+
+fn verify_reference_parity(
+    ctx: &BenchContext,
+    _prepared: &crate::api::case::PreparedCase,
+) -> Result<bool, BenchError> {
+    let fixture = build_ifds_skewed_fixture(128)?;
+    let shape = ProgramGraphShape::new(fixture.stats.nodes, fixture.stats.edges);
+    let program = csr_forward_traverse(shape, "frontier_in", "frontier_out", IFDS_REACH_MASK);
+    let oracle = ifds_skewed_cpu_oracle(&fixture);
+    let inputs = ifds_skewed_inputs(&fixture);
+    let expected = vec![vyre_primitives::wire::pack_u32_slice(&oracle.output)];
+    ctx.reference.verify_exact(&program, &inputs, &expected)
 }

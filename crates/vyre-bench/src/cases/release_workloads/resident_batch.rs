@@ -8,7 +8,7 @@
 //! drift from the payload without anything noticing. The measured length is taken
 //! here, so the constant has nowhere left to live.
 
-use crate::api::case::{dispatch_config_with_inferred_grid, BenchContext, BenchError};
+use crate::api::case::{BenchContext, BenchError};
 use crate::api::metric::MetricPoint;
 use crate::api::resident::ResidentInputPool;
 use vyre::ir::Program;
@@ -59,7 +59,7 @@ pub(super) struct BatchPlan<'a> {
 pub(super) fn dispatch_batch_or_single(
     ctx: &BenchContext,
     program: &Program,
-    inputs: &[Vec<u8>],
+    _inputs: &[Vec<u8>],
     resident_batch: Option<&ResidentInputPool>,
     plan: &BatchPlan<'_>,
     single: impl FnOnce() -> Result<SingleSample, BenchError>,
@@ -68,19 +68,22 @@ pub(super) fn dispatch_batch_or_single(
         return Ok(from_single(single()?));
     };
 
-    resident_batch.upload_resource_to_all_sets(
-        plan.reset_resource,
-        plan.reset_payload,
-        &format!(
-            "{} resident batch {} reset",
-            plan.label, plan.reset_resource_kind
-        ),
-    )?;
-    let config = dispatch_config_with_inferred_grid(program, inputs, plan.dispatch_config)
-        .map_err(|error| BenchError::BackendFailed(error.to_string()))?;
+    resident_batch
+        .upload_resource_to_all_sets(plan.reset_resource, plan.reset_payload, plan.label)
+        .map_err(|error| match error {
+            BenchError::ExecutionFailed(msg) => {
+                BenchError::ExecutionFailed(format!("{msg} ({} reset)", plan.reset_resource_kind))
+            }
+            other => other,
+        })?;
 
-    match resident_batch.dispatch_artifact_batch_timed(ctx, program, plan.batch_size, &config) {
-        Ok(batch) => {
+    match resident_batch.dispatch_artifact_batch_timed(
+        ctx,
+        program,
+        plan.batch_size,
+        plan.dispatch_config,
+    ) {
+        Ok(mut batch) => {
             if batch.outputs.len() != plan.batch_size {
                 return Err(BenchError::ExecutionFailed(format!(
                     "{} resident batch returned {} output row(s), expected {}",
@@ -89,33 +92,38 @@ pub(super) fn dispatch_batch_or_single(
                     plan.batch_size
                 )));
             }
-            let first_outputs = batch.outputs.first().cloned().ok_or_else(|| {
-                BenchError::ExecutionFailed(format!(
+            if batch.outputs.is_empty() {
+                return Err(BenchError::ExecutionFailed(format!(
                     "{} resident batch returned no output rows",
-                    plan.label
-                ))
-            })?;
-            if let Some((index, _)) = batch
-                .outputs
-                .iter()
-                .enumerate()
-                .find(|(_, outputs)| **outputs != first_outputs)
-            {
-                return Err(BenchError::CorrectnessViolation(format!(
-                    "{} resident batch output row {index} disagreed with row 0",
                     plan.label
                 )));
             }
+            if let Some((offset, _)) = batch.outputs[1..]
+                .iter()
+                .enumerate()
+                .find(|(_, outputs)| **outputs != batch.outputs[0])
+            {
+                return Err(BenchError::CorrectnessViolation(format!(
+                    "{} resident batch output row {} disagreed with row 0",
+                    plan.label,
+                    offset + 1
+                )));
+            }
+            let per_item_wall = batch.per_item_wall_ns();
+            let per_item_device = batch.per_item_device_ns();
+            let batch_wall_ns = batch.wall_ns_total;
+            let batch_len = batch.batch_len as u64;
+            let first_outputs = batch.outputs.swap_remove(0);
             Ok(BatchSample {
                 timed: vyre_runtime::TimedDispatchResult::device_timed(
                     first_outputs,
-                    batch.per_item_wall_ns(),
-                    batch.per_item_device_ns(),
+                    per_item_wall,
+                    per_item_device,
                 ),
                 resident_used: true,
                 reset_bytes: plan.reset_payload.len() as u64,
-                batch_wall_ns: Some(batch.wall_ns_total),
-                batch_len: Some(batch.batch_len as u64),
+                batch_wall_ns: Some(batch_wall_ns),
+                batch_len: Some(batch_len),
             })
         }
         Err(vyre_runtime::BackendError::UnsupportedFeature { .. }) => Ok(from_single(single()?)),
@@ -142,25 +150,56 @@ pub(super) fn dispatch_single(
 
 /// The metric points a resident batch sample publishes, under the case's prefix.
 pub(super) fn batch_metric_points(prefix: &str, sample: &BatchSample) -> Vec<MetricPoint> {
-    let mut points = vec![
-        MetricPoint {
-            name: format!("{prefix}_resident_buffers"),
-            value: u64::from(sample.resident_used),
-        },
-        MetricPoint {
-            name: format!("{prefix}_resident_reset_bytes"),
-            value: sample.reset_bytes,
-        },
-    ];
+    let (buffers_name, reset_name, wall_name, len_name) = match prefix {
+        "callgraph" => (
+            String::from("callgraph_resident_buffers"),
+            String::from("callgraph_resident_reset_bytes"),
+            Some(String::from("callgraph_resident_batch_wall_ns")),
+            Some(String::from("callgraph_resident_batch_len")),
+        ),
+        "metadata" => (
+            String::from("metadata_resident_buffers"),
+            String::from("metadata_resident_reset_bytes"),
+            Some(String::from("metadata_resident_batch_wall_ns")),
+            Some(String::from("metadata_resident_batch_len")),
+        ),
+        "sparse" => (
+            String::from("sparse_resident_buffers"),
+            String::from("sparse_resident_reset_bytes"),
+            Some(String::from("sparse_resident_batch_wall_ns")),
+            Some(String::from("sparse_resident_batch_len")),
+        ),
+        "synthetic" => (
+            String::from("synthetic_resident_buffers"),
+            String::from("synthetic_resident_reset_bytes"),
+            Some(String::from("synthetic_resident_batch_wall_ns")),
+            Some(String::from("synthetic_resident_batch_len")),
+        ),
+        _ => (
+            [prefix, "_resident_buffers"].concat(),
+            [prefix, "_resident_reset_bytes"].concat(),
+            None,
+            None,
+        ),
+    };
+    let mut points = Vec::with_capacity(4);
+    points.push(MetricPoint {
+        name: buffers_name,
+        value: u64::from(sample.resident_used),
+    });
+    points.push(MetricPoint {
+        name: reset_name,
+        value: sample.reset_bytes,
+    });
     if let Some(wall_ns) = sample.batch_wall_ns {
         points.push(MetricPoint {
-            name: format!("{prefix}_resident_batch_wall_ns"),
+            name: wall_name.unwrap_or_else(|| [prefix, "_resident_batch_wall_ns"].concat()),
             value: wall_ns,
         });
     }
     if let Some(len) = sample.batch_len {
         points.push(MetricPoint {
-            name: format!("{prefix}_resident_batch_len"),
+            name: len_name.unwrap_or_else(|| [prefix, "_resident_batch_len"].concat()),
             value: len,
         });
     }
