@@ -282,6 +282,39 @@ pub fn reachability_closure_via_with_scratch_into(
     Ok(())
 }
 
+fn closure_via(
+    dispatcher: &dyn SemanticExecutor,
+    policy: &SemanticExecutionPolicy,
+    adj: &[u32],
+    n: u32,
+    max_iters: u32,
+    semiring: Semiring,
+    merge: fn(&mut [u32], &[u32]) -> bool,
+) -> Result<Vec<u32>, SemanticExecutionError> {
+    let mut current = Vec::with_capacity(adj.len());
+    current.extend_from_slice(adj);
+    let mut next = Vec::with_capacity(current.len());
+    let mut scratch = SemiringGemmGpuScratch::default();
+    for _ in 0..max_iters {
+        semiring_gemm_via_with_scratch_into(
+            dispatcher,
+            policy,
+            &current,
+            &current,
+            n,
+            n,
+            n,
+            semiring,
+            &mut scratch,
+            &mut next,
+        )?;
+        if !merge(&mut current, &next) {
+            return Ok(current);
+        }
+    }
+    Ok(current)
+}
+
 /// GPU dispatch wrapper around lineage closure.
 ///
 /// # Errors
@@ -294,25 +327,15 @@ pub fn lineage_closure_via(
     n: u32,
     max_iters: u32,
 ) -> Result<Vec<u32>, SemanticExecutionError> {
-    let mut current = adj.to_vec();
-    let mut next = Vec::with_capacity(current.len());
-    for _ in 0..max_iters {
-        semiring_gemm_via_into(
-            dispatcher,
-            policy,
-            &current,
-            &current,
-            n,
-            n,
-            n,
-            Semiring::Lineage,
-            &mut next,
-        )?;
-        if !foundation_dataflow::merge_or_changed(&mut current, &next) {
-            return Ok(current);
-        }
-    }
-    Ok(current)
+    closure_via(
+        dispatcher,
+        policy,
+        adj,
+        n,
+        max_iters,
+        Semiring::Lineage,
+        foundation_dataflow::merge_or_changed,
+    )
 }
 
 /// GPU dispatch wrapper around shortest-path closure.
@@ -327,25 +350,15 @@ pub fn shortest_path_closure_via(
     n: u32,
     max_iters: u32,
 ) -> Result<Vec<u32>, SemanticExecutionError> {
-    let mut current = adj.to_vec();
-    let mut next = Vec::with_capacity(current.len());
-    for _ in 0..max_iters {
-        semiring_gemm_via_into(
-            dispatcher,
-            policy,
-            &current,
-            &current,
-            n,
-            n,
-            n,
-            Semiring::MinPlus,
-            &mut next,
-        )?;
-        if !foundation_dataflow::merge_min_changed(&mut current, &next) {
-            return Ok(current);
-        }
-    }
-    Ok(current)
+    closure_via(
+        dispatcher,
+        policy,
+        adj,
+        n,
+        max_iters,
+        Semiring::MinPlus,
+        foundation_dataflow::merge_min_changed,
+    )
 }
 
 /// GPU-backed forward/backward reach bitset query for one pivot.
@@ -659,11 +672,12 @@ mod tests {
                     )));
                 }
                 self.cursor.store(idx + 1, Ordering::Relaxed);
-                self.outputs.get(idx).cloned().ok_or_else(|| {
+                let step = self.outputs.get(idx).ok_or_else(|| {
                     SemanticExecutionError::Backend(
                         "Fix: sequence dispatcher exhausted outputs.".into(),
                     )
-                })
+                })?;
+                Ok(step.iter().map(|b| b.as_slice().into()).collect())
             })()?;
             vyre_test_support::test_parity_oracles::semantic_output(request, ordered)
         }
@@ -737,25 +751,28 @@ mod tests {
         );
     }
 
+    fn step_bytes(words: &[u32]) -> Vec<u8> {
+        u32_slice_to_le_bytes(words)
+    }
+
+    fn dual_closure_steps() -> Vec<Vec<Vec<u8>>> {
+        vec![
+            vec![step_bytes(&[1, 0, 0, 1])],
+            vec![step_bytes(&[1, 1, 1, 1])],
+            vec![step_bytes(&[1, 0, 0, 1])],
+            vec![step_bytes(&[1, 1, 1, 1])],
+        ]
+    }
+
     #[test]
     fn scc_components_gpu_into_reuses_output_storage() {
-        let adj = vec![0, 1, 1, 0];
-        let semiring_step_a = u32_slice_to_le_bytes(&[1, 0, 0, 1]);
-        let semiring_step_b = u32_slice_to_le_bytes(&[1, 1, 1, 1]);
-        let components_done = u32_slice_to_le_bytes(&[0, 0]);
+        let adj = [0, 1, 1, 0];
+        let mut outputs = dual_closure_steps();
+        outputs.push(vec![step_bytes(&[0, 0])]);
+        outputs.extend(dual_closure_steps());
+        outputs.push(vec![step_bytes(&[0, 0])]);
         let dispatcher = SequenceDispatcher {
-            outputs: vec![
-                vec![semiring_step_a.clone()],
-                vec![semiring_step_b.clone()],
-                vec![semiring_step_a.clone()],
-                vec![semiring_step_b.clone()],
-                vec![components_done.clone()],
-                vec![semiring_step_a.clone()],
-                vec![semiring_step_b.clone()],
-                vec![semiring_step_a],
-                vec![semiring_step_b],
-                vec![components_done],
-            ],
+            outputs,
             expected_input_counts: vec![2, 2, 2, 2, 3, 2, 2, 2, 2, 3],
             cursor: AtomicUsize::new(0),
         };
@@ -811,25 +828,17 @@ mod tests {
 
     #[test]
     fn forward_backward_bitsets_for_pivot_dispatches_dual_closures_and_gpu_packing() {
-        let adj = vec![0, 1, 1, 0];
-        let semiring_step_a = u32_slice_to_le_bytes(&[1, 0, 0, 1]);
-        let semiring_step_b = u32_slice_to_le_bytes(&[1, 1, 1, 1]);
-        let packed_bitsets = u32_slice_to_le_bytes(&[0b11]);
+        let mut outputs = dual_closure_steps();
+        outputs.push(vec![step_bytes(&[0b11]), step_bytes(&[0b11])]);
         let dispatcher = SequenceDispatcher {
-            outputs: vec![
-                vec![semiring_step_a.clone()],
-                vec![semiring_step_b.clone()],
-                vec![semiring_step_a],
-                vec![semiring_step_b],
-                vec![packed_bitsets.clone(), packed_bitsets],
-            ],
+            outputs,
             expected_input_counts: vec![2, 2, 2, 2, 4],
             cursor: AtomicUsize::new(0),
         };
         let (fwd, bwd) = forward_backward_bitsets_for_pivot_via(
             &dispatcher,
             &vyre_test_support::test_parity_oracles::policy(),
-            &adj,
+            &[0, 1, 1, 0],
             0,
             2,
         )
@@ -840,36 +849,27 @@ mod tests {
 
     #[test]
     fn forward_backward_bitsets_for_pivot_rejects_extra_outputs() {
-        let adj = vec![0, 1, 1, 0];
-        let semiring_step_a = u32_slice_to_le_bytes(&[1, 0, 0, 1]);
-        let semiring_step_b = u32_slice_to_le_bytes(&[1, 1, 1, 1]);
-        let packed_bitsets = u32_slice_to_le_bytes(&[0b11]);
+        let mut outputs = dual_closure_steps();
+        outputs.push(vec![
+            step_bytes(&[0b11]),
+            step_bytes(&[0b11]),
+            step_bytes(&[0b11]),
+        ]);
         let dispatcher = SequenceDispatcher {
-            outputs: vec![
-                vec![semiring_step_a.clone()],
-                vec![semiring_step_b.clone()],
-                vec![semiring_step_a],
-                vec![semiring_step_b],
-                vec![
-                    packed_bitsets.clone(),
-                    packed_bitsets.clone(),
-                    packed_bitsets,
-                ],
-            ],
+            outputs,
             expected_input_counts: vec![2, 2, 2, 2, 4],
             cursor: AtomicUsize::new(0),
         };
         let err = forward_backward_bitsets_for_pivot_via(
             &dispatcher,
             &vyre_test_support::test_parity_oracles::policy(),
-            &adj,
+            &[0, 1, 1, 0],
             0,
             2,
         )
         .unwrap_err();
         assert!(matches!(err, SemanticExecutionError::Backend(_)));
     }
-
     #[test]
     fn forward_backward_bitsets_for_pivot_rejects_invalid_pivot() {
         let dispatcher = SequenceDispatcher {

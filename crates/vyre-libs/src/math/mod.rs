@@ -60,9 +60,6 @@ pub(crate) mod square;
 /// Block-FMA weighted-sum reduction.
 #[cfg(feature = "math-dialect")]
 pub mod weighted_sum;
-/// Welford sum-of-squares operation
-#[cfg(feature = "math-dialect")]
-pub(crate) mod welford;
 /// Wrapping negation operation
 #[cfg(feature = "math-dialect")]
 pub mod wrapping_neg;
@@ -145,8 +142,6 @@ pub use reduce_variance::reduce_variance;
 pub use reduce_variance::try_reduce_variance;
 #[cfg(feature = "math-dialect")]
 pub use square::square;
-#[cfg(feature = "math-dialect")]
-pub use welford::welford_sum_of_squares;
 
 // ---------------------------------------------------------------------------
 // Math kernels moved from vyre-primitives. Each module exposes one reusable

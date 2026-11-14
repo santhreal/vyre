@@ -164,42 +164,36 @@ pub fn smooth_matroid_flow_fixed_via_with_scratch_into(
         "n_fine",
         "smooth_matroid_flow_fixed_via transfer matrix",
     )?;
-    if a_fixed.len() != fine_cells {
-        return Err(SemanticExecutionError::InvalidRequest(format!(
-        "Fix: smooth_matroid_flow_fixed_via requires a_fixed.len() == n_fine*n_fine, got len={}, expected={fine_cells}.",
-        a_fixed.len()
-    )));
-    }
-    if b_fixed.len() != n_fine as usize {
-        return Err(SemanticExecutionError::InvalidRequest(format!(
-        "Fix: smooth_matroid_flow_fixed_via requires b_fixed.len() == n_fine, got len={}, n_fine={n_fine}.",
-        b_fixed.len()
-    )));
-    }
-    if x_fixed.len() != n_fine as usize {
-        return Err(SemanticExecutionError::InvalidRequest(format!(
-        "Fix: smooth_matroid_flow_fixed_via requires x_fixed.len() == n_fine, got len={}, n_fine={n_fine}.",
-        x_fixed.len()
-    )));
-    }
-    if r_mat_fixed.len() != transfer_cells {
-        return Err(SemanticExecutionError::InvalidRequest(format!(
-        "Fix: smooth_matroid_flow_fixed_via requires r_mat_fixed.len() == n_coarse*n_fine, got len={}, expected={transfer_cells}.",
-        r_mat_fixed.len()
-    )));
-    }
-    if p_mat_fixed.len() != transfer_cells {
-        return Err(SemanticExecutionError::InvalidRequest(format!(
-        "Fix: smooth_matroid_flow_fixed_via requires p_mat_fixed.len() == n_fine*n_coarse, got len={}, expected={transfer_cells}.",
-        p_mat_fixed.len()
-    )));
-    }
-    if a_c_fixed.len() != coarse_cells {
-        return Err(SemanticExecutionError::InvalidRequest(format!(
-        "Fix: smooth_matroid_flow_fixed_via requires a_c_fixed.len() == n_coarse*n_coarse, got len={}, expected={coarse_cells}.",
-        a_c_fixed.len()
-    )));
-    }
+    let check_len = |actual: usize, expected: usize, field: &str, expr: &str| {
+        if actual == expected {
+            Ok(())
+        } else {
+            Err(SemanticExecutionError::InvalidRequest(format!(
+                "Fix: smooth_matroid_flow_fixed_via requires {field}.len() == {expr}, got len={actual}, expected={expected}."
+            )))
+        }
+    };
+    check_len(a_fixed.len(), fine_cells, "a_fixed", "n_fine*n_fine")?;
+    check_len(b_fixed.len(), n_fine as usize, "b_fixed", "n_fine")?;
+    check_len(x_fixed.len(), n_fine as usize, "x_fixed", "n_fine")?;
+    check_len(
+        r_mat_fixed.len(),
+        transfer_cells,
+        "r_mat_fixed",
+        "n_coarse*n_fine",
+    )?;
+    check_len(
+        p_mat_fixed.len(),
+        transfer_cells,
+        "p_mat_fixed",
+        "n_fine*n_coarse",
+    )?;
+    check_len(
+        a_c_fixed.len(),
+        coarse_cells,
+        "a_c_fixed",
+        "n_coarse*n_coarse",
+    )?;
 
     let program = amg_v_cycle(
         "a",
@@ -375,24 +369,25 @@ mod tests {
         (a - b).abs() < 1e-3 * (1.0 + a.abs() + b.abs())
     }
 
-    #[test]
-    fn identity_system_converges_in_one_cycle() {
-        // A = I, b = [1, 2, 3, 4], x0 = [0; 4]. Expected after V-cycle:
-        // x ≈ [1, 2, 3, 4].
-        let n_fine = 4;
-        let n_coarse = 2;
+    type DiagFixture = (Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>);
+
+    fn diag_4x2_fixture(diag: f64) -> DiagFixture {
         let mut a = vec![0.0; 16];
         for i in 0..4 {
-            a[i * 4 + i] = 1.0;
+            a[i * 4 + i] = diag;
         }
-        let b = vec![1.0, 2.0, 3.0, 4.0];
-        let x = vec![0.0; 4];
-        // Restriction: 4×2 matrix collapsing pairs. Prolongation: 2×4 transpose.
+        let x0 = vec![0.0; 4];
         let r_mat = vec![0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.5, 0.5];
         let p_mat = vec![1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0];
-        let a_c = vec![1.0, 0.0, 0.0, 1.0];
-        let result =
-            reference_smooth_matroid_flow(&a, &b, &x, &r_mat, &p_mat, &a_c, n_fine, n_coarse);
+        let a_c = vec![diag, 0.0, 0.0, diag];
+        (a, x0, r_mat, p_mat, a_c)
+    }
+
+    #[test]
+    fn identity_system_converges_in_one_cycle() {
+        let (a, x, r_mat, p_mat, a_c) = diag_4x2_fixture(1.0);
+        let b = vec![1.0, 2.0, 3.0, 4.0];
+        let result = reference_smooth_matroid_flow(&a, &b, &x, &r_mat, &p_mat, &a_c, 4, 2);
         assert_eq!(result.len(), 4);
         for v in &result {
             assert!(v.is_finite());
@@ -401,22 +396,11 @@ mod tests {
 
     #[test]
     fn solve_to_tolerance_converges_or_returns_max_cycles() {
-        let n_fine = 4;
-        let n_coarse = 2;
-        let mut a = vec![0.0; 16];
-        for i in 0..4 {
-            a[i * 4 + i] = 4.0;
-        }
+        let (a, x0, r_mat, p_mat, a_c) = diag_4x2_fixture(4.0);
         let b = vec![1.0; 4];
-        let x0 = vec![0.0; 4];
-        let r_mat = vec![0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.5, 0.5];
-        let p_mat = vec![1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0];
-        let a_c = vec![4.0, 0.0, 0.0, 4.0];
-        let (result, cycles) =
-            solve_to_tolerance(&a, &b, &x0, &r_mat, &p_mat, &a_c, n_fine, n_coarse, 1e-2, 8);
+        let (result, cycles) = solve_to_tolerance(&a, &b, &x0, &r_mat, &p_mat, &a_c, 4, 2, 1e-2, 8);
         assert!(cycles >= 1);
         assert_eq!(result.len(), 4);
-        // Expected: x ≈ b/4 = 0.25 per element.
         for v in result {
             assert!(approx_eq(v, 0.25) || v.abs() > 0.0);
         }
@@ -424,19 +408,10 @@ mod tests {
 
     #[test]
     fn solve_to_tolerance_into_matches_owned_solver() {
-        let n_fine = 4;
-        let n_coarse = 2;
-        let mut a = vec![0.0; 16];
-        for i in 0..4 {
-            a[i * 4 + i] = 4.0;
-        }
+        let (a, x0, r_mat, p_mat, a_c) = diag_4x2_fixture(4.0);
         let b = vec![1.0; 4];
-        let x0 = vec![0.0; 4];
-        let r_mat = vec![0.5, 0.5, 0.0, 0.0, 0.0, 0.0, 0.5, 0.5];
-        let p_mat = vec![1.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0, 1.0];
-        let a_c = vec![4.0, 0.0, 0.0, 4.0];
         let (owned, owned_cycles) =
-            solve_to_tolerance(&a, &b, &x0, &r_mat, &p_mat, &a_c, n_fine, n_coarse, 1e-2, 8);
+            solve_to_tolerance(&a, &b, &x0, &r_mat, &p_mat, &a_c, 4, 2, 1e-2, 8);
 
         let mut scratch = AmgVcycleScratch::default();
         let mut x = Vec::new();
@@ -448,8 +423,8 @@ mod tests {
             &r_mat,
             &p_mat,
             &a_c,
-            n_fine,
-            n_coarse,
+            4,
+            2,
             1e-2,
             8,
             &mut scratch,
@@ -459,8 +434,8 @@ mod tests {
 
         assert_eq!(into_cycles, owned_cycles);
         assert_eq!(x.len(), owned.len());
-        for (a, b) in x.iter().zip(owned.iter()) {
-            assert!(approx_eq(*a, *b));
+        for (lhs, rhs) in x.iter().zip(owned.iter()) {
+            assert!(approx_eq(*lhs, *rhs));
         }
     }
 

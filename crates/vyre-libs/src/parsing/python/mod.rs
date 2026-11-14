@@ -9,8 +9,6 @@
 pub mod lex;
 /// Python structural extractors.
 pub mod parse;
-/// Content-keyed pipeline Program cache.
-pub mod source_cache;
 
 pub(crate) const INVALID_POS: u32 = u32::MAX;
 

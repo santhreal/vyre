@@ -82,7 +82,6 @@ counters! {
     persistent_homology_loop_signature_calls,
     planar_rewrite_pass_scheduler_calls,
     sinkhorn_dispatch_clustering_calls,
-    sinkhorn_full_clustering_calls,
     spectral_schedule_calls,
     string_diagram_ir_rewrite_calls,
     tensor_network_fusion_order_calls,

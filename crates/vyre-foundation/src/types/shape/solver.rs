@@ -87,6 +87,58 @@ impl ShapeProofCertificate {
 pub struct ShapeSolver;
 
 impl ShapeSolver {
+    fn pair_cert(
+        proof_kind: ShapeProofKind,
+        lhs_shape: ShapeId,
+        rhs_shape: ShapeId,
+        verdict: bool,
+        derivation_steps: Vec<String>,
+    ) -> (bool, ShapeProofCertificate) {
+        (
+            verdict,
+            ShapeProofCertificate {
+                proof_kind,
+                lhs_shape,
+                rhs_shape: Some(rhs_shape),
+                constraints_applied: Vec::new(),
+                verdict,
+                derivation_steps,
+            },
+        )
+    }
+
+    fn constraint_cert(
+        proof_kind: ShapeProofKind,
+        lhs_shape: ShapeId,
+        constraint: &ShapeConstraint,
+        verdict: bool,
+        derivation_steps: Vec<String>,
+    ) -> (bool, ShapeProofCertificate) {
+        (
+            verdict,
+            ShapeProofCertificate {
+                proof_kind,
+                lhs_shape,
+                rhs_shape: None,
+                constraints_applied: vec![constraint.clone()],
+                verdict,
+                derivation_steps,
+            },
+        )
+    }
+
+    fn eval_bin(
+        interner: &ShapeInterner,
+        lhs: ShapeExprId,
+        rhs: ShapeExprId,
+        env: &FxHashMap<String, i128>,
+    ) -> Option<(i128, i128)> {
+        Some((
+            Self::evaluate_expr(interner, lhs, env)?,
+            Self::evaluate_expr(interner, rhs, env)?,
+        ))
+    }
+
     /// Prove symbolic shape equality.
     #[must_use]
     pub fn solve_equality(
@@ -94,28 +146,12 @@ impl ShapeSolver {
         lhs: ShapeId,
         rhs: ShapeId,
     ) -> (bool, ShapeProofCertificate) {
-        let mut steps = Vec::new();
-        steps.push(format!("Comparing shape {lhs:?} with shape {rhs:?}"));
-
+        let mut steps = vec![format!("Comparing shape {lhs:?} with shape {rhs:?}")];
         if lhs == rhs {
             steps.push("Direct ShapeId identity match".into());
-            return (
-                true,
-                ShapeProofCertificate {
-                    proof_kind: ShapeProofKind::Equality,
-                    lhs_shape: lhs,
-                    rhs_shape: Some(rhs),
-                    constraints_applied: Vec::new(),
-                    verdict: true,
-                    derivation_steps: steps,
-                },
-            );
+            return Self::pair_cert(ShapeProofKind::Equality, lhs, rhs, true, steps);
         }
-
-        let lhs_dims = interner.get_shape(lhs);
-        let rhs_dims = interner.get_shape(rhs);
-
-        match (lhs_dims, rhs_dims) {
+        let verdict = match (interner.get_shape(lhs), interner.get_shape(rhs)) {
             (Some(l), Some(r)) if l.len() == r.len() => {
                 let mut all_match = true;
                 for (idx, (&ld, &rd)) in l.iter().zip(r.iter()).enumerate() {
@@ -127,17 +163,7 @@ impl ShapeSolver {
                         break;
                     }
                 }
-                (
-                    all_match,
-                    ShapeProofCertificate {
-                        proof_kind: ShapeProofKind::Equality,
-                        lhs_shape: lhs,
-                        rhs_shape: Some(rhs),
-                        constraints_applied: Vec::new(),
-                        verdict: all_match,
-                        derivation_steps: steps,
-                    },
-                )
+                all_match
             }
             (Some(l), Some(r)) => {
                 steps.push(format!(
@@ -145,30 +171,11 @@ impl ShapeSolver {
                     l.len(),
                     r.len()
                 ));
-                (
-                    false,
-                    ShapeProofCertificate {
-                        proof_kind: ShapeProofKind::Equality,
-                        lhs_shape: lhs,
-                        rhs_shape: Some(rhs),
-                        constraints_applied: Vec::new(),
-                        verdict: false,
-                        derivation_steps: steps,
-                    },
-                )
+                false
             }
-            _ => (
-                false,
-                ShapeProofCertificate {
-                    proof_kind: ShapeProofKind::Equality,
-                    lhs_shape: lhs,
-                    rhs_shape: Some(rhs),
-                    constraints_applied: Vec::new(),
-                    verdict: false,
-                    derivation_steps: steps,
-                },
-            ),
-        }
+            _ => false,
+        };
+        Self::pair_cert(ShapeProofKind::Equality, lhs, rhs, verdict, steps)
     }
 
     /// Prove total layout / volume compatibility between two shapes.
@@ -178,66 +185,24 @@ impl ShapeSolver {
         src: ShapeId,
         dst: ShapeId,
     ) -> (bool, ShapeProofCertificate) {
-        let mut steps = Vec::new();
-        steps.push(format!(
+        let mut steps = vec![format!(
             "Solving layout compatibility between {src:?} and {dst:?}"
-        ));
-
+        )];
         if src == dst {
             steps.push("Identical shape ID; layout is trivially compatible".into());
-            return (
-                true,
-                ShapeProofCertificate {
-                    proof_kind: ShapeProofKind::LayoutCompatibility,
-                    lhs_shape: src,
-                    rhs_shape: Some(dst),
-                    constraints_applied: Vec::new(),
-                    verdict: true,
-                    derivation_steps: steps,
-                },
-            );
+            return Self::pair_cert(ShapeProofKind::LayoutCompatibility, src, dst, true, steps);
         }
-
-        let src_dims = interner.get_shape(src);
-        let dst_dims = interner.get_shape(dst);
-
-        if let (Some(s), Some(d)) = (src_dims, dst_dims) {
-            // Compute total volume expression for each
-            let src_vol = s
-                .iter()
-                .fold(interner.constant(1), |acc, &dim| interner.mul(acc, dim));
-            let dst_vol = d
-                .iter()
-                .fold(interner.constant(1), |acc, &dim| interner.mul(acc, dim));
-
+        if let (Some(s), Some(d)) = (interner.get_shape(src), interner.get_shape(dst)) {
+            let one = interner.constant(1);
+            let src_vol = s.iter().fold(one, |acc, &dim| interner.mul(acc, dim));
+            let dst_vol = d.iter().fold(one, |acc, &dim| interner.mul(acc, dim));
             if src_vol == dst_vol {
                 steps.push(format!("Total symbolic volume matches: {src_vol:?}"));
-                return (
-                    true,
-                    ShapeProofCertificate {
-                        proof_kind: ShapeProofKind::LayoutCompatibility,
-                        lhs_shape: src,
-                        rhs_shape: Some(dst),
-                        constraints_applied: Vec::new(),
-                        verdict: true,
-                        derivation_steps: steps,
-                    },
-                );
+                return Self::pair_cert(ShapeProofKind::LayoutCompatibility, src, dst, true, steps);
             }
         }
-
         steps.push("Layout volume mismatch or unresolvable shapes".into());
-        (
-            false,
-            ShapeProofCertificate {
-                proof_kind: ShapeProofKind::LayoutCompatibility,
-                lhs_shape: src,
-                rhs_shape: Some(dst),
-                constraints_applied: Vec::new(),
-                verdict: false,
-                derivation_steps: steps,
-            },
-        )
+        Self::pair_cert(ShapeProofKind::LayoutCompatibility, src, dst, false, steps)
     }
 
     /// Evaluate an expression against a concrete valuation environment.
@@ -247,71 +212,42 @@ impl ShapeSolver {
         expr_id: ShapeExprId,
         env: &FxHashMap<String, i128>,
     ) -> Option<i128> {
-        let dim = interner.get_expr(expr_id)?;
-        match dim {
+        match interner.get_expr(expr_id)? {
             SymbolicDim::Constant(val) => Some(val),
-            SymbolicDim::Symbol(name) => env.get(&name).copied(),
-            SymbolicDim::Param { name, .. } => env.get(&name).copied(),
+            SymbolicDim::Symbol(name) | SymbolicDim::Param { name, .. } => env.get(&name).copied(),
             SymbolicDim::Add(lhs, rhs) => {
-                let l = Self::evaluate_expr(interner, lhs, env)?;
-                let r = Self::evaluate_expr(interner, rhs, env)?;
-                Some(l + r)
+                Self::eval_bin(interner, lhs, rhs, env).map(|(l, r)| l + r)
             }
             SymbolicDim::Sub(lhs, rhs) => {
-                let l = Self::evaluate_expr(interner, lhs, env)?;
-                let r = Self::evaluate_expr(interner, rhs, env)?;
-                Some(l - r)
+                Self::eval_bin(interner, lhs, rhs, env).map(|(l, r)| l - r)
             }
             SymbolicDim::Mul(lhs, rhs) => {
-                let l = Self::evaluate_expr(interner, lhs, env)?;
-                let r = Self::evaluate_expr(interner, rhs, env)?;
-                Some(l * r)
+                Self::eval_bin(interner, lhs, rhs, env).map(|(l, r)| l * r)
             }
             SymbolicDim::DivFloor(lhs, rhs) => {
-                let l = Self::evaluate_expr(interner, lhs, env)?;
-                let r = Self::evaluate_expr(interner, rhs, env)?;
-                if r != 0 {
-                    Some(l.div_euclid(r))
-                } else {
-                    None
-                }
+                let (l, r) = Self::eval_bin(interner, lhs, rhs, env)?;
+                (r != 0).then(|| l.div_euclid(r))
             }
             SymbolicDim::DivCeil(lhs, rhs) => {
-                let l = Self::evaluate_expr(interner, lhs, env)?;
-                let r = Self::evaluate_expr(interner, rhs, env)?;
-                if r > 0 && l >= 0 {
-                    Some((l + r - 1) / r)
-                } else {
-                    None
-                }
+                let (l, r) = Self::eval_bin(interner, lhs, rhs, env)?;
+                (r > 0 && l >= 0).then(|| (l + r - 1) / r)
             }
             SymbolicDim::Mod(lhs, rhs) => {
-                let l = Self::evaluate_expr(interner, lhs, env)?;
-                let r = Self::evaluate_expr(interner, rhs, env)?;
-                if r != 0 {
-                    Some(l % r)
-                } else {
-                    None
-                }
+                let (l, r) = Self::eval_bin(interner, lhs, rhs, env)?;
+                (r != 0).then(|| l % r)
             }
             SymbolicDim::Min(lhs, rhs) => {
-                let l = Self::evaluate_expr(interner, lhs, env)?;
-                let r = Self::evaluate_expr(interner, rhs, env)?;
-                Some(l.min(r))
+                Self::eval_bin(interner, lhs, rhs, env).map(|(l, r)| l.min(r))
             }
             SymbolicDim::Max(lhs, rhs) => {
-                let l = Self::evaluate_expr(interner, lhs, env)?;
-                let r = Self::evaluate_expr(interner, rhs, env)?;
-                Some(l.max(r))
+                Self::eval_bin(interner, lhs, rhs, env).map(|(l, r)| l.max(r))
             }
             SymbolicDim::AlignTo { expr, alignment } => {
                 let val = Self::evaluate_expr(interner, expr, env)?;
-                if val >= 0 && alignment > 0 {
+                (val >= 0 && alignment > 0).then(|| {
                     let a = alignment as i128;
-                    Some(((val + a - 1) / a) * a)
-                } else {
-                    None
-                }
+                    ((val + a - 1) / a) * a
+                })
             }
         }
     }
@@ -323,244 +259,81 @@ impl ShapeSolver {
         constraint: &ShapeConstraint,
         env: Option<&FxHashMap<String, i128>>,
     ) -> (bool, ShapeProofCertificate) {
-        let mut steps = Vec::new();
-        steps.push(format!("Proving constraint: {constraint:?}"));
-
+        let mut steps = vec![format!("Proving constraint: {constraint:?}")];
         let dummy_shape = interner.intern_shape(&[]);
+        let finish = |kind: ShapeProofKind, verdict: bool, steps: Vec<String>| {
+            Self::constraint_cert(kind, dummy_shape, constraint, verdict, steps)
+        };
 
         match constraint {
             ShapeConstraint::Equal(lhs, rhs) => {
                 if lhs == rhs {
                     steps.push("Equal: direct ExprId identity".into());
-                    return (
-                        true,
-                        ShapeProofCertificate {
-                            proof_kind: ShapeProofKind::Satisfiability,
-                            lhs_shape: dummy_shape,
-                            rhs_shape: None,
-                            constraints_applied: vec![constraint.clone()],
-                            verdict: true,
-                            derivation_steps: steps,
-                        },
-                    );
+                    return finish(ShapeProofKind::Satisfiability, true, steps);
                 }
-                if let Some(e) = env {
-                    if let (Some(lv), Some(rv)) = (
-                        Self::evaluate_expr(interner, *lhs, e),
-                        Self::evaluate_expr(interner, *rhs, e),
-                    ) {
-                        let ok = lv == rv;
-                        steps.push(format!("Valuation: {lv} == {rv} => {ok}"));
-                        return (
-                            ok,
-                            ShapeProofCertificate {
-                                proof_kind: ShapeProofKind::Satisfiability,
-                                lhs_shape: dummy_shape,
-                                rhs_shape: None,
-                                constraints_applied: vec![constraint.clone()],
-                                verdict: ok,
-                                derivation_steps: steps,
-                            },
-                        );
-                    }
+                if let Some((lv, rv)) = env.and_then(|e| Self::eval_bin(interner, *lhs, *rhs, e)) {
+                    let ok = lv == rv;
+                    steps.push(format!("Valuation: {lv} == {rv} => {ok}"));
+                    return finish(ShapeProofKind::Satisfiability, ok, steps);
                 }
-                (
-                    false,
-                    ShapeProofCertificate {
-                        proof_kind: ShapeProofKind::Satisfiability,
-                        lhs_shape: dummy_shape,
-                        rhs_shape: None,
-                        constraints_applied: vec![constraint.clone()],
-                        verdict: false,
-                        derivation_steps: steps,
-                    },
-                )
+                finish(ShapeProofKind::Satisfiability, false, steps)
             }
             ShapeConstraint::LessEqual(lhs, rhs) => {
                 if lhs == rhs {
                     steps.push("LessEqual: direct ExprId identity (x <= x holds)".into());
-                    return (
-                        true,
-                        ShapeProofCertificate {
-                            proof_kind: ShapeProofKind::Bound,
-                            lhs_shape: dummy_shape,
-                            rhs_shape: None,
-                            constraints_applied: vec![constraint.clone()],
-                            verdict: true,
-                            derivation_steps: steps,
-                        },
-                    );
+                    return finish(ShapeProofKind::Bound, true, steps);
                 }
                 if let (Some(SymbolicDim::Constant(l)), Some(SymbolicDim::Constant(r))) =
                     (interner.get_expr(*lhs), interner.get_expr(*rhs))
                 {
                     let ok = l <= r;
                     steps.push(format!("Constant bounds: {l} <= {r} => {ok}"));
-                    return (
-                        ok,
-                        ShapeProofCertificate {
-                            proof_kind: ShapeProofKind::Bound,
-                            lhs_shape: dummy_shape,
-                            rhs_shape: None,
-                            constraints_applied: vec![constraint.clone()],
-                            verdict: ok,
-                            derivation_steps: steps,
-                        },
-                    );
+                    return finish(ShapeProofKind::Bound, ok, steps);
                 }
-                if let Some(e) = env {
-                    if let (Some(lv), Some(rv)) = (
-                        Self::evaluate_expr(interner, *lhs, e),
-                        Self::evaluate_expr(interner, *rhs, e),
-                    ) {
-                        let ok = lv <= rv;
-                        steps.push(format!("Valuation: {lv} <= {rv} => {ok}"));
-                        return (
-                            ok,
-                            ShapeProofCertificate {
-                                proof_kind: ShapeProofKind::Bound,
-                                lhs_shape: dummy_shape,
-                                rhs_shape: None,
-                                constraints_applied: vec![constraint.clone()],
-                                verdict: ok,
-                                derivation_steps: steps,
-                            },
-                        );
-                    }
+                if let Some((lv, rv)) = env.and_then(|e| Self::eval_bin(interner, *lhs, *rhs, e)) {
+                    let ok = lv <= rv;
+                    steps.push(format!("Valuation: {lv} <= {rv} => {ok}"));
+                    return finish(ShapeProofKind::Bound, ok, steps);
                 }
-                (
-                    false,
-                    ShapeProofCertificate {
-                        proof_kind: ShapeProofKind::Bound,
-                        lhs_shape: dummy_shape,
-                        rhs_shape: None,
-                        constraints_applied: vec![constraint.clone()],
-                        verdict: false,
-                        derivation_steps: steps,
-                    },
-                )
+                finish(ShapeProofKind::Bound, false, steps)
             }
             ShapeConstraint::DivisibleBy { expr, divisor } => {
                 if *divisor == 0 {
                     steps.push("DivisibleBy: divisor 0 is impossible".into());
-                    return (
-                        false,
-                        ShapeProofCertificate {
-                            proof_kind: ShapeProofKind::Divisibility,
-                            lhs_shape: dummy_shape,
-                            rhs_shape: None,
-                            constraints_applied: vec![constraint.clone()],
-                            verdict: false,
-                            derivation_steps: steps,
-                        },
-                    );
+                    return finish(ShapeProofKind::Divisibility, false, steps);
                 }
                 if *divisor == 1 {
                     steps.push("DivisibleBy: divisor 1 holds trivially".into());
-                    return (
-                        true,
-                        ShapeProofCertificate {
-                            proof_kind: ShapeProofKind::Divisibility,
-                            lhs_shape: dummy_shape,
-                            rhs_shape: None,
-                            constraints_applied: vec![constraint.clone()],
-                            verdict: true,
-                            derivation_steps: steps,
-                        },
-                    );
+                    return finish(ShapeProofKind::Divisibility, true, steps);
                 }
                 if let Some(SymbolicDim::Constant(c)) = interner.get_expr(*expr) {
                     let ok = c % (*divisor as i128) == 0;
                     steps.push(format!(
                         "Constant divisibility: {c} % {divisor} == 0 => {ok}"
                     ));
-                    return (
-                        ok,
-                        ShapeProofCertificate {
-                            proof_kind: ShapeProofKind::Divisibility,
-                            lhs_shape: dummy_shape,
-                            rhs_shape: None,
-                            constraints_applied: vec![constraint.clone()],
-                            verdict: ok,
-                            derivation_steps: steps,
-                        },
-                    );
+                    return finish(ShapeProofKind::Divisibility, ok, steps);
                 }
-                if let Some(e) = env {
-                    if let Some(v) = Self::evaluate_expr(interner, *expr, e) {
-                        let ok = v % (*divisor as i128) == 0;
-                        steps.push(format!(
-                            "Valuation divisibility: {v} % {divisor} == 0 => {ok}"
-                        ));
-                        return (
-                            ok,
-                            ShapeProofCertificate {
-                                proof_kind: ShapeProofKind::Divisibility,
-                                lhs_shape: dummy_shape,
-                                rhs_shape: None,
-                                constraints_applied: vec![constraint.clone()],
-                                verdict: ok,
-                                derivation_steps: steps,
-                            },
-                        );
-                    }
+                if let Some(v) = env.and_then(|e| Self::evaluate_expr(interner, *expr, e)) {
+                    let ok = v % (*divisor as i128) == 0;
+                    steps.push(format!(
+                        "Valuation divisibility: {v} % {divisor} == 0 => {ok}"
+                    ));
+                    return finish(ShapeProofKind::Divisibility, ok, steps);
                 }
-                (
-                    false,
-                    ShapeProofCertificate {
-                        proof_kind: ShapeProofKind::Divisibility,
-                        lhs_shape: dummy_shape,
-                        rhs_shape: None,
-                        constraints_applied: vec![constraint.clone()],
-                        verdict: false,
-                        derivation_steps: steps,
-                    },
-                )
+                finish(ShapeProofKind::Divisibility, false, steps)
             }
             ShapeConstraint::Range { expr, min, max } => {
                 if let Some(SymbolicDim::Constant(c)) = interner.get_expr(*expr) {
                     let ok = c >= *min && c <= *max;
                     steps.push(format!("Constant in range: {min} <= {c} <= {max} => {ok}"));
-                    return (
-                        ok,
-                        ShapeProofCertificate {
-                            proof_kind: ShapeProofKind::Bound,
-                            lhs_shape: dummy_shape,
-                            rhs_shape: None,
-                            constraints_applied: vec![constraint.clone()],
-                            verdict: ok,
-                            derivation_steps: steps,
-                        },
-                    );
+                    return finish(ShapeProofKind::Bound, ok, steps);
                 }
-                if let Some(e) = env {
-                    if let Some(v) = Self::evaluate_expr(interner, *expr, e) {
-                        let ok = v >= *min && v <= *max;
-                        steps.push(format!("Valuation in range: {min} <= {v} <= {max} => {ok}"));
-                        return (
-                            ok,
-                            ShapeProofCertificate {
-                                proof_kind: ShapeProofKind::Bound,
-                                lhs_shape: dummy_shape,
-                                rhs_shape: None,
-                                constraints_applied: vec![constraint.clone()],
-                                verdict: ok,
-                                derivation_steps: steps,
-                            },
-                        );
-                    }
+                if let Some(v) = env.and_then(|e| Self::evaluate_expr(interner, *expr, e)) {
+                    let ok = v >= *min && v <= *max;
+                    steps.push(format!("Valuation in range: {min} <= {v} <= {max} => {ok}"));
+                    return finish(ShapeProofKind::Bound, ok, steps);
                 }
-                (
-                    false,
-                    ShapeProofCertificate {
-                        proof_kind: ShapeProofKind::Bound,
-                        lhs_shape: dummy_shape,
-                        rhs_shape: None,
-                        constraints_applied: vec![constraint.clone()],
-                        verdict: false,
-                        derivation_steps: steps,
-                    },
-                )
+                finish(ShapeProofKind::Bound, false, steps)
             }
             ShapeConstraint::ModuloEqual {
                 expr,
@@ -569,65 +342,23 @@ impl ShapeSolver {
             } => {
                 if *modulus == 0 || *remainder >= *modulus {
                     steps.push("Invalid modulo parameters".into());
-                    return (
-                        false,
-                        ShapeProofCertificate {
-                            proof_kind: ShapeProofKind::Divisibility,
-                            lhs_shape: dummy_shape,
-                            rhs_shape: None,
-                            constraints_applied: vec![constraint.clone()],
-                            verdict: false,
-                            derivation_steps: steps,
-                        },
-                    );
+                    return finish(ShapeProofKind::Divisibility, false, steps);
                 }
                 if let Some(SymbolicDim::Constant(c)) = interner.get_expr(*expr) {
                     let ok = (c % (*modulus as i128)) == (*remainder as i128);
                     steps.push(format!(
                         "Constant mod equals: {c} % {modulus} == {remainder} => {ok}"
                     ));
-                    return (
-                        ok,
-                        ShapeProofCertificate {
-                            proof_kind: ShapeProofKind::Divisibility,
-                            lhs_shape: dummy_shape,
-                            rhs_shape: None,
-                            constraints_applied: vec![constraint.clone()],
-                            verdict: ok,
-                            derivation_steps: steps,
-                        },
-                    );
+                    return finish(ShapeProofKind::Divisibility, ok, steps);
                 }
-                if let Some(e) = env {
-                    if let Some(v) = Self::evaluate_expr(interner, *expr, e) {
-                        let ok = (v % (*modulus as i128)) == (*remainder as i128);
-                        steps.push(format!(
-                            "Valuation mod equals: {v} % {modulus} == {remainder} => {ok}"
-                        ));
-                        return (
-                            ok,
-                            ShapeProofCertificate {
-                                proof_kind: ShapeProofKind::Divisibility,
-                                lhs_shape: dummy_shape,
-                                rhs_shape: None,
-                                constraints_applied: vec![constraint.clone()],
-                                verdict: ok,
-                                derivation_steps: steps,
-                            },
-                        );
-                    }
+                if let Some(v) = env.and_then(|e| Self::evaluate_expr(interner, *expr, e)) {
+                    let ok = (v % (*modulus as i128)) == (*remainder as i128);
+                    steps.push(format!(
+                        "Valuation mod equals: {v} % {modulus} == {remainder} => {ok}"
+                    ));
+                    return finish(ShapeProofKind::Divisibility, ok, steps);
                 }
-                (
-                    false,
-                    ShapeProofCertificate {
-                        proof_kind: ShapeProofKind::Divisibility,
-                        lhs_shape: dummy_shape,
-                        rhs_shape: None,
-                        constraints_applied: vec![constraint.clone()],
-                        verdict: false,
-                        derivation_steps: steps,
-                    },
-                )
+                finish(ShapeProofKind::Divisibility, false, steps)
             }
         }
     }

@@ -1,19 +1,13 @@
 //! Quantization sub-dialect for Parameter Golf recipe.
 //!
-//! Contains int4 dot, int6/int8 pack/unpack, byte shuffle, GPTQ-SDClip,
-//! and GGML K-Quants ops.
+//! Contains int4 dot, int6/int8 pack/unpack, byte shuffle, and GPTQ-SDClip ops.
 pub(crate) mod byte_shuffle;
-pub(crate) mod ggml;
 pub(crate) mod gptq;
 pub(crate) mod int4;
 pub(crate) mod int6;
 pub(crate) mod int8;
 
 pub use byte_shuffle::byte_shuffle;
-pub use ggml::{
-    q2_k_linear, q2_k_unpack, q4_k_linear, q4_k_unpack, Q2_K_BLOCKS_PER_SUPER, Q2_K_BLOCK_SIZE,
-    Q2_K_SUPER_BLOCK_SIZE, Q4_K_BLOCKS_PER_SUPER, Q4_K_BLOCK_SIZE, Q4_K_SUPER_BLOCK_SIZE,
-};
 pub use gptq::{gptq_round, gptq_sdclip};
 pub use int4::{
     int4_batched_matmul_f32_scaled, int4_batched_matmul_top1_f32_scaled,

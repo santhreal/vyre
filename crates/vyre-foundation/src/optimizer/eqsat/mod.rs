@@ -36,9 +36,8 @@
 //! supply-chain risk" stance.
 //!
 //! [`crate::optimizer::eqsat::EGraph`] behavior lives in `egraph`, its dense-index and reserve
-//! bookkeeping in `class_index`, the rewrite loop in `saturation`, the
-//! device-fact rule adapter in `device_aware_rule`, and cost extraction in
-//! `extraction`. The public types stay declared here so their rendered
+//! bookkeeping in `class_index`, the rewrite loop in `saturation`, and cost
+//! extraction in `extraction`. The public types stay declared here so their
 //! documentation paths do not move.
 
 use std::error::Error as StdError;
@@ -51,7 +50,6 @@ use smallvec::SmallVec;
 use crate::optimizer::rewrite_contract::RewriteWitness;
 
 mod class_index;
-mod device_aware_rule;
 mod egraph;
 mod extraction;
 mod hardware_rule;

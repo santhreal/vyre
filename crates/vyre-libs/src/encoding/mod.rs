@@ -5,7 +5,6 @@ pub mod bitset_summary;
 pub mod bitset_transform_pipeline;
 pub mod matching_diagnostic_compaction;
 pub mod matroid_exact_megakernel;
-pub mod parsing_dispatch_pipeline;
 pub mod scallop_provenance;
 pub mod scallop_provenance_wide;
 pub mod vsa_fingerprint;

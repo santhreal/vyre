@@ -14,7 +14,6 @@ const OP_ID: &str = "vyre-libs::nn::gqa_attention";
 
 #[allow(clippy::too_many_arguments)]
 fn three_pass_softmax_row_nodes(
-    parent_op_id: &str,
     q: &str,
     k: &str,
     v_buf: &str,
@@ -26,7 +25,7 @@ fn three_pass_softmax_row_nodes(
     kv_base: Expr,
     dtype: DataType,
 ) -> Vec<Node> {
-    let parent = Ident::from(parent_op_id);
+    let parent = Ident::from(OP_ID);
     vec![
         Node::let_bind("max_val", Expr::f32(f32::MIN)),
         wrap_child_region(
@@ -153,7 +152,6 @@ pub fn gqa_attention(
         Node::if_then(
             Expr::lt(Expr::var("i"), Expr::u32(q_rows)),
             three_pass_softmax_row_nodes(
-                OP_ID,
                 q,
                 k,
                 v_buf,
@@ -298,7 +296,6 @@ pub fn gqa_attention_causal_typed(
         Node::if_then(
             Expr::lt(Expr::var("row"), Expr::u32(rows)),
             three_pass_softmax_row_nodes(
-                "vyre-libs::nn::gqa_attention_causal",
                 q,
                 k,
                 v_buf,

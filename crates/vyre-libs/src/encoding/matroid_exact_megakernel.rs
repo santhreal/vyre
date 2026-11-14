@@ -362,32 +362,9 @@ mod tests {
         n: usize,
         max_augmentations: u32,
     ) -> Result<Vec<u32>, ExactMatroidError> {
+        validate_full(exchange_adj, sources, sinks, seed_x, n)?;
         if n == 0 {
             return Ok(Vec::new());
-        }
-        if exchange_adj.len() != n * n {
-            return Err(ExactMatroidError::ExchangeAdjLen {
-                expected: n * n,
-                actual: exchange_adj.len(),
-            });
-        }
-        if sources.len() != n {
-            return Err(ExactMatroidError::SourcesLen {
-                expected: n,
-                actual: sources.len(),
-            });
-        }
-        if sinks.len() != n {
-            return Err(ExactMatroidError::SinksLen {
-                expected: n,
-                actual: sinks.len(),
-            });
-        }
-        if seed_x.len() != n {
-            return Err(ExactMatroidError::SeedLen {
-                expected: n,
-                actual: seed_x.len(),
-            });
         }
         let result = vyre_reference::composition_witness::matroid_select_optimal_subset_witness(
             exchange_adj,
@@ -428,33 +405,10 @@ mod tests {
         max_augmentations: u32,
         scratch: &'a mut ExactMatroidScratch,
     ) -> Result<&'a [u32], ExactMatroidError> {
+        validate_full(exchange_adj, sources, sinks, seed_x, n)?;
         if n == 0 {
             scratch.current.clear();
             return Ok(&scratch.current);
-        }
-        if exchange_adj.len() != n * n {
-            return Err(ExactMatroidError::ExchangeAdjLen {
-                expected: n * n,
-                actual: exchange_adj.len(),
-            });
-        }
-        if sources.len() != n {
-            return Err(ExactMatroidError::SourcesLen {
-                expected: n,
-                actual: sources.len(),
-            });
-        }
-        if sinks.len() != n {
-            return Err(ExactMatroidError::SinksLen {
-                expected: n,
-                actual: sinks.len(),
-            });
-        }
-        if seed_x.len() != n {
-            return Err(ExactMatroidError::SeedLen {
-                expected: n,
-                actual: seed_x.len(),
-            });
         }
         vyre_reference::composition_witness::matroid_select_optimal_subset_witness_into(
             exchange_adj,
@@ -486,33 +440,33 @@ mod tests {
         Ok(&scratch.current)
     }
 
+    fn chain_adj(n: usize) -> Vec<u32> {
+        let mut adj = vec![0u32; n * n];
+        for i in 0..n.saturating_sub(1) {
+            adj[i * n + i + 1] = 1;
+        }
+        adj
+    }
+
     #[test]
     fn empty_seed_grows_to_max() {
-        // 3 nodes: 0→1, 1→2 in the exchange graph. sources={0}, sinks={2}.
-        // Augmenting paths: 0→1→2 puts both 0 and 2 in the independent set.
-        let n = 3;
-        let mut adj = vec![0u32; 9];
-        adj[0 * 3 + 1] = 1;
-        adj[1 * 3 + 2] = 1;
-        let sources = vec![1, 0, 0];
-        let sinks = vec![0, 0, 1];
-        let seed = vec![0u32; 3];
-        let result = reference_select_optimal_subset(&adj, &sources, &sinks, &seed, n, 8).unwrap();
-        // At least the source survives.
+        let adj = chain_adj(3);
+        let result =
+            reference_select_optimal_subset(&adj, &[1, 0, 0], &[0, 0, 1], &[0; 3], 3, 8).unwrap();
         assert!(result[0] != 0 || count_selected(&result) >= 1);
     }
 
     #[test]
     fn seeded_set_is_at_least_preserved() {
-        // 4 nodes, no exchange edges. Seed {1, 2}. No augmentations
-        // possible, so seed stays.
-        let n = 4;
-        let adj = vec![0u32; 16];
-        let sources = vec![1, 0, 0, 0];
-        let sinks = vec![0, 0, 0, 1];
-        let seed = vec![0, 1, 1, 0];
-        let result = reference_select_optimal_subset(&adj, &sources, &sinks, &seed, n, 8).unwrap();
-        // At minimum, the seeded items remain.
+        let result = reference_select_optimal_subset(
+            &[0u32; 16],
+            &[1, 0, 0, 0],
+            &[0, 0, 0, 1],
+            &[0, 1, 1, 0],
+            4,
+            8,
+        )
+        .unwrap();
         assert_eq!(result[1], 1);
         assert_eq!(result[2], 1);
     }
@@ -532,65 +486,59 @@ mod tests {
 
     #[test]
     fn all_eligible_path_matches_generic_all_ones() {
-        let n = 4;
-        let mut adj = vec![0u32; 16];
-        adj[0 * 4 + 1] = 1;
-        adj[1 * 4 + 2] = 1;
-        adj[2 * 4 + 3] = 1;
-        let sources = vec![1u32; n];
-        let sinks = vec![1u32; n];
-        let seed = vec![0, 1, 0, 0];
-        let generic = reference_select_optimal_subset(&adj, &sources, &sinks, &seed, n, 8).unwrap();
-        let specialized = reference_select_optimal_subset_all_eligible(&adj, &seed, n, 8).unwrap();
+        let adj = chain_adj(4);
+        let seed = [0, 1, 0, 0];
+        let generic = reference_select_optimal_subset(&adj, &[1; 4], &[1; 4], &seed, 4, 8).unwrap();
+        let specialized = reference_select_optimal_subset_all_eligible(&adj, &seed, 4, 8).unwrap();
         assert_eq!(specialized, generic);
     }
 
     #[test]
     fn all_eligible_into_matches_owned_selector() {
-        let n = 4;
-        let mut adj = vec![0u32; 16];
-        adj[0 * 4 + 1] = 1;
-        adj[1 * 4 + 2] = 1;
-        adj[2 * 4 + 3] = 1;
-        let seed = vec![0, 1, 0, 0];
-        let owned = reference_select_optimal_subset_all_eligible(&adj, &seed, n, 8).unwrap();
-
+        let adj = chain_adj(4);
+        let seed = [0, 1, 0, 0];
+        let owned = reference_select_optimal_subset_all_eligible(&adj, &seed, 4, 8).unwrap();
         let mut scratch = ExactMatroidScratch::default();
         let borrowed =
-            reference_select_optimal_subset_all_eligible_into(&adj, &seed, n, 8, &mut scratch)
+            reference_select_optimal_subset_all_eligible_into(&adj, &seed, 4, 8, &mut scratch)
                 .unwrap();
-
         assert_eq!(borrowed, owned.as_slice());
         assert_eq!(scratch.result(), owned.as_slice());
     }
 
     #[test]
     fn generic_selector_into_reuses_current_storage() {
-        let n = 3;
-        let mut adj = vec![0u32; 9];
-        adj[0 * 3 + 1] = 1;
-        adj[1 * 3 + 2] = 1;
-        let sources = vec![1, 0, 0];
-        let sinks = vec![0, 0, 1];
-        let seed = vec![0u32; 3];
+        let adj = chain_adj(3);
         let mut scratch = ExactMatroidScratch::default();
-
-        let first =
-            reference_select_optimal_subset_into(&adj, &sources, &sinks, &seed, n, 8, &mut scratch)
-                .unwrap()
-                .to_vec();
+        let first: Vec<u32> = reference_select_optimal_subset_into(
+            &adj,
+            &[1, 0, 0],
+            &[0, 0, 1],
+            &[0; 3],
+            3,
+            8,
+            &mut scratch,
+        )
+        .unwrap()
+        .into();
         let current_ptr = scratch.current.as_ptr();
         let next_ptr = scratch.next.as_ptr();
-        let second =
-            reference_select_optimal_subset_into(&adj, &sources, &sinks, &seed, n, 8, &mut scratch)
-                .unwrap()
-                .to_vec();
+        let second: Vec<u32> = reference_select_optimal_subset_into(
+            &adj,
+            &[1, 0, 0],
+            &[0, 0, 1],
+            &[0; 3],
+            3,
+            8,
+            &mut scratch,
+        )
+        .unwrap()
+        .into();
 
         assert_eq!(first, second);
         assert!([current_ptr, next_ptr].contains(&scratch.current.as_ptr()));
         assert!([current_ptr, next_ptr].contains(&scratch.next.as_ptr()));
     }
-
     #[test]
     fn invalid_shapes_return_errors_instead_of_panicking() {
         let err =
@@ -655,26 +603,18 @@ mod tests {
 
     #[test]
     fn select_optimal_subset_via_dispatches_full_primitive() {
-        let n = 3;
-        let mut adj = vec![0u32; 9];
-        adj[0 * 3 + 1] = 1;
-        adj[1 * 3 + 2] = 1;
-        let sources = vec![1, 0, 0];
-        let sinks = vec![0, 0, 1];
-        let seed = vec![0u32; 3];
-
+        let adj = chain_adj(3);
         let result = select_optimal_subset_via(
             &MatroidDispatcher,
             &vyre_test_support::test_parity_oracles::policy(),
             &adj,
-            &sources,
-            &sinks,
-            &seed,
-            n,
+            &[1, 0, 0],
+            &[0, 0, 1],
+            &[0; 3],
+            3,
             8,
         )
         .unwrap();
-
         assert_eq!(result, vec![1, 0, 1]);
     }
 
@@ -718,13 +658,7 @@ mod tests {
 
     #[test]
     fn select_optimal_subset_via_with_scratch_reuses_input_buffers() {
-        let n = 3;
-        let mut adj = vec![0u32; 9];
-        adj[0 * 3 + 1] = 1;
-        adj[1 * 3 + 2] = 1;
-        let sources = vec![1, 0, 0];
-        let sinks = vec![0, 0, 1];
-        let seed = vec![0u32; 3];
+        let adj = chain_adj(3);
         let mut scratch = ExactMatroidDispatchScratch::default();
         let mut out = Vec::new();
 
@@ -732,10 +666,10 @@ mod tests {
             &MatroidDispatcher,
             &vyre_test_support::test_parity_oracles::policy(),
             &adj,
-            &sources,
-            &sinks,
-            &seed,
-            n,
+            &[1, 0, 0],
+            &[0, 0, 1],
+            &[0; 3],
+            3,
             8,
             &mut scratch,
             &mut out,
@@ -746,10 +680,10 @@ mod tests {
             &MatroidDispatcher,
             &vyre_test_support::test_parity_oracles::policy(),
             &adj,
-            &sources,
-            &sinks,
-            &seed,
-            n,
+            &[1, 0, 0],
+            &[0, 0, 1],
+            &[0; 3],
+            3,
             8,
             &mut scratch,
             &mut out,
@@ -757,11 +691,6 @@ mod tests {
         .unwrap();
 
         assert_eq!(scratch.inputs.len(), 12);
-        for (before, after) in input_ptrs
-            .iter()
-            .zip(scratch.inputs.iter().map(Vec::as_ptr))
-        {
-            assert_eq!(*before, after);
-        }
+        crate::solvers::test_helpers::assert_input_pointers_preserved(&input_ptrs, &scratch.inputs);
     }
 }

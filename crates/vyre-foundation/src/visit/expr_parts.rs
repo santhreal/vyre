@@ -10,6 +10,54 @@ use crate::ir_inner::model::expr::Ident;
 use crate::ir_inner::model::op_signature::{AtomicOp, BinOp, SubgroupReduceOp, UnOp};
 use smallvec::SmallVec;
 
+macro_rules! non_buffer_expr_pat {
+    () => {
+        Expr::LitU32(_)
+            | Expr::LitI32(_)
+            | Expr::LitF32(_)
+            | Expr::LitBool(_)
+            | Expr::Var(_)
+            | Expr::InvocationId { .. }
+            | Expr::LogicalIndex { .. }
+            | Expr::LogicalTileId { .. }
+            | Expr::LogicalWithinTileId { .. }
+            | Expr::WorkgroupId { .. }
+            | Expr::LocalId { .. }
+            | Expr::BinOp { .. }
+            | Expr::UnOp { .. }
+            | Expr::Call { .. }
+            | Expr::Select { .. }
+            | Expr::Cast { .. }
+            | Expr::Fma { .. }
+            | Expr::SubgroupBallot { .. }
+            | Expr::SubgroupShuffle { .. }
+            | Expr::SubgroupReduce { .. }
+            | Expr::SubgroupLocalId
+            | Expr::SubgroupSize
+    };
+}
+
+macro_rules! leaf_expr_pat {
+    () => {
+        Expr::LitU32(_)
+            | Expr::LitI32(_)
+            | Expr::LitF32(_)
+            | Expr::LitBool(_)
+            | Expr::Var(_)
+            | Expr::BufferRef { .. }
+            | Expr::BufLen { .. }
+            | Expr::InvocationId { .. }
+            | Expr::LogicalIndex { .. }
+            | Expr::LogicalTileId { .. }
+            | Expr::LogicalWithinTileId { .. }
+            | Expr::WorkgroupId { .. }
+            | Expr::LocalId { .. }
+            | Expr::SubgroupLocalId
+            | Expr::SubgroupSize
+            | Expr::Opaque(_)
+    };
+}
+
 /// What an expression does to the buffer it names.
 #[derive(Debug, Clone, Copy)]
 pub enum ExprBufferRef<'a> {
@@ -38,28 +86,7 @@ pub fn expr_buffer_ref(expr: &Expr) -> ExprBufferRef<'_> {
         Expr::Load { buffer, .. } | Expr::BufLen { buffer } | Expr::BufferRef { buffer } => {
             ExprBufferRef::Read(buffer)
         }
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::InvocationId { .. }
-        | Expr::LogicalIndex { .. }
-        | Expr::LogicalTileId { .. }
-        | Expr::LogicalWithinTileId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::BinOp { .. }
-        | Expr::UnOp { .. }
-        | Expr::Call { .. }
-        | Expr::Select { .. }
-        | Expr::Cast { .. }
-        | Expr::Fma { .. }
-        | Expr::SubgroupBallot { .. }
-        | Expr::SubgroupShuffle { .. }
-        | Expr::SubgroupReduce { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize => ExprBufferRef::None,
+        non_buffer_expr_pat!() => ExprBufferRef::None,
         Expr::Opaque(_) => ExprBufferRef::Unknown,
     }
 }
@@ -89,28 +116,7 @@ pub fn expr_buffer_name_mut(expr: &mut Expr) -> ExprBufferName<'_> {
         | Expr::Load { buffer, .. }
         | Expr::BufLen { buffer }
         | Expr::BufferRef { buffer } => ExprBufferName::Named(buffer),
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::InvocationId { .. }
-        | Expr::LogicalIndex { .. }
-        | Expr::LogicalTileId { .. }
-        | Expr::LogicalWithinTileId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::BinOp { .. }
-        | Expr::UnOp { .. }
-        | Expr::Call { .. }
-        | Expr::Select { .. }
-        | Expr::Cast { .. }
-        | Expr::Fma { .. }
-        | Expr::SubgroupBallot { .. }
-        | Expr::SubgroupShuffle { .. }
-        | Expr::SubgroupReduce { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize => ExprBufferName::None,
+        non_buffer_expr_pat!() => ExprBufferName::None,
         Expr::Opaque(_) => ExprBufferName::Unknown,
     }
 }
@@ -128,22 +134,7 @@ pub type ExprStackMut<'a> = SmallVec<[&'a mut Expr; 16]>;
 /// rewrite reaches.
 pub fn push_expr_children_mut<'a>(expr: &'a mut Expr, sink: &mut ExprStackMut<'a>) {
     match expr {
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::BufferRef { .. }
-        | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::LogicalIndex { .. }
-        | Expr::LogicalTileId { .. }
-        | Expr::LogicalWithinTileId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize
-        | Expr::Opaque(_) => {}
+        leaf_expr_pat!() => {}
         Expr::Load { index, .. }
         | Expr::UnOp { operand: index, .. }
         | Expr::Cast { value: index, .. }
@@ -461,22 +452,7 @@ impl<'a> ExprChildren<'a> {
 #[must_use]
 pub fn expr_children(expr: &Expr) -> ExprChildren<'_> {
     match expr {
-        Expr::LitU32(_)
-        | Expr::LitI32(_)
-        | Expr::LitF32(_)
-        | Expr::LitBool(_)
-        | Expr::Var(_)
-        | Expr::BufferRef { .. }
-        | Expr::BufLen { .. }
-        | Expr::InvocationId { .. }
-        | Expr::LogicalIndex { .. }
-        | Expr::LogicalTileId { .. }
-        | Expr::LogicalWithinTileId { .. }
-        | Expr::WorkgroupId { .. }
-        | Expr::LocalId { .. }
-        | Expr::SubgroupLocalId
-        | Expr::SubgroupSize
-        | Expr::Opaque(_) => ExprChildren::NONE,
+        leaf_expr_pat!() => ExprChildren::NONE,
         Expr::Load { index, .. }
         | Expr::UnOp { operand: index, .. }
         | Expr::Cast { value: index, .. }

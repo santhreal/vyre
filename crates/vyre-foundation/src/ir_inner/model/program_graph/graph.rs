@@ -10,7 +10,7 @@ use super::contracts::{
     ProgramGraphValue, ShapeDim, ValueContract, ValueLifetime,
 };
 use super::validate::{estimate_program_bytes, validate_buffer, PortRole};
-use crate::ir_inner::model::op_signature::{BufferAccess, DataType};
+use crate::ir_inner::model::op_signature::BufferAccess;
 use crate::ir_inner::model::program::Program;
 
 /// Connected executable Programs with canonical typed values.
@@ -66,7 +66,7 @@ impl ProgramGraph {
                 return Err(ProgramGraphError::BufferContract {
                     node: node_name,
                     buffer: buffer_name.clone(),
-                    reason: "runtime element-count override requires a host-visible declaration with count == 0".to_string(),
+                    reason: "runtime element-count override requires a host-visible declaration with count == 0".into(),
                 });
             }
         }
@@ -91,7 +91,7 @@ impl ProgramGraph {
                 {
                     return Err(ProgramGraphError::BufferContract {
                         node: node_name,
-                        buffer: buffer.name().to_string(),
+                        buffer: buffer.name().into(),
                         reason: format!(
                             "backend-allocated output `{}` has no static element count and no caller bytes to size it. Fix: declare it with .with_count(n), or with .with_output_byte_range(0..0) if it is genuinely empty",
                             buffer.name()
@@ -116,15 +116,15 @@ impl ProgramGraph {
             };
             if contract.lifetime == ValueLifetime::Output {
                 outputs.push(GraphOutput {
-                    buffer: buffer.name().to_string(),
-                    name: buffer.name().to_string(),
+                    buffer: buffer.name().into(),
+                    name: buffer.name().into(),
                     contract,
                     retained_successor_of: None,
                 });
             } else {
                 let value = graph.add_external_value(buffer.name(), contract.clone())?;
                 inputs.push(GraphInput {
-                    buffer: buffer.name().to_string(),
+                    buffer: buffer.name().into(),
                     value,
                     contract,
                 });
@@ -158,14 +158,7 @@ impl ProgramGraph {
             if !batch_names.insert(name.as_str()) {
                 return Err(ProgramGraphError::DuplicateName(name.clone()));
             }
-            let index = self
-                .values
-                .len()
-                .checked_add(offset)
-                .ok_or(ProgramGraphError::IdentityOverflow(u32::MAX))?;
-            ids.push(GraphValueId(
-                u32::try_from(index).map_err(|_| ProgramGraphError::IdentityOverflow(u32::MAX))?,
-            ));
+            ids.push(self.next_value_id(offset)?);
         }
         for ((name, contract), id) in values.into_iter().zip(ids.iter().copied()) {
             self.names.insert(name.clone(), ());
@@ -208,55 +201,10 @@ impl ProgramGraph {
             if !new_names.insert(output.name.as_str()) {
                 return Err(ProgramGraphError::DuplicateName(output.name.clone()));
             }
-            let index = self
-                .values
-                .len()
-                .checked_add(offset)
-                .ok_or(ProgramGraphError::IdentityOverflow(u32::MAX))?;
-            output_ids.push(GraphValueId(
-                u32::try_from(index).map_err(|_| ProgramGraphError::IdentityOverflow(u32::MAX))?,
-            ));
+            output_ids.push(self.next_value_id(offset)?);
         }
 
-        let mut bound = BTreeSet::new();
-        let mut bound_values = BTreeSet::new();
-        for input in &inputs {
-            if !bound.insert(input.buffer.as_str()) {
-                return Err(ProgramGraphError::DuplicatePort {
-                    node: name,
-                    buffer: input.buffer.clone(),
-                });
-            }
-            if !bound_values.insert(input.value) {
-                return Err(ProgramGraphError::DuplicateValueInput {
-                    node: name,
-                    value: input.value,
-                });
-            }
-            let value = self
-                .values
-                .get(input.value.0 as usize)
-                .ok_or(ProgramGraphError::MissingValue(input.value))?;
-            if value.contract.dtype != input.contract.dtype
-                || value.contract.shape != input.contract.shape
-                || value.contract.lifetime != input.contract.lifetime
-            {
-                return Err(ProgramGraphError::InputContract {
-                    node: name,
-                    buffer: input.buffer.clone(),
-                    value: input.value,
-                    actual: value.contract.clone(),
-                    expected: input.contract.clone(),
-                });
-            }
-            validate_buffer(
-                &name,
-                &program,
-                &input.buffer,
-                &input.contract,
-                PortRole::Input,
-            )?;
-        }
+        let mut bound = self.validate_inputs(&name, &program, &inputs)?;
         for output in &outputs {
             if let Some(prior_id) = output.retained_successor_of {
                 let prior = self
@@ -375,45 +323,7 @@ impl ProgramGraph {
             return Err(ProgramGraphError::InvalidReplacementOutputs { node: node_id });
         }
 
-        let mut bound = BTreeSet::new();
-        let mut bound_values = BTreeSet::new();
-        for input in &inputs {
-            if !bound.insert(input.buffer.as_str()) {
-                return Err(ProgramGraphError::DuplicatePort {
-                    node: name,
-                    buffer: input.buffer.clone(),
-                });
-            }
-            if !bound_values.insert(input.value) {
-                return Err(ProgramGraphError::DuplicateValueInput {
-                    node: name,
-                    value: input.value,
-                });
-            }
-            let value = self
-                .values
-                .get(input.value.0 as usize)
-                .ok_or(ProgramGraphError::MissingValue(input.value))?;
-            if value.contract.dtype != input.contract.dtype
-                || value.contract.shape != input.contract.shape
-                || value.contract.lifetime != input.contract.lifetime
-            {
-                return Err(ProgramGraphError::InputContract {
-                    node: name,
-                    buffer: input.buffer.clone(),
-                    value: input.value,
-                    actual: value.contract.clone(),
-                    expected: input.contract.clone(),
-                });
-            }
-            validate_buffer(
-                &name,
-                &program,
-                &input.buffer,
-                &input.contract,
-                PortRole::Input,
-            )?;
-        }
+        let _ = self.validate_inputs(&name, &program, &inputs)?;
         for output in &outputs {
             validate_buffer(
                 &name,
@@ -506,6 +416,65 @@ impl ProgramGraph {
             .collect()
     }
 
+    fn next_value_id(&self, offset: usize) -> Result<GraphValueId, ProgramGraphError> {
+        let index = self
+            .values
+            .len()
+            .checked_add(offset)
+            .ok_or(ProgramGraphError::IdentityOverflow(u32::MAX))?;
+        u32::try_from(index)
+            .map(GraphValueId)
+            .map_err(|_| ProgramGraphError::IdentityOverflow(u32::MAX))
+    }
+
+    fn validate_inputs<'a>(
+        &self,
+        name: &str,
+        program: &Program,
+        inputs: &'a [GraphInput],
+    ) -> Result<BTreeSet<&'a str>, ProgramGraphError> {
+        let mut bound = BTreeSet::new();
+        let mut bound_values = BTreeSet::new();
+        for input in inputs {
+            if !bound.insert(input.buffer.as_str()) {
+                return Err(ProgramGraphError::DuplicatePort {
+                    node: name.into(),
+                    buffer: input.buffer.clone(),
+                });
+            }
+            if !bound_values.insert(input.value) {
+                return Err(ProgramGraphError::DuplicateValueInput {
+                    node: name.into(),
+                    value: input.value,
+                });
+            }
+            let value = self
+                .values
+                .get(input.value.0 as usize)
+                .ok_or(ProgramGraphError::MissingValue(input.value))?;
+            if value.contract.dtype != input.contract.dtype
+                || value.contract.shape != input.contract.shape
+                || value.contract.lifetime != input.contract.lifetime
+            {
+                return Err(ProgramGraphError::InputContract {
+                    node: name.into(),
+                    buffer: input.buffer.clone(),
+                    value: input.value,
+                    actual: value.contract.clone(),
+                    expected: input.contract.clone(),
+                });
+            }
+            validate_buffer(
+                name,
+                program,
+                &input.buffer,
+                &input.contract,
+                PortRole::Input,
+            )?;
+        }
+        Ok(bound)
+    }
+
     fn push_value(
         &mut self,
         name: String,
@@ -514,10 +483,7 @@ impl ProgramGraph {
         retained_successor_of: Option<GraphValueId>,
     ) -> Result<GraphValueId, ProgramGraphError> {
         self.ensure_name_available(&name)?;
-        let id = GraphValueId(
-            u32::try_from(self.values.len())
-                .map_err(|_| ProgramGraphError::IdentityOverflow(u32::MAX))?,
-        );
+        let id = self.next_value_id(0)?;
         self.names.insert(name.clone(), ());
         self.values.push(ProgramGraphValue {
             id,
@@ -532,7 +498,7 @@ impl ProgramGraph {
 
     fn ensure_name_available(&self, name: &str) -> Result<(), ProgramGraphError> {
         if self.names.contains_key(name) {
-            return Err(ProgramGraphError::DuplicateName(name.to_string()));
+            return Err(ProgramGraphError::DuplicateName(name.into()));
         }
         Ok(())
     }
@@ -609,17 +575,6 @@ impl ProgramGraph {
         self.push_value(name.into(), stream_contract, None, None)
     }
 
-    /// Add an operation node with declared inputs and outputs.
-    pub fn add_operation_node(
-        &mut self,
-        name: impl Into<String>,
-        program: Program,
-        inputs: Vec<GraphInput>,
-        outputs: Vec<GraphOutput>,
-    ) -> Result<(GraphNodeId, Vec<GraphValueId>), ProgramGraphError> {
-        self.add_node(name, program, inputs, outputs)
-    }
-
     /// Inline a nested reusable [`ProgramGraph`] into `self`.
     ///
     /// `name_prefix` namespaces every node and produced value of the subgraph.
@@ -638,7 +593,7 @@ impl ProgramGraph {
             if sub_val.producer.is_none() {
                 let mapped_in_self = input_mapping.get(&sub_val.id).copied().ok_or_else(|| {
                     ProgramGraphError::SubgraphMapping {
-                        subgraph: name_prefix.to_string(),
+                        subgraph: name_prefix.into(),
                         reason: format!(
                             "missing input mapping for subgraph external value `{}` ({:?})",
                             sub_val.name, sub_val.id
@@ -653,7 +608,7 @@ impl ProgramGraph {
                     || self_val.contract.shape != sub_val.contract.shape
                 {
                     return Err(ProgramGraphError::SubgraphMapping {
-                        subgraph: name_prefix.to_string(),
+                        subgraph: name_prefix.into(),
                         reason: format!(
                             "input contract mismatch on `{}`: expected {:?}, got {:?}",
                             sub_val.name, sub_val.contract, self_val.contract
@@ -670,7 +625,7 @@ impl ProgramGraph {
             for in_port in &sub_node.inputs {
                 let self_val_id = value_map.get(&in_port.value).copied().ok_or_else(|| {
                     ProgramGraphError::SubgraphMapping {
-                        subgraph: name_prefix.to_string(),
+                        subgraph: name_prefix.into(),
                         reason: format!(
                             "unresolved input value {:?} for port `{}` in node `{}`",
                             in_port.value, in_port.buffer, sub_node.name
@@ -690,7 +645,7 @@ impl ProgramGraph {
                 let mapped_retained = match out_port.retained_successor_of {
                     Some(prior) => Some(*value_map.get(&prior).ok_or_else(|| {
                         ProgramGraphError::SubgraphMapping {
-                            subgraph: name_prefix.to_string(),
+                            subgraph: name_prefix.into(),
                             reason: format!(
                                 "unresolved retained predecessor {:?} for output `{}`",
                                 prior, out_port.name
@@ -750,11 +705,11 @@ impl ProgramGraph {
     ) -> Result<Vec<GraphValueId>, ProgramGraphError> {
         if bounds.max_steps == 0 {
             return Err(ProgramGraphError::InvalidLoopBounds(
-                "bounded loop max_steps must be greater than zero".to_string(),
+                "bounded loop max_steps must be greater than zero".into(),
             ));
         }
 
-        let mut current_state = loop_carried_inputs.to_vec();
+        let mut current_state: Vec<GraphValueId> = loop_carried_inputs.into();
         for step in 0..bounds.max_steps {
             let step_prefix = format!("{name_prefix}_step{step}");
             let mut input_map = BTreeMap::new();
@@ -781,143 +736,6 @@ impl ProgramGraph {
         }
 
         Ok(current_state)
-    }
-
-    /// Add a conditional branch by inlining then/else subgraphs and joining outputs with a select node.
-    pub fn add_conditional_branch(
-        &mut self,
-        name_prefix: &str,
-        condition: GraphValueId,
-        then_graph: &ProgramGraph,
-        else_graph: &ProgramGraph,
-        inputs: &[GraphValueId],
-    ) -> Result<Vec<GraphValueId>, ProgramGraphError> {
-        let mut then_in_map = BTreeMap::new();
-        let mut else_in_map = BTreeMap::new();
-        let then_exts: Vec<_> = then_graph
-            .values()
-            .iter()
-            .filter(|v| v.producer.is_none())
-            .collect();
-        let else_exts: Vec<_> = else_graph
-            .values()
-            .iter()
-            .filter(|v| v.producer.is_none())
-            .collect();
-        for (i, val) in inputs.iter().enumerate() {
-            if let Some(te) = then_exts.get(i) {
-                then_in_map.insert(te.id, *val);
-            }
-            if let Some(ee) = else_exts.get(i) {
-                else_in_map.insert(ee.id, *val);
-            }
-        }
-
-        let then_outs =
-            self.inline_subgraph(&format!("{name_prefix}_then"), then_graph, &then_in_map)?;
-        let else_outs =
-            self.inline_subgraph(&format!("{name_prefix}_else"), else_graph, &else_in_map)?;
-
-        if then_outs.len() != else_outs.len() {
-            return Err(ProgramGraphError::SubgraphMapping {
-                subgraph: name_prefix.to_string(),
-                reason: format!(
-                    "then branch produced {} outputs but else branch produced {}",
-                    then_outs.len(),
-                    else_outs.len()
-                ),
-            });
-        }
-
-        let mut joined_outs = Vec::with_capacity(then_outs.len());
-        for (idx, (t_out, e_out)) in then_outs.iter().zip(else_outs.iter()).enumerate() {
-            let t_val = &self.values[t_out.0 as usize];
-            let e_val = &self.values[e_out.0 as usize];
-            if t_val.contract.dtype != e_val.contract.dtype
-                || t_val.contract.shape != e_val.contract.shape
-            {
-                return Err(ProgramGraphError::SubgraphMapping {
-                    subgraph: name_prefix.to_string(),
-                    reason: format!(
-                        "branch output {idx} contract mismatch: then is {:?}, else is {:?}",
-                        t_val.contract, e_val.contract
-                    ),
-                });
-            }
-
-            let join_name = format!("{name_prefix}_join{idx}");
-            let out_name = format!("{name_prefix}_cond_out{idx}");
-            let contract = t_val.contract.clone();
-            let count = match contract.shape.first() {
-                Some(ShapeDim::Known(k)) => *k as u32,
-                _ => 1,
-            };
-
-            let join_prog = Program::wrapped(
-                vec![
-                    crate::ir::BufferDecl::read("cond", 0, DataType::U32).with_count(1),
-                    crate::ir::BufferDecl::read("then_buf", 1, contract.dtype.clone())
-                        .with_count(count),
-                    crate::ir::BufferDecl::read("else_buf", 2, contract.dtype.clone())
-                        .with_count(count),
-                    crate::ir::BufferDecl::output("out", 3, contract.dtype.clone())
-                        .with_count(count),
-                ],
-                [count.max(1), 1, 1],
-                vec![crate::ir::Node::if_then_else(
-                    crate::ir::Expr::ne(
-                        crate::ir::Expr::load("cond", crate::ir::Expr::u32(0)),
-                        crate::ir::Expr::u32(0),
-                    ),
-                    vec![crate::ir::Node::store(
-                        "out",
-                        crate::ir::Expr::gid_x(),
-                        crate::ir::Expr::load("then_buf", crate::ir::Expr::gid_x()),
-                    )],
-                    vec![crate::ir::Node::store(
-                        "out",
-                        crate::ir::Expr::gid_x(),
-                        crate::ir::Expr::load("else_buf", crate::ir::Expr::gid_x()),
-                    )],
-                )],
-            );
-
-            let (_, outs) = self.add_node(
-                join_name,
-                join_prog,
-                vec![
-                    GraphInput {
-                        buffer: "cond".to_string(),
-                        value: condition,
-                        contract: ValueContract {
-                            dtype: DataType::U32,
-                            shape: vec![ShapeDim::Known(1)],
-                            access: BufferAccess::ReadOnly,
-                            lifetime: self.values[condition.0 as usize].contract.lifetime,
-                        },
-                    },
-                    GraphInput {
-                        buffer: "then_buf".to_string(),
-                        value: *t_out,
-                        contract: contract.clone(),
-                    },
-                    GraphInput {
-                        buffer: "else_buf".to_string(),
-                        value: *e_out,
-                        contract: contract.clone(),
-                    },
-                ],
-                vec![GraphOutput {
-                    buffer: "out".to_string(),
-                    name: out_name,
-                    contract,
-                    retained_successor_of: None,
-                }],
-            )?;
-            joined_outs.extend(outs);
-        }
-
-        Ok(joined_outs)
     }
 
     /// Add an external effect barrier node enforcing synchronization and ordering.

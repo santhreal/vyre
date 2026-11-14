@@ -132,7 +132,6 @@ pub fn select_dense_traversal_kernel(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::graph::adaptive_traverse::test_graphs::pack_nodes;
 
     #[test]
     fn should_use_dense_empty_frontier_is_false() {
@@ -172,7 +171,9 @@ mod tests {
     #[test]
     fn selector_roundtrip_common_density_profiles() {
         // Sparse (1% density) → CSR.
-        assert!(!should_use_dense(&pack_nodes(&[5], 512), 512));
+        let mut sparse = vec![0_u32; bitset_words(512) as usize];
+        sparse[0] = 1 << 5;
+        assert!(!should_use_dense(&sparse, 512));
 
         // Dense (50% density) → dense.
         let mut f = vec![0_u32; bitset_words(512) as usize];

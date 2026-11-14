@@ -115,6 +115,12 @@ impl LoopSoftwarePipeline {
     }
 }
 
+fn rewrite_body(body: Vec<Node>, facts: &ProgramFacts, changed: &mut bool) -> Vec<Node> {
+    body.into_iter()
+        .flat_map(|n| rewrite_node(n, facts, changed))
+        .collect()
+}
+
 fn rewrite_node(node: Node, facts: &ProgramFacts, changed: &mut bool) -> Vec<Node> {
     match node {
         Node::Loop {
@@ -131,10 +137,7 @@ fn rewrite_node(node: Node, facts: &ProgramFacts, changed: &mut bool) -> Vec<Nod
                 var,
                 from,
                 to,
-                body: body
-                    .into_iter()
-                    .flat_map(|n| rewrite_node(n, facts, changed))
-                    .collect(),
+                body: rewrite_body(body, facts, changed),
             }]
         }
         Node::If {
@@ -143,29 +146,12 @@ fn rewrite_node(node: Node, facts: &ProgramFacts, changed: &mut bool) -> Vec<Nod
             otherwise,
         } => vec![Node::If {
             cond,
-            then: then
-                .into_iter()
-                .flat_map(|n| rewrite_node(n, facts, changed))
-                .collect(),
-            otherwise: otherwise
-                .into_iter()
-                .flat_map(|n| rewrite_node(n, facts, changed))
-                .collect(),
+            then: rewrite_body(then, facts, changed),
+            otherwise: rewrite_body(otherwise, facts, changed),
         }],
-        Node::Block(body) => vec![Node::Block(
-            body.into_iter()
-                .flat_map(|n| rewrite_node(n, facts, changed))
-                .collect(),
-        )],
-        // A `Region`, and every other body-bearing variant this match does not
-        // name, is descended as well: the applicability search below admits a
-        // nested loop through `child_bodies`, so a rewrite that stopped here
-        // would report no change for a program the analysis accepted.
-        // `map_body` owns which slots exist.
+        Node::Block(body) => vec![Node::Block(rewrite_body(body, facts, changed))],
         other => vec![visit::node_map::map_body(other, &mut |body| {
-            body.into_iter()
-                .flat_map(|n| rewrite_node(n, facts, changed))
-                .collect()
+            rewrite_body(body, facts, changed)
         })],
     }
 }
@@ -208,15 +194,12 @@ fn analyse_pipelinable(
         },
         _ => return None,
     };
-    let (buf_out, _store_index, store_value) = match &body[1] {
+    let (buf_out, store_value) = match &body[1] {
         Node::Store {
             buffer,
-            index,
+            index: Expr::Var(idx_var),
             value,
-        } => match index {
-            Expr::Var(idx_var) if idx_var == var => (buffer.clone(), index.clone(), value.clone()),
-            _ => return None,
-        },
+        } if idx_var == var => (buffer.clone(), value.clone()),
         _ => return None,
     };
     if buf_in == buf_out {
@@ -413,264 +396,181 @@ mod tests {
         Program::wrapped(buffers, [1, 1, 1], entry)
     }
 
-    fn pipelinable_loop(lo: u32, hi: u32) -> Vec<Node> {
+    fn load_store_loop(
+        from: Expr,
+        to: Expr,
+        load_buf: &str,
+        load_index: Expr,
+        extra_stmt: Option<Node>,
+        store_value: Expr,
+    ) -> Vec<Node> {
+        let mut body = vec![Node::let_bind(
+            "x",
+            Expr::Load {
+                buffer: Ident::from(load_buf),
+                index: Box::new(load_index),
+            },
+        )];
+        if let Some(stmt) = extra_stmt {
+            body.push(stmt);
+        }
+        body.push(Node::store("rw", Expr::var("i"), store_value));
         vec![Node::Loop {
             var: Ident::from("i"),
-            from: Expr::u32(lo),
-            to: Expr::u32(hi),
-
-            body: vec![
-                Node::let_bind(
-                    "x",
-                    Expr::Load {
-                        buffer: Ident::from("ro"),
-                        index: Box::new(Expr::var("i")),
-                    },
-                ),
-                Node::store(
-                    "rw",
-                    Expr::var("i"),
-                    Expr::BinOp {
-                        op: BinOp::Add,
-                        left: Box::new(Expr::var("x")),
-                        right: Box::new(Expr::u32(1)),
-                    },
-                ),
-            ],
+            from,
+            to,
+            body,
         }]
+    }
+
+    fn add_one_x() -> Expr {
+        Expr::BinOp {
+            op: BinOp::Add,
+            left: Box::new(Expr::var("x")),
+            right: Box::new(Expr::u32(1)),
+        }
+    }
+
+    fn pipelinable_loop(lo: u32, hi: u32) -> Vec<Node> {
+        load_store_loop(
+            Expr::u32(lo),
+            Expr::u32(hi),
+            "ro",
+            Expr::var("i"),
+            None,
+            add_one_x(),
+        )
     }
 
     fn count_loops_and_stores(nodes: &[Node]) -> (usize, usize) {
         let mut loops = 0;
         let mut stores = 0;
         for n in nodes {
-            match n {
-                Node::Loop { body, .. } => {
-                    loops += 1;
-                    let (l, s) = count_loops_and_stores(body);
-                    loops += l;
-                    stores += s;
-                }
-                Node::Store { .. } => stores += 1,
-                Node::Block(body) => {
-                    let (l, s) = count_loops_and_stores(body);
-                    loops += l;
-                    stores += s;
-                }
-                Node::Region { body, .. } => {
-                    let (l, s) = count_loops_and_stores(body.as_ref());
-                    loops += l;
-                    stores += s;
-                }
-                Node::If {
-                    then, otherwise, ..
-                } => {
-                    let (l, s) = count_loops_and_stores(then);
-                    loops += l;
-                    stores += s;
-                    let (l2, s2) = count_loops_and_stores(otherwise);
-                    loops += l2;
-                    stores += s2;
-                }
-                _ => {}
+            if matches!(n, Node::Loop { .. }) {
+                loops += 1;
+            } else if matches!(n, Node::Store { .. }) {
+                stores += 1;
+            }
+            for body in visit::child_bodies(n) {
+                let (l, s) = count_loops_and_stores(body);
+                loops += l;
+                stores += s;
             }
         }
         (loops, stores)
     }
 
-    /// Positive: pipelinable Load-then-Store loop becomes prologue +
-    /// steady-state + epilogue.
+    fn assert_unchanged(buffers: Vec<BufferDecl>, entry: Vec<Node>) {
+        let result = LoopSoftwarePipeline::transform(program(buffers, entry));
+        assert!(!result.changed);
+    }
+
     #[test]
     fn pipelines_simple_load_store_loop() {
-        let entry = pipelinable_loop(0, 8);
-        let prog = program(vec![ro("ro"), rw("rw", 1)], entry);
+        let prog = program(vec![ro("ro"), rw("rw", 1)], pipelinable_loop(0, 8));
         let result = LoopSoftwarePipeline::transform(prog);
         assert!(result.changed, "Load-then-Store loop must pipeline");
         let (loops, stores) = count_loops_and_stores(result.program.entry());
         assert_eq!(loops, 1, "exactly one steady-state Loop after pipelining");
-        // 1 store inside the loop body + 1 epilogue store
         assert_eq!(stores, 2);
     }
 
-    /// Negative: trip count < 2  -  the prologue/epilogue degenerate.
     #[test]
     fn keeps_loop_with_trip_count_one() {
-        let entry = pipelinable_loop(0, 1);
-        let prog = program(vec![ro("ro"), rw("rw", 1)], entry);
-        let result = LoopSoftwarePipeline::transform(prog);
-        assert!(!result.changed);
+        assert_unchanged(vec![ro("ro"), rw("rw", 1)], pipelinable_loop(0, 1));
     }
 
-    /// Negative: same buffer in Load and Store  -  alias proof fails.
     #[test]
     fn keeps_loop_when_buffers_alias() {
-        let entry = vec![Node::Loop {
-            var: Ident::from("i"),
-            from: Expr::u32(0),
-            to: Expr::u32(8),
-            body: vec![
-                Node::let_bind(
-                    "x",
-                    Expr::Load {
-                        buffer: Ident::from("rw"),
-                        index: Box::new(Expr::var("i")),
-                    },
-                ),
-                Node::store(
-                    "rw",
-                    Expr::var("i"),
-                    Expr::BinOp {
-                        op: BinOp::Add,
-                        left: Box::new(Expr::var("x")),
-                        right: Box::new(Expr::u32(1)),
-                    },
-                ),
-            ],
-        }];
-        let prog = program(vec![rw("rw", 1)], entry);
-        let result = LoopSoftwarePipeline::transform(prog);
-        assert!(
-            !result.changed,
-            "self-aliasing Load+Store must not pipeline"
+        let entry = load_store_loop(
+            Expr::u32(0),
+            Expr::u32(8),
+            "rw",
+            Expr::var("i"),
+            None,
+            add_one_x(),
         );
+        assert_unchanged(vec![rw("rw", 1)], entry);
     }
 
-    /// Negative: index expression isn't `Var(i)`  -  affine indexing
-    /// is the next refinement.
     #[test]
     fn keeps_loop_with_non_var_index() {
-        let entry = vec![Node::Loop {
-            var: Ident::from("i"),
-            from: Expr::u32(0),
-            to: Expr::u32(8),
-            body: vec![
-                Node::let_bind(
-                    "x",
-                    Expr::Load {
-                        buffer: Ident::from("ro"),
-                        index: Box::new(Expr::BinOp {
-                            op: BinOp::Add,
-                            left: Box::new(Expr::var("i")),
-                            right: Box::new(Expr::u32(1)),
-                        }),
-                    },
-                ),
-                Node::store("rw", Expr::var("i"), Expr::var("x")),
-            ],
-        }];
-        let prog = program(vec![ro("ro"), rw("rw", 1)], entry);
-        let result = LoopSoftwarePipeline::transform(prog);
-        assert!(!result.changed);
+        let bad_idx = Expr::BinOp {
+            op: BinOp::Add,
+            left: Box::new(Expr::var("i")),
+            right: Box::new(Expr::u32(1)),
+        };
+        let entry = load_store_loop(
+            Expr::u32(0),
+            Expr::u32(8),
+            "ro",
+            bad_idx,
+            None,
+            Expr::var("x"),
+        );
+        assert_unchanged(vec![ro("ro"), rw("rw", 1)], entry);
     }
 
-    /// Negative: body has a third statement  -  pattern doesn't match.
     #[test]
     fn keeps_loop_with_three_body_stmts() {
-        let entry = vec![Node::Loop {
-            var: Ident::from("i"),
-            from: Expr::u32(0),
-            to: Expr::u32(8),
-            body: vec![
-                Node::let_bind(
-                    "x",
-                    Expr::Load {
-                        buffer: Ident::from("ro"),
-                        index: Box::new(Expr::var("i")),
-                    },
-                ),
-                Node::let_bind("y", Expr::u32(1)),
-                Node::store("rw", Expr::var("i"), Expr::var("x")),
-            ],
-        }];
-        let prog = program(vec![ro("ro"), rw("rw", 1)], entry);
-        let result = LoopSoftwarePipeline::transform(prog);
-        assert!(!result.changed);
+        let entry = load_store_loop(
+            Expr::u32(0),
+            Expr::u32(8),
+            "ro",
+            Expr::var("i"),
+            Some(Node::let_bind("y", Expr::u32(1))),
+            Expr::var("x"),
+        );
+        assert_unchanged(vec![ro("ro"), rw("rw", 1)], entry);
     }
 
-    /// Negative: store value doesn't read the Let-bound name  -
-    /// no Load → Store dataflow to pipeline.
     #[test]
     fn keeps_loop_when_store_does_not_use_load() {
-        let entry = vec![Node::Loop {
-            var: Ident::from("i"),
-            from: Expr::u32(0),
-            to: Expr::u32(8),
-            body: vec![
-                Node::let_bind(
-                    "x",
-                    Expr::Load {
-                        buffer: Ident::from("ro"),
-                        index: Box::new(Expr::var("i")),
-                    },
-                ),
-                Node::store("rw", Expr::var("i"), Expr::u32(99)),
-            ],
-        }];
-        let prog = program(vec![ro("ro"), rw("rw", 1)], entry);
-        let result = LoopSoftwarePipeline::transform(prog);
-        assert!(!result.changed);
+        let entry = load_store_loop(
+            Expr::u32(0),
+            Expr::u32(8),
+            "ro",
+            Expr::var("i"),
+            None,
+            Expr::u32(99),
+        );
+        assert_unchanged(vec![ro("ro"), rw("rw", 1)], entry);
     }
 
-    /// Negative: store value contains another Load  -  observably-free
-    /// gate fails.
     #[test]
     fn keeps_loop_when_store_value_has_other_load() {
-        let entry = vec![Node::Loop {
-            var: Ident::from("i"),
-            from: Expr::u32(0),
-            to: Expr::u32(8),
-            body: vec![
-                Node::let_bind(
-                    "x",
-                    Expr::Load {
-                        buffer: Ident::from("ro"),
-                        index: Box::new(Expr::var("i")),
-                    },
-                ),
-                Node::store(
-                    "rw",
-                    Expr::var("i"),
-                    Expr::BinOp {
-                        op: BinOp::Add,
-                        left: Box::new(Expr::var("x")),
-                        right: Box::new(Expr::Load {
-                            buffer: Ident::from("ro"),
-                            index: Box::new(Expr::u32(0)),
-                        }),
-                    },
-                ),
-            ],
-        }];
-        let prog = program(vec![ro("ro"), rw("rw", 1)], entry);
-        let result = LoopSoftwarePipeline::transform(prog);
-        assert!(!result.changed);
+        let other_load = Expr::BinOp {
+            op: BinOp::Add,
+            left: Box::new(Expr::var("x")),
+            right: Box::new(Expr::Load {
+                buffer: Ident::from("ro"),
+                index: Box::new(Expr::u32(0)),
+            }),
+        };
+        let entry = load_store_loop(
+            Expr::u32(0),
+            Expr::u32(8),
+            "ro",
+            Expr::var("i"),
+            None,
+            other_load,
+        );
+        assert_unchanged(vec![ro("ro"), rw("rw", 1)], entry);
     }
 
-    /// Negative: runtime bounds skip  -  needs literal bounds for
-    /// prologue / epilogue construction.
     #[test]
     fn keeps_loop_with_runtime_bounds() {
-        let entry = vec![Node::Loop {
-            var: Ident::from("i"),
-            from: Expr::u32(0),
-            to: Expr::var("n"),
-            body: vec![
-                Node::let_bind(
-                    "x",
-                    Expr::Load {
-                        buffer: Ident::from("ro"),
-                        index: Box::new(Expr::var("i")),
-                    },
-                ),
-                Node::store("rw", Expr::var("i"), Expr::var("x")),
-            ],
-        }];
-        let prog = program(vec![ro("ro"), rw("rw", 1)], entry);
-        let result = LoopSoftwarePipeline::transform(prog);
-        assert!(!result.changed);
+        let entry = load_store_loop(
+            Expr::u32(0),
+            Expr::var("n"),
+            "ro",
+            Expr::var("i"),
+            None,
+            Expr::var("x"),
+        );
+        assert_unchanged(vec![ro("ro"), rw("rw", 1)], entry);
     }
 
-    /// `analyze` short-circuits when no candidate exists.
     #[test]
     fn analyze_skips_program_without_pipelinable_loop() {
         let entry = vec![Node::store("rw", Expr::u32(0), Expr::u32(1))];
@@ -681,37 +581,11 @@ mod tests {
         }
     }
 
-    /// Loop bounds with `lo + 2 > u32::MAX` previously overflowed in the
-    /// pipelinable-loop guard. The replacement uses `checked_sub` so the
-    /// pass cleanly declines instead of panicking on overflow under
-    /// debug-assertions.
     #[test]
     fn keeps_loop_when_pipelinability_check_would_overflow() {
-        let entry = vec![Node::Loop {
-            var: Ident::from("i"),
-            from: Expr::u32(u32::MAX),
-            to: Expr::u32(u32::MAX),
-            body: vec![
-                Node::let_bind(
-                    "x",
-                    Expr::Load {
-                        buffer: Ident::from("ro"),
-                        index: Box::new(Expr::var("i")),
-                    },
-                ),
-                Node::store(
-                    "rw",
-                    Expr::var("i"),
-                    Expr::BinOp {
-                        op: BinOp::Add,
-                        left: Box::new(Expr::var("x")),
-                        right: Box::new(Expr::u32(1)),
-                    },
-                ),
-            ],
-        }];
-        let prog = program(vec![ro("ro"), rw("rw", 1)], entry);
-        let result = LoopSoftwarePipeline::transform(prog);
-        assert!(!result.changed);
+        assert_unchanged(
+            vec![ro("ro"), rw("rw", 1)],
+            pipelinable_loop(u32::MAX, u32::MAX),
+        );
     }
 }

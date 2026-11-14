@@ -16,7 +16,6 @@ pub mod quantized_dispatch;
 pub mod sheaf_heterophilic_dispatch;
 pub mod sheaf_spectral_clustering;
 pub mod sinkhorn_dispatch_clustering;
-pub mod sinkhorn_full_clustering;
 pub mod tensor_network_fusion_order;
 pub mod tensor_train_chain_fusion;
 pub mod tensor_train_compression;

@@ -29,7 +29,7 @@ fn linear_type_violations(program: &Program) -> BTreeSet<String> {
         .collect()
 }
 
-fn introduces_linear_type_violations(before: &BTreeSet<String>, after: &BTreeSet<String>) -> bool {
+fn introduces_violations(before: &BTreeSet<String>, after: &BTreeSet<String>) -> bool {
     after.iter().any(|violation| !before.contains(violation))
 }
 
@@ -40,11 +40,72 @@ fn shape_predicate_violations(program: &Program) -> BTreeSet<String> {
         .collect()
 }
 
-fn introduces_shape_predicate_violations(
-    before: &BTreeSet<String>,
-    after: &BTreeSet<String>,
-) -> bool {
-    after.iter().any(|violation| !before.contains(violation))
+fn map_budget_res(
+    res: Result<(), crate::optimizer::pass_result::RefusalReason>,
+) -> Result<(), OptimizerError> {
+    match res {
+        Ok(()) => Ok(()),
+        Err(crate::optimizer::pass_result::RefusalReason::BudgetExceeded {
+            resource,
+            budget,
+            consumed,
+        }) => Err(OptimizerError::BudgetExceeded {
+            resource,
+            budget,
+            consumed,
+        }),
+        Err(_) => Ok(()),
+    }
+}
+
+fn charge_cpu_step(
+    budget: Option<&mut crate::optimizer::compile_budget::CompileBudget>,
+) -> Result<(), OptimizerError> {
+    if let Some(b) = budget {
+        map_budget_res(b.charge_cpu_steps(1))?;
+    }
+    Ok(())
+}
+
+fn charge_landed_rewrite(
+    budget: Option<&mut crate::optimizer::compile_budget::CompileBudget>,
+    next_program: &Program,
+) -> Result<(), OptimizerError> {
+    if let Some(b) = budget {
+        map_budget_res(b.charge_transform_steps(1))?;
+        let allocs = estimate_ir_allocations(next_program);
+        map_budget_res(b.charge_memory_bytes(allocs.bytes as u64))?;
+        let code_size = (next_program.entry().len() + allocs.allocations) as u64;
+        map_budget_res(b.check_code_size(code_size))?;
+    }
+    Ok(())
+}
+
+fn check_pass_requirements(
+    metadata: crate::optimizer::PassMetadata,
+    available: Option<&FxHashSet<&'static str>>,
+) -> Result<(), OptimizerError> {
+    if let Some(available) = available {
+        if !requirements_satisfied(metadata, available) {
+            let missing = metadata
+                .requires
+                .iter()
+                .copied()
+                .find(|requirement| !available.contains(requirement))
+                .unwrap_or("<unknown>");
+            return Err(OptimizerError::UnsatisfiedRequirement {
+                pass: metadata.name,
+                missing,
+            });
+        }
+    }
+    Ok(())
+}
+
+fn set_metric_after_gates(metric: &mut PassRunMetric, facts: &GateFacts) {
+    metric.effect_bits_after = facts.effect_bits();
+    metric.linear_type_violations_after = facts.linear_violation_count();
+    metric.shape_predicate_violations_after = facts.shape_violation_count();
 }
 
 /// The program to carry forward when a pass reported no rewrite.
@@ -305,7 +366,7 @@ impl PassScheduler {
             before.linear_violations.as_ref(),
             linear_violations.as_ref(),
         ) {
-            if introduces_linear_type_violations(before_violations, after_violations) {
+            if introduces_violations(before_violations, after_violations) {
                 return Err(GateRejection::LinearTypes);
             }
         }
@@ -315,7 +376,7 @@ impl PassScheduler {
         if let (Some(before_violations), Some(after_violations)) =
             (before.shape_violations.as_ref(), shape_violations.as_ref())
         {
-            if introduces_shape_predicate_violations(before_violations, after_violations) {
+            if introduces_violations(before_violations, after_violations) {
                 return Err(GateRejection::ShapePredicates);
             }
         }
@@ -356,37 +417,11 @@ impl PassScheduler {
                 continue;
             };
             let metadata = pass.metadata();
-            if let Some(available) = available.as_ref() {
-                if !requirements_satisfied(metadata, available) {
-                    let missing = metadata
-                        .requires
-                        .iter()
-                        .copied()
-                        .find(|requirement| !available.contains(requirement))
-                        .unwrap_or("<unknown>");
-                    return Err(OptimizerError::UnsatisfiedRequirement {
-                        pass: metadata.name,
-                        missing,
-                    });
-                }
-            }
+            check_pass_requirements(metadata, available.as_ref())?;
 
             if dirty.get(pass_index).copied().unwrap_or(false) && pass.analyze(&program).should_run
             {
-                if let Some(b) = &mut budget {
-                    if let Err(crate::optimizer::pass_result::RefusalReason::BudgetExceeded {
-                        resource,
-                        budget,
-                        consumed,
-                    }) = b.charge_cpu_steps(1)
-                    {
-                        return Err(OptimizerError::BudgetExceeded {
-                            resource,
-                            budget,
-                            consumed,
-                        });
-                    }
-                }
+                charge_cpu_step(budget.as_deref_mut())?;
                 // One snapshot serves both the gate rollback and the check for a
                 // pass that reports a rewrite it did not make.
                 let snapshot = program.clone();
@@ -446,46 +481,7 @@ impl PassScheduler {
                     }
                 };
                 if landed {
-                    if let Some(b) = &mut budget {
-                        if let Err(crate::optimizer::pass_result::RefusalReason::BudgetExceeded {
-                            resource,
-                            budget,
-                            consumed,
-                        }) = b.charge_transform_steps(1)
-                        {
-                            return Err(OptimizerError::BudgetExceeded {
-                                resource,
-                                budget,
-                                consumed,
-                            });
-                        }
-                        let allocs = estimate_ir_allocations(&next_program);
-                        if let Err(crate::optimizer::pass_result::RefusalReason::BudgetExceeded {
-                            resource,
-                            budget,
-                            consumed,
-                        }) = b.charge_memory_bytes(allocs.bytes as u64)
-                        {
-                            return Err(OptimizerError::BudgetExceeded {
-                                resource,
-                                budget,
-                                consumed,
-                            });
-                        }
-                        let code_size = (next_program.entry().len() + allocs.allocations) as u64;
-                        if let Err(crate::optimizer::pass_result::RefusalReason::BudgetExceeded {
-                            resource,
-                            budget,
-                            consumed,
-                        }) = b.check_code_size(code_size)
-                        {
-                            return Err(OptimizerError::BudgetExceeded {
-                                resource,
-                                budget,
-                                consumed,
-                            });
-                        }
-                    }
+                    charge_landed_rewrite(budget.as_deref_mut(), &next_program)?;
                     changed = true;
                     changed_by = Some(pass.pass_id());
                 }
@@ -528,20 +524,7 @@ impl PassScheduler {
                 continue;
             };
             let metadata = pass.metadata();
-            if let Some(available) = available.as_ref() {
-                if !requirements_satisfied(metadata, available) {
-                    let missing = metadata
-                        .requires
-                        .iter()
-                        .copied()
-                        .find(|requirement| !available.contains(requirement))
-                        .unwrap_or("<unknown>");
-                    return Err(OptimizerError::UnsatisfiedRequirement {
-                        pass: metadata.name,
-                        missing,
-                    });
-                }
-            }
+            check_pass_requirements(metadata, available.as_ref())?;
 
             let before_stats = *program.stats();
             let before_allocations = *cached_allocation_estimate
@@ -593,20 +576,7 @@ impl PassScheduler {
                     }
                     continue;
                 }
-                if let Some(b) = &mut budget {
-                    if let Err(crate::optimizer::pass_result::RefusalReason::BudgetExceeded {
-                        resource,
-                        budget,
-                        consumed,
-                    }) = b.charge_cpu_steps(1)
-                    {
-                        return Err(OptimizerError::BudgetExceeded {
-                            resource,
-                            budget,
-                            consumed,
-                        });
-                    }
-                }
+                charge_cpu_step(budget.as_deref_mut())?;
                 // One snapshot serves both the gate rollback and the check for a
                 // pass that reports a rewrite it did not make.
                 let snapshot = program.clone();
@@ -633,25 +603,13 @@ impl PassScheduler {
                                     } else {
                                         PassRunDecision::RanUnchanged
                                     };
-                                    metric.effect_bits_after = after.effect_bits();
-                                    metric.linear_type_violations_after =
-                                        after.linear_violation_count();
-                                    metric.shape_predicate_violations_after =
-                                        after.shape_violation_count();
+                                    set_metric_after_gates(&mut metric, &after);
                                     gates.store(&result.program, after);
                                     (result.program, landed)
                                 }
                                 Err(rejection) => {
-                                    // A tracked post-condition regressed without
-                                    // an explicit refusal. Drop the rewrite and
-                                    // restore the snapshot; the counters below
-                                    // describe the post-revert program.
                                     metric.decision = rejection.decision();
-                                    metric.effect_bits_after = before.effect_bits();
-                                    metric.linear_type_violations_after =
-                                        before.linear_violation_count();
-                                    metric.shape_predicate_violations_after =
-                                        before.shape_violation_count();
+                                    set_metric_after_gates(&mut metric, &before);
                                     gates.store(&snapshot, before);
                                     (snapshot, false)
                                 }
@@ -659,10 +617,7 @@ impl PassScheduler {
                         }
                         Ok(result) => {
                             metric.decision = PassRunDecision::RanUnchanged;
-                            metric.effect_bits_after = before.effect_bits();
-                            metric.linear_type_violations_after = before.linear_violation_count();
-                            metric.shape_predicate_violations_after =
-                                before.shape_violation_count();
+                            set_metric_after_gates(&mut metric, &before);
                             gates.store(&snapshot, before);
                             (result.program, false)
                         }
@@ -681,10 +636,7 @@ impl PassScheduler {
                             }
                             metric.decision = PassRunDecision::Refused;
                             metric.refusal_kind = Some(refusal.kind());
-                            metric.effect_bits_after = before.effect_bits();
-                            metric.linear_type_violations_after = before.linear_violation_count();
-                            metric.shape_predicate_violations_after =
-                                before.shape_violation_count();
+                            set_metric_after_gates(&mut metric, &before);
                             gates.store(&snapshot, before);
                             (snapshot, false)
                         }
@@ -701,46 +653,7 @@ impl PassScheduler {
                     (result.program, landed)
                 };
                 if landed_changed {
-                    if let Some(b) = &mut budget {
-                        if let Err(crate::optimizer::pass_result::RefusalReason::BudgetExceeded {
-                            resource,
-                            budget,
-                            consumed,
-                        }) = b.charge_transform_steps(1)
-                        {
-                            return Err(OptimizerError::BudgetExceeded {
-                                resource,
-                                budget,
-                                consumed,
-                            });
-                        }
-                        let allocs = estimate_ir_allocations(&next_program);
-                        if let Err(crate::optimizer::pass_result::RefusalReason::BudgetExceeded {
-                            resource,
-                            budget,
-                            consumed,
-                        }) = b.charge_memory_bytes(allocs.bytes as u64)
-                        {
-                            return Err(OptimizerError::BudgetExceeded {
-                                resource,
-                                budget,
-                                consumed,
-                            });
-                        }
-                        let code_size = (next_program.entry().len() + allocs.allocations) as u64;
-                        if let Err(crate::optimizer::pass_result::RefusalReason::BudgetExceeded {
-                            resource,
-                            budget,
-                            consumed,
-                        }) = b.check_code_size(code_size)
-                        {
-                            return Err(OptimizerError::BudgetExceeded {
-                                resource,
-                                budget,
-                                consumed,
-                            });
-                        }
-                    }
+                    charge_landed_rewrite(budget.as_deref_mut(), &next_program)?;
                 }
                 program = next_program;
                 let after_stats = *program.stats();

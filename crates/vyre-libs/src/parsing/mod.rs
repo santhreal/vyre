@@ -10,8 +10,6 @@
 //! - `lr_tables`  -  precomputed LR action/goto tables and the CPU reference
 //!   parser that walks them.
 //! - `vast`  -  the packed AST wire format and its host walks.
-//! - `source_cache`  -  content-hash LRU cache for parsed source artifacts.
-//! - `parallel_parse`  -  parallel corpus parse on top of that cache.
 //! - `go`  -  Go 1.21 lex + structural extraction.
 //!   Feature-gated behind `go-parser`.
 //! - `python`  -  Python 3.12 sparse lex + structural extraction.
@@ -22,20 +20,10 @@
 /// Behind `parsing` because the three registrations under it carry
 /// `vyre-libs::parsing::` op ids, and that is the feature the operation
 /// schema routes those ids to. The substrate below (`composition`,
-/// `source_cache`, `lr_tables`, `vast`, `parallel_parse`) registers nothing
+/// `lr_tables`, `vast`) registers nothing
 /// and stays available to a build that only wants the kernels.
 #[cfg(feature = "parsing")]
 pub mod core;
-
-/// Content-hash LRU cache for parsed source artifacts.
-/// substrate; language-specific parse pipelines opt in via
-/// `ParsedSourceLru::get_or_parse`.
-pub mod source_cache;
-
-/// Parallel corpus parse on top of the L2 LRU cache.
-/// substrate; fans `get_or_parse` across cores with `rayon` while
-/// preserving input order.
-pub mod parallel_parse;
 
 /// The phase-nesting helper, behind the two features that compose a phase:
 /// `parsing` for the core shunting-yard statement pass, `python-parser` for the
@@ -91,13 +79,6 @@ pub mod whitespace_classify_word;
 /// the post-phase-2 byte stream and the original-offset map.
 #[cfg(feature = "parsing-kernels")]
 pub mod line_splice_classify;
-
-/// AST-level constant-folding wave operating on packed-AST u32 buffers.
-/// NOT the vyre-IR `optimizer::passes::fusion_cse::cse`: the `ast_` prefix
-/// marks this as a parsing-domain primitive that runs against a packed-AST
-/// representation, not against `Expr` / `Node` of the IR.
-#[cfg(feature = "parsing-kernels")]
-pub mod ast_cse_constant_fold;
 
 /// AST-level structural-hash CSE probe/insert wave operating on packed-AST
 /// u32 buffers. NOT the vyre-IR CSE; the `ast_` prefix disambiguates.

@@ -44,12 +44,9 @@
 
 mod dense_step;
 mod four_russians;
-mod frontier_plan;
 mod mode_selection;
 mod plan_cache_key;
 mod sparse_dense_step;
-#[cfg(test)]
-mod test_graphs;
 mod traversal_plan;
 
 pub use dense_step::adaptive_dense_step;
@@ -57,13 +54,6 @@ pub use four_russians::{
     adaptive_four_russians_dense_step, four_russians_dense_columns_from_adj_rows,
     four_russians_dense_lut_from_adj_rows, four_russians_dense_lut_words,
     four_russians_frontier_words, four_russians_source_tile_count,
-};
-#[cfg(test)]
-pub use frontier_plan::{adaptive_frontier_popcount, adaptive_frontier_popcount_in_domain};
-pub use frontier_plan::{
-    adaptive_frontier_stats, plan_adaptive_frontier_work, validate_adaptive_frontier,
-    validate_adaptive_traversal_layout, AdaptiveFrontierLayout, AdaptiveFrontierStats,
-    AdaptiveFrontierWorkPlan, AdaptiveTraversalLayout,
 };
 #[cfg(test)]
 pub use mode_selection::should_use_dense;
