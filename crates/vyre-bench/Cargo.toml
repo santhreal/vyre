@@ -9,6 +9,7 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "Internal vyre benchmark + parity harness across the CUDA, wgpu, SPIR-V, and reference substrates. Not published to crates.io."
+readme = "README.md"
 publish = false
 
 [dependencies]
@@ -40,7 +41,7 @@ vyre-emit = { workspace = true, features = ["ptx", "naga", "spirv"] }
 vyre-spec = { workspace = true }
 # The per-thread allocation probe the runner installs. It is a runtime
 # dependency because `main.rs` declares the global allocator.
-vyre-alloc-probe = { workspace = true }
+vyre-test-support = { workspace = true }
 blake3 = { workspace = true }
 
 aho-corasick = { workspace = true }
@@ -87,8 +88,6 @@ tempfile.workspace = true
 # The baseline suite recomputes each pinned harness digest from the file on disk.
 sha2.workspace = true
 hex.workspace = true
-# The registry-closure gate and the shared fixture readers the suites read.
-vyre-test-support = { workspace = true }
 
 [[bin]]
 name = "vyre-bench"

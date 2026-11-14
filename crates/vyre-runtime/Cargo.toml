@@ -9,6 +9,7 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "Backend contracts, driver registry, artifact execution, resident work queues and zero-copy IO for vyre typed programs"
+readme = "README.md"
 keywords = ["gpu", "runtime", "megakernel", "io-uring", "vyre"]
 categories = ["compilers", "hardware-support", "asynchronous"]
 documentation = "https://docs.rs/vyre-runtime"
