@@ -33,7 +33,7 @@ fn does_not_replace_full_standalone_workgroup_sum_region() {
         }],
     );
 
-    let lowered = lower_subgroup_reductions(program, &caps_with_subgroup(32));
+    let lowered = lower_subgroup_reductions(&program, &caps_with_subgroup(32));
     let [Node::Region { body, .. }] = lowered.entry() else {
         panic!("Fix: standalone workgroup sum must remain wrapped in one region.");
     };
@@ -68,7 +68,7 @@ fn u32_two_level_workgroup_sum_uses_u32_neutral() {
         }],
     );
 
-    let lowered = lower_subgroup_reductions(program, &caps_with_subgroup(32));
+    let lowered = lower_subgroup_reductions(&program, &caps_with_subgroup(32));
     let [Node::Region { body, .. }] = lowered.entry() else {
         panic!("Fix: u32 workgroup sum must remain wrapped in one region.");
     };
@@ -206,8 +206,8 @@ fn no_change_when_subgroup_not_supported() {
         vec![region],
     );
     let caps = AdapterCaps::default();
-    let lowered = lower_subgroup_reductions(Clone::clone(&program), &caps);
-    assert_eq!(lowered, program);
+    let lowered = lower_subgroup_reductions(&program, &caps);
+    assert_eq!(*lowered, program);
 }
 
 #[test]
@@ -219,8 +219,8 @@ fn no_change_when_workgroup_larger_than_subgroup() {
         vec![region],
     );
     let caps = caps_with_subgroup(32);
-    let lowered = lower_subgroup_reductions(Clone::clone(&program), &caps);
-    assert_eq!(lowered, program);
+    let lowered = lower_subgroup_reductions(&program, &caps);
+    assert_eq!(*lowered, program);
 }
 
 /// Splits a lowered reduction body into the lane binding it opens with and
@@ -271,7 +271,7 @@ fn lowered_reduction_body_is_closed_over_the_lanes_it_reads() {
             [workgroup, 1, 1],
             vec![region],
         );
-        let lowered = lower_subgroup_reductions(program, &caps_with_subgroup(32));
+        let lowered = lower_subgroup_reductions(&program, &caps_with_subgroup(32));
         let Node::Region { body, .. } = &lowered.entry()[0] else {
             panic!("expected Region");
         };
@@ -297,7 +297,7 @@ fn lowers_every_workgroup_sum_to_subgroup_add() {
         vec![region],
     );
     let caps = caps_with_subgroup(32);
-    let lowered = lower_subgroup_reductions(program, &caps);
+    let lowered = lower_subgroup_reductions(&program, &caps);
 
     let entry = lowered.entry();
     assert_eq!(entry.len(), 1);
@@ -337,7 +337,7 @@ fn lowers_every_workgroup_max_to_subgroup_reduce_max() {
         [4, 1, 1],
         vec![region],
     );
-    let lowered = lower_subgroup_reductions(program, &caps_with_subgroup(32));
+    let lowered = lower_subgroup_reductions(&program, &caps_with_subgroup(32));
 
     let entry = lowered.entry();
     assert_eq!(entry.len(), 1);
@@ -386,7 +386,7 @@ fn lowers_workgroup_max_u32_to_subgroup_reduce_max() {
         [4, 1, 1],
         vec![region],
     );
-    let lowered = lower_subgroup_reductions(program, &caps_with_subgroup(32));
+    let lowered = lower_subgroup_reductions(&program, &caps_with_subgroup(32));
 
     let entry = lowered.entry();
     assert_eq!(entry.len(), 1);
@@ -428,7 +428,7 @@ fn lowers_workgroup_min_f32_to_subgroup_reduce_min() {
         [4, 1, 1],
         vec![region],
     );
-    let lowered = lower_subgroup_reductions(program, &caps_with_subgroup(32));
+    let lowered = lower_subgroup_reductions(&program, &caps_with_subgroup(32));
 
     let Node::Region { body, .. } = &lowered.entry()[0] else {
         panic!("expected Region");
@@ -467,7 +467,7 @@ fn lowers_workgroup_min_u32_to_subgroup_reduce_min() {
         [4, 1, 1],
         vec![region],
     );
-    let lowered = lower_subgroup_reductions(program, &caps_with_subgroup(32));
+    let lowered = lower_subgroup_reductions(&program, &caps_with_subgroup(32));
 
     let Node::Region { body, .. } = &lowered.entry()[0] else {
         panic!("expected Region");
@@ -507,7 +507,7 @@ fn lowers_two_level_workgroup_max_uses_neg_inf_neutral() {
         [256, 1, 1],
         vec![region],
     );
-    let lowered = lower_subgroup_reductions(program, &caps_with_subgroup(32));
+    let lowered = lower_subgroup_reductions(&program, &caps_with_subgroup(32));
     let entry = lowered.entry();
     let Node::Region { body, .. } = &entry[0] else {
         panic!("expected Region");
@@ -558,7 +558,7 @@ fn lowers_two_level_workgroup_sum_for_large_workgroups() {
         vec![region],
     );
     let caps = caps_with_subgroup(32);
-    let lowered = lower_subgroup_reductions(program, &caps);
+    let lowered = lower_subgroup_reductions(&program, &caps);
 
     let entry = lowered.entry();
     assert_eq!(entry.len(), 1);
@@ -592,7 +592,7 @@ fn lowers_first_workgroup_sum_with_guard() {
         vec![region],
     );
     let caps = caps_with_subgroup(32);
-    let lowered = lower_subgroup_reductions(program, &caps);
+    let lowered = lower_subgroup_reductions(&program, &caps);
 
     let entry = lowered.entry();
     assert_eq!(entry.len(), 1);
@@ -629,8 +629,8 @@ fn non_reduction_regions_are_unchanged() {
         vec![region],
     );
     let caps = caps_with_subgroup(32);
-    let lowered = lower_subgroup_reductions(Clone::clone(&program), &caps);
-    assert_eq!(lowered, program);
+    let lowered = lower_subgroup_reductions(&program, &caps);
+    assert_eq!(*lowered, program);
 }
 
 #[test]
@@ -642,7 +642,7 @@ fn stats_flag_subgroup_ops_after_lowering() {
         vec![region],
     );
     let caps = caps_with_subgroup(32);
-    let lowered = lower_subgroup_reductions(program, &caps);
+    let lowered = lower_subgroup_reductions(&program, &caps);
     assert!(
         lowered.stats().subgroup_ops(),
         "lowering must set the subgroup_ops capability bit"

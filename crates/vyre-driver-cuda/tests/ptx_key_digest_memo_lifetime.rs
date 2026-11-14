@@ -5,8 +5,8 @@
 //! program, and the normalized digest feeding that key is memoized ON THE
 //! PROGRAM VALUE. The defect locked out here is neither a wrong digest nor a
 //! broken memo: both were correct in isolation. It is that the key used to be
-//! derived from `lower_subgroup_reductions(program.clone(), caps)`, a value
-//! created and dropped inside a single dispatch, so the memo's only writer was
+//! derived from a per-dispatch clone of the program, a value created and
+//! dropped inside a single dispatch, so the memo's only writer was
 //! a temporary and the memo could never be read. A memo whose only writer is a
 //! temporary is a memo that cannot ever be read. Measured before the fix: 79 ns
 //! per IR node, 92 percent of the host PTX phase, and 6 recomputes per `cjk`
@@ -128,7 +128,7 @@ fn a_per_dispatch_clone_off_a_cold_original_recomputes_every_time() {
 
     let mut digests = Vec::new();
     for dispatch in 1..=4u32 {
-        let mut lowered = lower_subgroup_reductions(program.clone(), &adapter);
+        let mut lowered = lower_subgroup_reductions(&program, &adapter).into_owned();
         assert!(
             Arc::ptr_eq(&program.entry, &lowered.entry),
             "Fix: fixture must be a lowering no-op, or this control is measuring \
@@ -200,7 +200,7 @@ fn a_rewritten_program_does_not_share_the_unlowered_digest() {
             body: Arc::new(vec![Node::store("scratch", Expr::u32(0), Expr::u32(7))]),
         }],
     );
-    let lowered = lower_subgroup_reductions(program.clone(), &caps());
+    let lowered = lower_subgroup_reductions(&program, &caps());
 
     assert!(
         !Arc::ptr_eq(&program.entry, &lowered.entry),

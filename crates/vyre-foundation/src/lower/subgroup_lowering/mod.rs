@@ -85,10 +85,13 @@ impl ReductionValueType {
 /// in one subgroup lowers to one `subgroup_add`. A larger workgroup lowers to
 /// a subgroup-then-shared reduction when its subgroup count fits in one
 /// subgroup.
+///
+/// Returns `program` borrowed when nothing lowers, so its memoized digests
+/// stay valid for the caller.
 #[must_use]
-pub fn lower_subgroup_reductions(program: Program, caps: &AdapterCaps) -> Program {
+pub fn lower_subgroup_reductions<'p>(program: &'p Program, caps: &AdapterCaps) -> Cow<'p, Program> {
     if !caps.supports_subgroup_ops || caps.subgroup_size == 0 {
-        return program;
+        return Cow::Borrowed(program);
     }
 
     let workgroup_total = program.workgroup_size()[0]
@@ -96,7 +99,7 @@ pub fn lower_subgroup_reductions(program: Program, caps: &AdapterCaps) -> Progra
         .saturating_mul(program.workgroup_size()[2]);
 
     if workgroup_total > subgroup_reduce_lane_limit(caps.subgroup_size) {
-        return program;
+        return Cow::Borrowed(program);
     }
 
     let plan = SubgroupReductionPlan {
@@ -104,8 +107,8 @@ pub fn lower_subgroup_reductions(program: Program, caps: &AdapterCaps) -> Progra
         workgroup_total,
     };
     match rewrite_nodes(program.entry(), plan) {
-        Cow::Borrowed(_) => program,
-        Cow::Owned(entry) => program.with_rewritten_entry(entry),
+        Cow::Borrowed(_) => Cow::Borrowed(program),
+        Cow::Owned(entry) => Cow::Owned(program.with_rewritten_entry(entry)),
     }
 }
 

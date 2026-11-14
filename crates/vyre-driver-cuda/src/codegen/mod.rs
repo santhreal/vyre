@@ -51,7 +51,7 @@ pub fn program_to_ptx_for_sm_and_subgroup(
         tracing::debug!("[cuda-codegen] start target_sm={target_sm} subgroup={subgroup_size}");
     }
     let subgroup_lowered = vyre_foundation::lower::lower_subgroup_reductions(
-        program.clone(),
+        program,
         &AdapterCaps {
             backend: "cuda",
             supports_subgroup_ops: true,
