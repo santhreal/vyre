@@ -301,7 +301,7 @@ impl InstanceCore {
             .bindings
             .iter()
             .filter(|binding| binding.role != BindingRole::Shared);
-        let mut ordered = Vec::new();
+        let mut ordered = Vec::with_capacity(plan.bindings.len());
         for binding in non_shared {
             let buffer = &program.buffers()[binding.buffer_index];
             let name = buffer.name();

@@ -153,7 +153,7 @@ impl CudaBackend {
                     "resident batch dispatch view cache",
                 )?;
                 resident.validate_binding(
-                    &format!("resident batch dispatch item {batch_index}"),
+                    format_args!("resident batch dispatch item {batch_index}"),
                     &binding.name,
                     binding.static_byte_len,
                     handle.handle,

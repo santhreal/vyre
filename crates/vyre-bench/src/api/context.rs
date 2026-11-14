@@ -445,20 +445,20 @@ fn bindings_for_program_resources(
     prog: &vyre::ir::Program,
     resources: &[vyre_driver::Resource],
 ) -> Result<vyre_driver::BindingSet, vyre_driver::BackendError> {
-    let non_shared_buffers: Vec<&vyre_foundation::ir::BufferDecl> = prog
-        .buffers()
-        .iter()
-        .filter(|decl| decl.access != vyre_foundation::ir::BufferAccess::Workgroup)
-        .collect();
-    if non_shared_buffers.len() != resources.len() {
+    let non_shared_buffers = || {
+        prog.buffers()
+            .iter()
+            .filter(|decl| decl.access != vyre_foundation::ir::BufferAccess::Workgroup)
+    };
+    let declared = non_shared_buffers().count();
+    if declared != resources.len() {
         return Err(vyre_driver::BackendError::new(format!(
-            "program declares {} non-shared buffer(s), but {} resident resource(s) were supplied",
-            non_shared_buffers.len(),
+            "program declares {declared} non-shared buffer(s), but {} resident resource(s) were supplied",
             resources.len()
         )));
     }
     let mut dataset = vyre_runtime::artifact_admission::TypedResourceDataset::new();
-    for (decl, resource) in non_shared_buffers.into_iter().zip(resources) {
+    for (decl, resource) in non_shared_buffers().zip(resources) {
         let value_id = session
             .resource(decl.name())
             .map_err(|error| vyre_driver::BackendError::new(error.to_string()))?;

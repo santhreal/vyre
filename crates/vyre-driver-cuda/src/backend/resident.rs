@@ -66,7 +66,7 @@ impl ResidentBufferView {
     /// both only for the diagnostic.
     pub(crate) fn validate_binding(
         self,
-        subject: &str,
+        subject: impl std::fmt::Display,
         binding: &str,
         static_byte_len: Option<usize>,
         handle: ResidentHandle,
