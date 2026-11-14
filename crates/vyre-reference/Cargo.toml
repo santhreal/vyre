@@ -32,7 +32,7 @@ vyre-test-support = { workspace = true, features = ["ir-fixtures"] }
 # Byte-stability golden harness (`artifact_golden`) shared with the emitter
 # crates, so the reference-output corpus is pinned the same way emitted
 # artifacts are instead of growing a second comparison spelling.
-vyre-lower = { workspace = true, features = ["test-fixtures"] }
+vyre-compiler = { workspace = true, features = ["test-fixtures"] }
 proptest.workspace = true
 # Per-thread heap counters behind a `GlobalAlloc` wrapper, so the oracle's
 # per-node allocation is measured on the measuring thread rather than across

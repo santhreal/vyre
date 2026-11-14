@@ -241,8 +241,8 @@ pub use program_walks::{
     admit_dispatch_grid, dispatch_element_count_for_program, element_size_bytes,
     enforce_actual_output_budget, find_indirect_dispatch, infer_dispatch_grid,
     infer_dispatch_grid_for_count, infer_launch_grid, output_binding_layout_parts,
-    output_binding_layouts, output_layout_from_program, try_dispatch_param_words_into,
-    IndirectDispatch, OutputBindingLayout, OutputLayout,
+    output_binding_layouts, try_dispatch_param_words_into, IndirectDispatch, OutputBindingLayout,
+    OutputLayout,
 };
 pub use read_only_alias::ReadOnlyAliasCheck;
 pub use specialization::SpecCacheKey;

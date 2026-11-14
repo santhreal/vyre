@@ -10,8 +10,8 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
+use vyre_compiler::{AbiAccess, ArtifactValueId, Digest, ResourceLifetime};
 use vyre_foundation::ir::DataType;
-use vyre_megakernel::{AbiAccess, ArtifactValueId, Digest, ResourceLifetime};
 use vyre_runtime::Resource;
 
 /// Source of data for a typed resource ingestion.

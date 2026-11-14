@@ -32,8 +32,6 @@ pub(crate) const IORING_OFF_SQES: u64 = 0x10000000;
 pub(crate) const IORING_REGISTER_BUFFERS: u32 = 0;
 pub(crate) const IORING_REGISTER_FILES: u32 = 2;
 
-pub(crate) const IOSQE_FIXED_FILE: u8 = 1 << 0;
-
 // ---- Struct Definitions matching Linux ABI ----
 
 #[repr(C)]

@@ -7,7 +7,7 @@ use super::{ResidentGridLimits, ResidentGridPlan, ResidentGridRequest, ResidentL
 ///
 /// Every value here is arithmetic over a count the caller states and a limit the
 /// adapter reports: workgroup width, slot padding, and the backend grid. Which
-/// worker count to run is a schedule decision `vyre-megakernel` records in the
+/// worker count to run is a schedule decision `vyre-compiler` records in the
 /// artifact, and this policy realizes it.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ResidentSizingPolicy {
@@ -27,12 +27,6 @@ impl ResidentSizingPolicy {
         Self {
             scheduling: SchedulingPolicy::standard(),
         }
-    }
-
-    /// Build from a shared backend-neutral scheduling policy.
-    #[must_use]
-    pub const fn from_scheduling(scheduling: SchedulingPolicy) -> Self {
-        Self { scheduling }
     }
 
     /// Default persistent worker workgroup count.

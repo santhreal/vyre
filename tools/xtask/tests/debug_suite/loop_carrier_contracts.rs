@@ -7,14 +7,14 @@ use xtask::debug::{carrier_summary, find_uncarriered_assigns};
 
 use crate::program_fixtures;
 
-fn lower_library_program(program: &Program) -> vyre_lower::KernelDescriptor {
+fn lower_library_program(program: &Program) -> vyre_compiler::lower::KernelDescriptor {
     let graph = ProgramGraph::from_program("vyre-debug::loop-carrier", program.clone())
         .expect("library fixture must form a valid graph");
     let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new())
         .expect("library fixture must have a valid logical domain");
-    let schedule = vyre_megakernel::baseline_schedule(&logical);
+    let schedule = vyre_compiler::baseline_schedule(&logical);
     let phase = schedule.phases[0].id;
-    vyre_lower::lower_scheduled(program, &schedule, phase)
+    vyre_compiler::lower::lower_scheduled(program, &schedule, phase)
         .expect("library fixture must lower through its selected schedule")
         .into_descriptor()
 }
@@ -22,7 +22,7 @@ fn lower_library_program(program: &Program) -> vyre_lower::KernelDescriptor {
 #[test]
 fn find_uncarriered_assigns_smoke_program_returns_empty() {
     let p = loop_carry_smoke();
-    let desc = vyre_lower::lower_physical(&p)
+    let desc = vyre_compiler::lower::lower_physical(&p)
         .map(|lowered| lowered.into_descriptor())
         .unwrap();
     let uncarriered = find_uncarriered_assigns(&p, &desc);
@@ -43,19 +43,19 @@ fn find_uncarriered_assigns_flags_a_loop_with_no_carrier() {
             ),
         ],
     );
-    let mut desc = vyre_lower::lower_physical(&p)
+    let mut desc = vyre_compiler::lower::lower_physical(&p)
         .map(|lowered| lowered.into_descriptor())
         .unwrap();
 
     // Manually strip LoopCarrier from the descriptor.
     // `LoopCarrierFinal` was consolidated into `LoopCarrier` upstream;
     // the strip set is now just the two remaining variants.
-    fn strip_carriers(body: &mut vyre_lower::KernelBody) {
+    fn strip_carriers(body: &mut vyre_compiler::lower::KernelBody) {
         body.ops.retain(|op| {
             !matches!(
                 op.kind,
-                vyre_lower::KernelOpKind::LoopCarrier { .. }
-                    | vyre_lower::KernelOpKind::LoopCarrierEnd { .. }
+                vyre_compiler::lower::KernelOpKind::LoopCarrier { .. }
+                    | vyre_compiler::lower::KernelOpKind::LoopCarrierEnd { .. }
             )
         });
         for child in &mut body.child_bodies {
@@ -85,20 +85,20 @@ fn carrier_summary_counts_match_descriptor_walk() {
     let mut writes = BTreeMap::new();
     let mut finals = BTreeMap::new();
     fn walk_body(
-        body: &vyre_lower::KernelBody,
+        body: &vyre_compiler::lower::KernelBody,
         r: &mut BTreeMap<String, usize>,
         w: &mut BTreeMap<String, usize>,
         f: &mut BTreeMap<String, usize>,
     ) {
         for op in &body.ops {
             match &op.kind {
-                vyre_lower::KernelOpKind::LoopCarrier { name } => {
+                vyre_compiler::lower::KernelOpKind::LoopCarrier { name } => {
                     *r.entry(name.to_string()).or_insert(0) += 1;
                 }
-                vyre_lower::KernelOpKind::LoopCarrierInit { name } => {
+                vyre_compiler::lower::KernelOpKind::LoopCarrierInit { name } => {
                     *w.entry(name.to_string()).or_insert(0) += 1;
                 }
-                vyre_lower::KernelOpKind::LoopCarrierEnd { name } => {
+                vyre_compiler::lower::KernelOpKind::LoopCarrierEnd { name } => {
                     *f.entry(name.to_string()).or_insert(0) += 1;
                 }
                 _ => {}

@@ -15,7 +15,7 @@ use vyre_foundation::ir::{Expr, Node, Program};
 
 use super::encode::EncodeError;
 use super::expr_arena::{encode_expr_arena, expr_kind, ExprArenaEncoding};
-use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 #[derive(Debug, Default)]
 struct CanonicalizeKernelScratch {

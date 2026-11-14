@@ -15,7 +15,7 @@
 
 use vyre_runtime::materialize::{self, MaterializerTarget};
 use vyre_runtime::BackendError;
-use vyre_megakernel::{
+use vyre_compiler::{
     Artifact, TargetEntryPoint, TargetModuleBundle, TargetPayload, TargetPayloadFormat,
     TargetProfile,
 };

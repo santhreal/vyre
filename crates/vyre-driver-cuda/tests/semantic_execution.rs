@@ -3,7 +3,7 @@
 #![cfg(all(test, feature = "device-tests"))]
 
 use vyre_driver_cuda::{registered_backend_id, CUDA_BACKEND_ID};
-use vyre_megakernel::DeviceFacts;
+use vyre_compiler::DeviceFacts;
 use vyre_runtime::RegisteredSemanticExecutor;
 use vyre_test_support::semantic_requests::{
     assert_executes_add, assert_executes_retained_accumulate, assert_refuses_zero_artifact_limit,

@@ -16,7 +16,7 @@ use vyre_libs_builder::plumbing::host::dispatch_buffers::{
 use vyre_libs_graph::graph::do_calculus::{
     impact_mask_from_closure, intervention_delete_incoming, rule2_reverse_incoming, rule3_subgraph,
 };
-use vyre_megakernel::{
+use vyre_compiler::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
 

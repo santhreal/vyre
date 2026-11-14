@@ -11,7 +11,7 @@ use thiserror::Error;
 use vyre_runtime::{AotLauncherRequest, LauncherDependency};
 
 use crate::artifact::{registration, TargetId};
-use vyre_megakernel::ArtifactEnvelope;
+use vyre_compiler::ArtifactEnvelope;
 
 /// Options controlling launcher emission.
 #[derive(Debug, Clone)]
@@ -126,7 +126,7 @@ lzma-rs = "0.3"
 sha2 = "0.10"
 "#,
     );
-    dependencies.push_str("vyre-megakernel = \"=");
+    dependencies.push_str("vyre-compiler = \"=");
     dependencies.push_str(env!("CARGO_PKG_VERSION"));
     dependencies.push_str("\"\n");
     for dep in deps {
@@ -223,7 +223,7 @@ mod tests {
             "Fix: generated launchers must include sha2 so runtime artifact integrity checks compile."
         );
         assert!(cargo.contains(&format!(
-            "vyre-megakernel = \"={}\"",
+            "vyre-compiler = \"={}\"",
             env!("CARGO_PKG_VERSION")
         )));
     }

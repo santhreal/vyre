@@ -71,7 +71,7 @@ pub(super) fn trap_sidecar_from_module(
         return Err(BackendError::KernelCompileFailed {
             backend: crate::CUDA_BACKEND_ID.to_string(),
             compiler_message: format!(
-                "loaded module reserved {byte_count} bytes for `{TRAP_SIDECAR_SYMBOL}` but a trap record is {TRAP_RECORD_BYTES} bytes. Fix: emit the symbol as vyre_lower::TRAP_SIDECAR_WORDS u32 words."
+                "loaded module reserved {byte_count} bytes for `{TRAP_SIDECAR_SYMBOL}` but a trap record is {TRAP_RECORD_BYTES} bytes. Fix: emit the symbol as vyre_compiler::lower::TRAP_SIDECAR_WORDS u32 words."
             ),
         });
     }
@@ -98,7 +98,7 @@ fn parse_trap_tag_table(ptx_src: &str) -> Result<Box<[(u32, Box<str>)]>, Backend
             return Err(BackendError::KernelCompileFailed {
                 backend: crate::CUDA_BACKEND_ID.to_string(),
                 compiler_message: format!(
-                    "loaded module declares trap tag code {code} twice, so a recorded code would decode to two tags. Fix: number trap tags through vyre_lower::descriptor_trap_tags, which assigns each distinct tag one code."
+                    "loaded module declares trap tag code {code} twice, so a recorded code would decode to two tags. Fix: number trap tags through vyre_compiler::lower::descriptor_trap_tags, which assigns each distinct tag one code."
                 ),
             });
         }
@@ -144,7 +144,7 @@ mod tests {
     /// at readback time where only the code is.
     ///
     /// Does not catch a table whose codes are internally consistent but were
-    /// numbered by something other than `vyre_lower::descriptor_trap_tags`: that
+    /// numbered by something other than `vyre_compiler::lower::descriptor_trap_tags`: that
     /// is what routing both the emitter and this parser through one numbering
     /// owner is for, and no readback can detect it.
     #[test]

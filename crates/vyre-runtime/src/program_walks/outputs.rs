@@ -62,26 +62,6 @@ pub struct OutputBindingLayout {
     pub word_count: usize,
 }
 
-/// Derive output readback layout for a program.
-///
-/// # Errors
-///
-/// Returns a backend error when the program has no output buffer or declares
-/// an out-of-bounds output byte range.
-pub fn output_layout_from_program(program: &Program) -> Result<OutputLayout, BackendError> {
-    let Some(&index) = program.output_buffer_indices().first() else {
-        return Err(BackendError::new(
-            "program has no output buffer. Fix: declare exactly one output buffer in the vyre Program.",
-        ));
-    };
-    let output = program.buffers().get(index as usize).ok_or_else(|| {
-        BackendError::new(format!(
-            "output buffer index {index} is out of bounds. Fix: rebuild the Program so writable buffer metadata stays consistent."
-        ))
-    })?;
-    output_binding_layout(output).map(|output| output.layout)
-}
-
 /// All output-buffer binding layouts for `program`, in declaration order.
 ///
 /// # Errors

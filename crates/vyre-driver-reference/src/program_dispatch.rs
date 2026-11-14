@@ -4,7 +4,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use vyre_runtime::target_dialect::{EmittedDialectModule, TargetDialect};
 use vyre_foundation::ir::GraphValueId;
-use vyre_megakernel::{
+use vyre_compiler::{
     ObjectiveMetric, SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionRequest,
     SemanticExecutor, TargetCompileError, TargetCompiler, TargetProfile,
 };
@@ -28,7 +28,7 @@ const REFERENCE_DIALECT: TargetDialect = TargetDialect {
 };
 
 fn emit_reference_module(
-    selected: &vyre_megakernel::SelectedLowering,
+    selected: &vyre_compiler::SelectedLowering,
     _profile: &TargetProfile,
 ) -> Result<EmittedDialectModule, TargetCompileError> {
     let mut bytes = Vec::with_capacity(48 + selected.nodes.len() * 4);
@@ -83,7 +83,7 @@ impl SemanticExecutor for ReferenceSemanticExecutor {
             .validate()
             .map_err(SemanticExecutionError::Compile)?;
         let artifact =
-            vyre_megakernel::compile(&compile_request).map_err(SemanticExecutionError::Compile)?;
+            vyre_compiler::compile(&compile_request).map_err(SemanticExecutionError::Compile)?;
         let compiler = target_compiler_factory().map_err(|error| {
             SemanticExecutionError::Target(TargetCompileError::Unsupported(error.to_string()))
         })?;
@@ -129,7 +129,7 @@ impl SemanticExecutor for ReferenceSemanticExecutor {
                     node.name
                 ))
             })?;
-            let written = vyre_megakernel::writable_graph_values(node);
+            let written = vyre_compiler::writable_graph_values(node);
             let mut output_values = Vec::with_capacity(written.len());
             for value in written {
                 let replaces_retained = node.inputs.iter().any(|port| port.value == value);
@@ -155,7 +155,7 @@ impl SemanticExecutor for ReferenceSemanticExecutor {
         }
 
         let mut outputs = BTreeMap::new();
-        for value in vyre_megakernel::returned_graph_values(graph) {
+        for value in vyre_compiler::returned_graph_values(graph) {
             let bytes = values.remove(&value).ok_or_else(|| {
                 SemanticExecutionError::Backend(format!(
                     "reference graph omitted declared result value {}. Fix: execute every logical graph node before collecting outputs",

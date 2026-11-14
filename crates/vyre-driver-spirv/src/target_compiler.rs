@@ -1,6 +1,6 @@
 use vyre_runtime::target_dialect::{EmittedDialectModule, TargetDialect};
 use vyre_runtime::BackendError;
-use vyre_megakernel::{TargetCompileError, TargetCompiler, TargetProfile};
+use vyre_compiler::{TargetCompileError, TargetCompiler, TargetProfile};
 
 use crate::SPIRV_BACKEND_ID;
 
@@ -21,7 +21,7 @@ const SPIRV_DIALECT: TargetDialect = TargetDialect {
 };
 
 fn emit_spirv_module(
-    selected: &vyre_megakernel::SelectedLowering,
+    selected: &vyre_compiler::SelectedLowering,
     _profile: &TargetProfile,
 ) -> Result<EmittedDialectModule, TargetCompileError> {
     let words = vyre_emit::spirv::emit(selected.descriptor())

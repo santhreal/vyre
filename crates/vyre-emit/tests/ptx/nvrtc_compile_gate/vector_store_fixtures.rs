@@ -1,6 +1,6 @@
 use super::*;
 
-fn output_slot() -> vyre_lower::BindingSlot {
+fn output_slot() -> vyre_compiler::lower::BindingSlot {
     global_wo(0, DataType::U32, "output")
 }
 

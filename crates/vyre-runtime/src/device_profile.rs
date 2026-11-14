@@ -264,8 +264,8 @@ impl DeviceProfile {
     /// was ranked as though it had reported none, so the model priced traffic
     /// against launches on a device it had the bandwidth for.
     #[must_use]
-    pub fn compile_facts(self) -> vyre_megakernel::DeviceFacts {
-        vyre_megakernel::DeviceFacts::new(
+    pub fn compile_facts(self) -> vyre_compiler::DeviceFacts {
+        vyre_compiler::DeviceFacts::new(
             self.validation_capabilities(),
             self.max_invocations_per_workgroup,
         )
@@ -380,7 +380,7 @@ impl DeviceProfile {
     /// Every workgroup width this profile admits for `requirements`, ascending.
     ///
     /// A width in the list is legal on this device, not preferred. Ordering
-    /// candidates is `vyre-megakernel`'s decision under the compile objective,
+    /// candidates is `vyre-compiler`'s decision under the compile objective,
     /// so a preference order returned here would be a second cost model. An
     /// empty list states that no width satisfies the requirements.
     #[must_use]

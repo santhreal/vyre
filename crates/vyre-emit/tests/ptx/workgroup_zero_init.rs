@@ -9,7 +9,7 @@
 //! operation against the reference, so that divergence reaches any operation
 //! whose declared workgroup extent exceeds the part a case writes.
 //!
-//! The case list is read from `vyre_lower::emit_adversarial_corpus` at run
+//! The case list is read from `vyre_compiler::lower::emit_adversarial_corpus` at run
 //! time, so a new descriptor that declares a shared binding is checked without
 //! editing this file.
 //!
@@ -18,8 +18,8 @@
 //! data race, and the reference reports it through race exploration.
 
 use vyre_foundation::ir::DataType;
-use vyre_lower::descriptor_builder::{body, descriptor, shared_rw};
-use vyre_lower::{emit_adversarial_corpus, KernelDescriptor};
+use vyre_compiler::lower::descriptor_builder::{body, descriptor, shared_rw};
+use vyre_compiler::lower::{emit_adversarial_corpus, KernelDescriptor};
 
 #[path = "ptx_text/text.rs"]
 mod ptx_text;

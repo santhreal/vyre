@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use vyre_foundation::ir::Program;
-use vyre_lower::{KernelDescriptor, KernelOpKind};
+use vyre_compiler::lower::{KernelDescriptor, KernelOpKind};
 
 /// A source assignment missing one or more lowered loop-carrier operations.
 #[derive(Debug, Clone, Serialize, Deserialize)]

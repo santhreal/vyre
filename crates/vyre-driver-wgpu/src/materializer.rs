@@ -12,8 +12,8 @@ use vyre_runtime::{
     TimedDispatchResult,
 };
 use vyre_foundation::ir::Program;
-use vyre_lower::TRAP_SIDECAR_NAME;
-use vyre_megakernel::{
+use vyre_compiler::lower::TRAP_SIDECAR_NAME;
+use vyre_compiler::{
     Artifact, ArtifactInputSlot, ArtifactValueId, TargetPayload, TargetResourceAccess,
 };
 
@@ -313,7 +313,7 @@ pub(crate) fn materializer_factory() -> Result<Box<dyn ArtifactMaterializer>, Ba
 mod tests {
     use super::*;
     use std::collections::BTreeSet;
-    use vyre_megakernel::Digest;
+    use vyre_compiler::Digest;
 
     /// WHY: runtime recovery must receive a stable device-loss class, never text to parse.
     #[test]

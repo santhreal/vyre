@@ -12,7 +12,7 @@ use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_libs_math::math::differentiable::softmax_step;
-use vyre_megakernel::{
+use vyre_compiler::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
 #[cfg(test)]
@@ -304,8 +304,8 @@ mod tests {
     impl SemanticExecutor for DifferentiableDispatcher {
         fn execute(
             &self,
-            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            request: &vyre_compiler::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError> {
             let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 match inputs.len() {

@@ -107,7 +107,7 @@ fn every_linked_target_declares_the_whole_catalog() {
 ///
 /// The contract above compares the facet registry with `supported_ops`, and
 /// both read the same registration, so it catches a join that ignores the arms
-/// and not an arm that stopped existing. `vyre_lower::lower` is the single
+/// and not an arm that stopped existing. `vyre_compiler::lower::lower` is the single
 /// place a `Program` becomes something an emitter reads, so a node kind whose
 /// lowering arm is removed fails here while the facet still claims the
 /// operation. That is the second half of the claim: a facet asserts a real
@@ -133,7 +133,7 @@ fn every_published_facet_lowers_through_the_program_to_descriptor_boundary() {
         });
         let lowered = lower_logical_schedule_borrowed(&program);
         let physical = lowered.as_ref().unwrap_or(&program);
-        if let Err(error) = vyre_lower::lower(physical) {
+        if let Err(error) = vyre_compiler::lower::lower(physical) {
             panic!(
                 "Fix: target `{}` publishes a facet for `{}`, and the shared Program-to-descriptor boundary refuses it: {error}. A facet states that a real lowering exists.",
                 facet.target_id, facet.operation_id

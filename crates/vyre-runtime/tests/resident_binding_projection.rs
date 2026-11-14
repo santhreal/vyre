@@ -13,7 +13,7 @@ use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
     ShapeDim, ValueContract, ValueLifetime,
 };
-use vyre_megakernel::{
+use vyre_compiler::{
     compile, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
     SearchBudget,
 };
@@ -268,7 +268,7 @@ fn project_resources_multi_node_fused_matches_returned_graph_values() {
         )
         .expect("adding node_b must succeed");
 
-    let expected = vyre_megakernel::returned_graph_values(&graph);
+    let expected = vyre_compiler::returned_graph_values(&graph);
     let request = CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([0xB5; 32]), BTreeMap::new()),

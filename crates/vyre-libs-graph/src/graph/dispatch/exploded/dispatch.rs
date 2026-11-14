@@ -18,7 +18,7 @@ use crate::graph::dispatch::dispatch_bridge::{
     dispatch_u32_outputs_from_prepared_into, refresh_keyed_dispatch_inputs, DispatchInput,
     U32Readback,
 };
-use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// GPU dispatch wrapper around the `build_cpu_reference` CPU oracle.
 ///

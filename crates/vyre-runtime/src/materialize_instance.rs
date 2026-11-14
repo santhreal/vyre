@@ -2,8 +2,8 @@
 
 use std::collections::BTreeMap;
 
+use vyre_compiler::ArtifactValueId;
 use vyre_foundation::ir::Program;
-use vyre_megakernel::ArtifactValueId;
 
 use crate::{
     BackendError, BindingPlan, BindingRole, BindingSet, BoundResource, Completion, DispatchConfig,

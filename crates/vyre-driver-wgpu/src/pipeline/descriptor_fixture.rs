@@ -6,7 +6,7 @@
 //! memory class or a visibility added to lowering widens every case that reads
 //! it rather than the one whose copy someone remembered to update.
 
-use vyre_lower::{
+use vyre_compiler::lower::{
     BindingLayout, BindingSlot, BindingVisibility, Dispatch, GridIndexSpace, KernelBody,
     KernelDescriptor, MemoryClass,
 };

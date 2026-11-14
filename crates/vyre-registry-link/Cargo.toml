@@ -28,8 +28,7 @@ vyre-foundation = { workspace = true }
 # The level-stage registry has one source per level, and a source whose
 # object file is dropped leaves its level with no verifier. These two own
 # the physical-kernel and target-payload levels.
-vyre-lower = { workspace = true }
-vyre-megakernel = { workspace = true }
+vyre-compiler = { workspace = true }
 vyre-spec = { workspace = true }
 vyre-driver-cuda = { workspace = true, optional = true }
 vyre-driver-metal = { workspace = true, optional = true }

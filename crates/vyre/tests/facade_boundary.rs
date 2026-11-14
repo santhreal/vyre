@@ -75,7 +75,7 @@ fn collect_use_paths(tree: &UseTree, prefix: &mut Vec<String>, out: &mut Vec<Exp
             prefix.pop();
         }
         UseTree::Rename(UseRename { ident, rename, .. }) => {
-            // Check if this is a top-level whole crate alias like `pub use vyre_megakernel as compiler;`
+            // Check if this is a top-level whole crate alias like `pub use vyre_compiler as compiler;`
             let is_top_crate = prefix.is_empty();
             prefix.push(format!("{ident} as {rename}"));
             out.push(ExportedPath {
@@ -148,7 +148,7 @@ pub(crate) fn validate_facade_exports(exports: &[ExportedPath]) -> Result<(), Ve
     for exp in exports {
         let full = exp.full_path();
 
-        // 1. Check for whole crate alias e.g. `pub use vyre_megakernel as compiler;`
+        // 1. Check for whole crate alias e.g. `pub use vyre_compiler as compiler;`
         if exp.is_whole_crate_alias {
             errors.push(format!(
                 "facade re-exports whole crate alias `{full}`; compiler and internal seams must be curated modules"
@@ -206,7 +206,7 @@ fn facade_compiler_module_is_curated_not_whole_crate_alias() {
     let content = std::fs::read_to_string(&path).expect("read facade");
     let ast = syn::parse_file(&content).expect("parse facade AST");
 
-    // Ensure `compiler` is defined as a curated `pub mod compiler`, not `pub use vyre_megakernel as compiler;`
+    // Ensure `compiler` is defined as a curated `pub mod compiler`, not `pub use vyre_compiler as compiler;`
     let has_curated_compiler_mod = ast.items.iter().any(|item| {
         if let Item::Mod(ItemMod {
             vis: Visibility::Public(_),
@@ -229,7 +229,7 @@ fn facade_compiler_module_is_curated_not_whole_crate_alias() {
         }) = item
         {
             if let UseTree::Rename(UseRename { ident, rename, .. }) = tree {
-                ident == "vyre_megakernel" && rename == "compiler"
+                ident == "vyre_compiler" && rename == "compiler"
             } else {
                 false
             }
@@ -244,13 +244,13 @@ fn facade_compiler_module_is_curated_not_whole_crate_alias() {
     );
     assert!(
         !has_whole_crate_compiler_alias,
-        "facade must NOT declare `pub use vyre_megakernel as compiler;`"
+        "facade must NOT declare `pub use vyre_compiler as compiler;`"
     );
 }
 
 #[test]
 fn mutation_injecting_whole_crate_alias_is_caught() {
-    let fake_source = "pub use vyre_megakernel as compiler;";
+    let fake_source = "pub use vyre_compiler as compiler;";
     let ast = syn::parse_file(fake_source).expect("parse fake source");
     let exports = extract_public_exports_from_ast(&ast);
     let result = validate_facade_exports(&exports);
@@ -278,7 +278,7 @@ fn mutation_injecting_optimizer_reexport_is_caught() {
 
 #[test]
 fn mutation_injecting_search_reexport_is_caught() {
-    let fake_source = "pub use vyre_megakernel::search::SearchSpace;";
+    let fake_source = "pub use vyre_compiler::search::SearchSpace;";
     let ast = syn::parse_file(fake_source).expect("parse fake source");
     let exports = extract_public_exports_from_ast(&ast);
     let result = validate_facade_exports(&exports);
@@ -292,7 +292,7 @@ fn mutation_injecting_search_reexport_is_caught() {
 
 #[test]
 fn mutation_injecting_lowering_reexport_is_caught() {
-    let fake_source = "pub use vyre_lower::lowering::PhysicalKernel;";
+    let fake_source = "pub use vyre_compiler::lower::lowering::PhysicalKernel;";
     let ast = syn::parse_file(fake_source).expect("parse fake source");
     let exports = extract_public_exports_from_ast(&ast);
     let result = validate_facade_exports(&exports);

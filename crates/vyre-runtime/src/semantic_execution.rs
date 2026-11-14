@@ -2,7 +2,7 @@
 
 use std::collections::BTreeMap;
 
-use vyre_megakernel::{
+use vyre_compiler::{
     ArtifactValueId, SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionRequest,
     SemanticExecutor,
 };
@@ -59,7 +59,7 @@ impl SemanticExecutor for RegisteredSemanticExecutor {
                 BoundResource::Host(bytes.to_vec()),
             );
         }
-        let expected_outputs = vyre_megakernel::returned_graph_values(request.logical().graph())
+        let expected_outputs = vyre_compiler::returned_graph_values(request.logical().graph())
             .into_iter()
             .map(|value| Ok((value, artifact_value(&session, request, value)?)))
             .collect::<Result<Vec<_>, SemanticExecutionError>>()?;

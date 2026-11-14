@@ -118,11 +118,6 @@ impl HostShimBuffer {
     pub fn as_mut_slice(&mut self) -> &mut [u8] {
         &mut self.bytes
     }
-
-    /// Attach a debug label after allocation.
-    pub fn set_label(&mut self, label: impl Into<String>) {
-        self.label = Some(label.into());
-    }
 }
 
 impl DeviceBuffer for HostShimBuffer {

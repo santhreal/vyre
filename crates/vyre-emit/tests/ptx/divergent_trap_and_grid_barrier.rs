@@ -81,14 +81,14 @@ fn probe(barriers: usize, trap_first: bool) -> Program {
 /// pass that merged two fences would otherwise make the count assertion below
 /// describe a program that no longer exists.
 fn lowered_grid_barriers(program: &Program) -> usize {
-    vyre_lower::lower_physical(program)
+    vyre_compiler::lower::lower_physical(program)
         .expect("the probe must lower")
         .descriptor()
         .ops_iter()
         .filter(|op| {
             matches!(
                 op.kind,
-                vyre_lower::KernelOpKind::Barrier { ordering } if ordering.requires_grid_sync()
+                vyre_compiler::lower::KernelOpKind::Barrier { ordering } if ordering.requires_grid_sync()
             )
         })
         .count()

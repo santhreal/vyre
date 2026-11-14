@@ -8,8 +8,8 @@ use std::collections::HashMap;
 use std::time::Instant;
 use vyre_emit::ptx::ComputeCapability;
 use vyre_foundation::ir::{BinOp, DataType};
-use vyre_lower::descriptor_builder::{effect, op};
-use vyre_lower::{
+use vyre_compiler::lower::descriptor_builder::{effect, op};
+use vyre_compiler::lower::{
     BindingLayout, BindingSlot, BindingVisibility, Dispatch, FragmentValue, KernelBody,
     KernelDescriptor, KernelOpKind, LiteralValue, MatrixMmaElement, MatrixMmaLayout, MatrixMmaSpec,
     MatrixTileShape, MemoryClass,

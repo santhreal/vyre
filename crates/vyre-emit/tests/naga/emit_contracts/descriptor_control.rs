@@ -1,6 +1,6 @@
 //! Test: descriptor control.
 use super::*;
-use vyre_lower::descriptor_builder::{
+use vyre_compiler::lower::descriptor_builder::{
     binop_over_loads, body, cast_over_load, counted_loop_head, descriptor, effect, global_ro,
     global_rw, lit, op, slot, wait_only, SlotCount,
 };
@@ -542,7 +542,7 @@ fn wide_source_to_wide_target_casts_emit_valid_wgsl() {
 
 /// Load a U64 (vec2<u32> backing), apply `unop`, store to a U64 out.
 fn u64_unop_desc(unop: UnOp) -> KernelDescriptor {
-    vyre_lower::descriptor_builder::unop_over_load("u64_unop", DataType::U64, unop)
+    vyre_compiler::lower::descriptor_builder::unop_over_load("u64_unop", DataType::U64, unop)
 }
 
 #[test]
@@ -1152,7 +1152,7 @@ fn descriptor_resume_is_runtime_marker_not_unsupported() {
 fn descriptor_wide_literal_opaque_emits_from_payload() {
     let desc = descriptor("opaque-lit")
         .body(body().ops([op(
-            KernelOpKind::OpaqueExpr(Box::new(vyre_lower::OpaqueExprData {
+            KernelOpKind::OpaqueExpr(Box::new(vyre_compiler::lower::OpaqueExprData {
                 extension_id: 1,
                 extension_kind: "vyre.literal.u64".to_owned(),
                 payload: 42u64.to_le_bytes().to_vec(),
@@ -1231,7 +1231,7 @@ fn opaque_u64_literal_above_u32_max_emits_as_u64() {
     let value: u64 = 1u64 << 40; // 0x10000000000, above u32::MAX
     let desc = descriptor("opaque-u64-wide")
         .body(body().ops([op(
-            KernelOpKind::OpaqueExpr(Box::new(vyre_lower::OpaqueExprData {
+            KernelOpKind::OpaqueExpr(Box::new(vyre_compiler::lower::OpaqueExprData {
                 extension_id: 1,
                 extension_kind: "vyre.literal.u64".to_owned(),
                 payload: value.to_le_bytes().to_vec(),

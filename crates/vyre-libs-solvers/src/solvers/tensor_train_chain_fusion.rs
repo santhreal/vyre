@@ -15,7 +15,7 @@ use vyre_libs_builder::plumbing::host::dispatch_buffers::{
 };
 use vyre_libs_builder::plumbing::host::scratch::reserve_vec_capacity;
 use vyre_libs_math::math::tensor_train::tt_contract_step;
-use vyre_megakernel::{
+use vyre_compiler::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
 #[cfg(test)]
@@ -231,8 +231,8 @@ mod tests {
     impl SemanticExecutor for ReferenceDispatcher {
         fn execute(
             &self,
-            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            request: &vyre_compiler::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError> {
             let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 let [acc_bytes, core_bytes, out_bytes] = inputs.as_slice() else {

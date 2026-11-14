@@ -88,7 +88,7 @@ inventory::submit! {
 /// `InlineUnknownOp` naming the callee.
 #[test]
 fn a_call_to_a_registered_op_resolves_in_the_pre_emit_pipeline() {
-    let prepared = vyre_lower::lower_physical(&caller())
+    let prepared = vyre_compiler::lower::lower_physical(&caller())
         .unwrap_or_else(|error| panic!("split op must survive physical lowering: {error}"))
         .program;
     let dump = format!("{:?}", prepared.entry());
@@ -102,7 +102,7 @@ fn a_call_to_a_registered_op_resolves_in_the_pre_emit_pipeline() {
 /// argument replaces every read of it.
 #[test]
 fn the_callees_input_buffer_does_not_leak_into_the_caller() {
-    let prepared = vyre_lower::lower_physical(&caller())
+    let prepared = vyre_compiler::lower::lower_physical(&caller())
         .expect("physical lowering")
         .program;
     let dump = format!("{:?}", prepared.entry());

@@ -23,7 +23,7 @@ pub enum RuntimeCacheError {
 
     /// Canonical envelope serialization failed before the cache write.
     #[error("runtime cache canonical artifact serialization failed: {0}")]
-    CanonicalArtifact(#[from] vyre_megakernel::CompileError),
+    CanonicalArtifact(#[from] vyre_compiler::CompileError),
 }
 
 /// Write a canonical artifact envelope under its neutral artifact digest.
@@ -35,7 +35,7 @@ pub enum RuntimeCacheError {
 /// Returns [`RuntimeCacheError::CanonicalArtifact`] when the envelope cannot
 /// encode, or [`RuntimeCacheError::Io`] when the atomic cache write fails.
 pub fn emit_runtime_cache_blob(
-    envelope: &vyre_megakernel::ArtifactEnvelope,
+    envelope: &vyre_compiler::ArtifactEnvelope,
     cache_dir: &Path,
 ) -> Result<PathBuf, RuntimeCacheError> {
     fs::create_dir_all(cache_dir).map_err(|source| RuntimeCacheError::Io {

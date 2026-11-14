@@ -1,6 +1,6 @@
 use std::fmt::Write as _;
 
-use vyre_lower::{KernelBody, KernelOp, KernelOpKind};
+use vyre_compiler::lower::{KernelBody, KernelOp, KernelOpKind};
 
 use super::schedule::is_schedulable_pure_op;
 use super::BodyCtx;

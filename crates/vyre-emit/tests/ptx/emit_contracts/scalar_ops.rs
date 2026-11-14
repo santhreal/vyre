@@ -1,6 +1,6 @@
 //! Test: scalar ops.
 use super::*;
-use vyre_lower::descriptor_builder::{body, descriptor, effect, global_wo, lit, op, SlotCount};
+use vyre_compiler::lower::descriptor_builder::{body, descriptor, effect, global_wo, lit, op, SlotCount};
 
 #[test]
 fn emit_ends_with_return() {

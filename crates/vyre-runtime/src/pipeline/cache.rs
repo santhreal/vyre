@@ -36,11 +36,6 @@ impl PipelineFeatureFlags {
     pub const ASYNC_COMPUTE: Self = Self(1 << 4);
     /// Pipeline expects push-constant support at dispatch time.
     pub const PUSH_CONSTANTS: Self = Self(1 << 5);
-    /// Pipeline emits indirect-dispatch commands.
-    pub const INDIRECT_DISPATCH: Self = Self(1 << 6);
-    /// Pipeline was compiled for speculative (fused prefilter+confirmer)
-    /// dispatch.
-    pub const SPECULATIVE: Self = Self(1 << 7);
     /// Pipeline was compiled for persistent-thread (device-side work queue)
     /// dispatch.
     pub const PERSISTENT_THREAD: Self = Self(1 << 8);
@@ -223,18 +218,6 @@ impl PipelineCacheMissReason {
             cached, requested,
         ))
     }
-
-    /// Stable metric suffix for backend metric snapshots.
-    #[must_use]
-    pub const fn metric_suffix(self) -> &'static str {
-        match self {
-            Self::EmptyCache => "empty_cache",
-            Self::ProgramChanged => "program_changed",
-            Self::DispatchPolicyChanged => "dispatch_policy_changed",
-            Self::DeviceOrRuntimeChanged => "device_or_runtime_changed",
-            Self::KeyAbsent => "key_absent",
-        }
-    }
 }
 
 // Inline: `vyre_runtime::pipeline` is `pub(crate)`, so no integration test can reach what this suite
@@ -332,30 +315,6 @@ mod pipeline_cache_key_tests {
                 same_program_policy_and_device_entries: 1,
             }),
             PipelineCacheMissReason::KeyAbsent
-        );
-    }
-
-    #[test]
-    fn miss_reason_metric_suffixes_are_stable_snake_case() {
-        assert_eq!(
-            PipelineCacheMissReason::EmptyCache.metric_suffix(),
-            "empty_cache"
-        );
-        assert_eq!(
-            PipelineCacheMissReason::ProgramChanged.metric_suffix(),
-            "program_changed"
-        );
-        assert_eq!(
-            PipelineCacheMissReason::DispatchPolicyChanged.metric_suffix(),
-            "dispatch_policy_changed"
-        );
-        assert_eq!(
-            PipelineCacheMissReason::DeviceOrRuntimeChanged.metric_suffix(),
-            "device_or_runtime_changed"
-        );
-        assert_eq!(
-            PipelineCacheMissReason::KeyAbsent.metric_suffix(),
-            "key_absent"
         );
     }
 

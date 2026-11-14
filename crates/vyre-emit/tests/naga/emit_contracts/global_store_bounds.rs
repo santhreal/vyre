@@ -175,13 +175,13 @@ fn every_global_store_route_emits_its_own_bounds_test() {
 
 #[test]
 fn the_shared_success_corpus_emits_no_unguarded_storage_store() {
-    let cases = vyre_lower::emit_adversarial_corpus::success_cases();
+    let cases = vyre_compiler::lower::emit_adversarial_corpus::success_cases();
     assert!(
         !cases.is_empty(),
         "Fix: the shared success corpus is empty, so this contract checks nothing."
     );
     for case in cases {
-        let verified = vyre_lower::verify_descriptor(&case.descriptor)
+        let verified = vyre_compiler::lower::verify_descriptor(&case.descriptor)
             .unwrap_or_else(|error| panic!("{}: corpus case must verify: {error:?}", case.id));
         let module = emit(&verified)
             .unwrap_or_else(|error| panic!("{}: corpus case must emit: {error:?}", case.id));

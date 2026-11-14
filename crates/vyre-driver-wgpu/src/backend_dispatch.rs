@@ -291,8 +291,8 @@ impl WgpuBackend {
     #[allow(clippy::too_many_arguments)]
     pub fn invalidate_impacted_pipeline_cache(
         &self,
-        executor: &dyn vyre_megakernel::SemanticExecutor,
-        policy: &vyre_megakernel::SemanticExecutionPolicy,
+        executor: &dyn vyre_compiler::SemanticExecutor,
+        policy: &vyre_compiler::SemanticExecutionPolicy,
         intervention_mask: &[u32],
         rule_adj: &[u32],
         state: &[u32],
@@ -320,8 +320,8 @@ impl WgpuBackend {
     /// Convenience wrapper around [`Self::invalidate_impacted_pipeline_cache`]
     pub fn invalidate_pipeline_cache_for_changed_op(
         &self,
-        executor: &dyn vyre_megakernel::SemanticExecutor,
-        policy: &vyre_megakernel::SemanticExecutionPolicy,
+        executor: &dyn vyre_compiler::SemanticExecutor,
+        policy: &vyre_compiler::SemanticExecutionPolicy,
         changed_op_handle: u32,
         pipeline_lineage_cell: &[u32],
         pipeline_keys: &[[u8; 32]],
@@ -363,8 +363,8 @@ impl WgpuBackend {
     #[allow(clippy::too_many_arguments)]
     pub fn invalidate_impacted_disk_cache(
         &self,
-        executor: &dyn vyre_megakernel::SemanticExecutor,
-        policy: &vyre_megakernel::SemanticExecutionPolicy,
+        executor: &dyn vyre_compiler::SemanticExecutor,
+        policy: &vyre_compiler::SemanticExecutionPolicy,
         intervention_mask: &[u32],
         rule_adj: &[u32],
         state: &[u32],

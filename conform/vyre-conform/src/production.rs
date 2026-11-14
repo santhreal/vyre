@@ -8,7 +8,7 @@ use vyre_conform_spec::protocol::ulp_distance_f32;
 use vyre_runtime::{BackendRegistration, BindingPlan};
 use vyre_foundation::ir::{BufferDecl, GraphValueId, Program, ProgramGraph};
 use vyre_foundation::logical::LogicalProgramGraph;
-use vyre_megakernel::{
+use vyre_compiler::{
     is_required_schedule_unreachable, writable_graph_values, CompileObjective, Digest,
     ExternalFacts, ObjectiveMetric, RequiredSchedule, ScheduleProduction, SearchBudget,
     SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionPolicy,

@@ -13,7 +13,7 @@ use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
     ShapeDim, ValueContract, ValueLifetime,
 };
-use vyre_megakernel::{Artifact, ArtifactEnvelope, ArtifactValueId};
+use vyre_compiler::{Artifact, ArtifactEnvelope, ArtifactValueId};
 use vyre_runtime::artifact_admission::{
     ArtifactSession, RetainedArtifactSession, RetainedSessionPhase, RetainedSessionTransition,
 };

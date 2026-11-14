@@ -12,7 +12,7 @@ use std::collections::BTreeMap;
 
 use vyre::compiler::{Artifact, TargetPayload};
 use vyre::ir::{Program, ProgramGraph};
-use vyre_lower::KernelDescriptor;
+use vyre_compiler::lower::KernelDescriptor;
 
 /// View of compiler state at any of the five architectural compiler levels.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

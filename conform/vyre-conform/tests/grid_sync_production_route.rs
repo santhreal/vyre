@@ -49,7 +49,7 @@ fn fenced_cases() -> Vec<FencedCase> {
             continue;
         };
         let program = build();
-        if !vyre_megakernel::grid_sync::requires_grid_sync(&program) {
+        if !vyre_compiler::grid_sync::requires_grid_sync(&program) {
             continue;
         }
         let Some(inputs) = fixtures().into_iter().next() else {

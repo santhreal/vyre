@@ -9,7 +9,7 @@
 //! report an admissible fact.
 
 use vyre_runtime::target_dialect::{EmittedDialectModule, TargetDialect};
-use vyre_megakernel::{SelectedLowering, TargetCompileError, TargetProfile};
+use vyre_compiler::{SelectedLowering, TargetCompileError, TargetProfile};
 
 fn unused_emit(
     _selected: &SelectedLowering,

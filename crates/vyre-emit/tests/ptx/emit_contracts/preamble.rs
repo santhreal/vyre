@@ -1,6 +1,6 @@
 //! Test: preamble.
 use super::*;
-use vyre_lower::descriptor_builder::{
+use vyre_compiler::lower::descriptor_builder::{
     body, descriptor, effect, global_ro, global_rw, global_wo, lit, op, SlotCount,
 };
 

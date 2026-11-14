@@ -36,19 +36,6 @@ impl RemoteCache {
         }
     }
 
-    /// Require exact source provenance and device compatibility metadata on
-    /// every remote hit.
-    #[must_use]
-    pub fn with_required_metadata(
-        mut self,
-        source_provenance: impl Into<String>,
-        device_compatibility: impl Into<String>,
-    ) -> Self {
-        self.expected_source_provenance = Some(source_provenance.into());
-        self.expected_device_compatibility = Some(device_compatibility.into());
-        self
-    }
-
     fn metadata_expectation(&self) -> RemoteMetadataExpectation<'_> {
         RemoteMetadataExpectation {
             expected_source_provenance: self.expected_source_provenance.as_deref(),

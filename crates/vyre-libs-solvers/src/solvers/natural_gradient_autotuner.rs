@@ -43,7 +43,7 @@ use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     write_zero_bytes,
 };
 use vyre_libs_math::math::natural_gradient::natural_gradient_block_apply;
-use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 #[cfg(test)]
 use vyre_reference::composition_witness::{
     identity_matrix_witness_into, natural_gradient_autotune_step_witness_into,
@@ -260,8 +260,8 @@ mod tests {
     impl SemanticExecutor for NaturalGradientDispatcher {
         fn execute(
             &self,
-            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            request: &vyre_compiler::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError> {
             let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 assert_eq!(inputs.len(), 3);

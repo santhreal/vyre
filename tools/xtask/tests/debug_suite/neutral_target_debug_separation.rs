@@ -7,7 +7,7 @@
 //! - Emitter crates do not depend on `vyre-debug` and binary emitters are inspected
 //!   without being forced through a text-disassembly interface.
 
-use vyre_lower::KernelDescriptor;
+use vyre_compiler::lower::KernelDescriptor;
 use xtask::debug::{
     carrier_summary, diff_descriptors, dump_descriptor, find_dangling_refs,
     neutral_debug_capabilities, source_assignments, DebugCapabilityKind, DescriptorDumpOptions,
@@ -15,9 +15,9 @@ use xtask::debug::{
 };
 
 fn sample_descriptor() -> KernelDescriptor {
-    vyre_lower::descriptor_builder::descriptor("debug_sample_kernel")
+    vyre_compiler::lower::descriptor_builder::descriptor("debug_sample_kernel")
         .dispatch(32, 1, 1)
-        .body(vyre_lower::descriptor_builder::body())
+        .body(vyre_compiler::lower::descriptor_builder::body())
         .build()
 }
 

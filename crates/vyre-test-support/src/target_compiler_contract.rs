@@ -27,7 +27,7 @@ use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
     ShapeDim, ValueContract, ValueLifetime,
 };
-use vyre_megakernel::{Artifact, ArtifactValueId, TargetModuleBundle, TargetPayload};
+use vyre_compiler::{Artifact, ArtifactValueId, TargetModuleBundle, TargetPayload};
 
 /// Value the fixture program stores into lane zero.
 ///

@@ -14,11 +14,11 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use vyre_foundation::ir::Program;
-use vyre_megakernel::{
+use vyre_compiler::{
     Artifact, ArtifactNodeId, ArtifactValueId, Digest, FusionRecord, TargetModuleBundle,
     TargetPayload,
 };
+use vyre_foundation::ir::Program;
 
 use crate::{
     BackendError, BindingPlan, BindingRole, BindingSet, Completion, DeviceIdentity, DispatchConfig,
@@ -305,7 +305,7 @@ fn reject_unsuppliable_module_reads(
         .resources()
         .iter()
         .filter(|resource| {
-            resource.lifetime == vyre_megakernel::ResourceLifetime::Retained
+            resource.lifetime == vyre_compiler::ResourceLifetime::Retained
                 || !written.contains(&resource.value)
         })
         .map(|resource| resource.value)
@@ -507,13 +507,13 @@ impl InstanceCore {
             for binding in &entry.resource_bindings {
                 resources.insert((binding.group, binding.slot), binding.resource);
                 match binding.access {
-                    vyre_megakernel::TargetResourceAccess::ReadOnly => {
+                    vyre_compiler::TargetResourceAccess::ReadOnly => {
                         inputs.push(binding.resource);
                     }
-                    vyre_megakernel::TargetResourceAccess::WriteOnly => {
+                    vyre_compiler::TargetResourceAccess::WriteOnly => {
                         outputs.push(binding.resource);
                     }
-                    vyre_megakernel::TargetResourceAccess::ReadWrite => {
+                    vyre_compiler::TargetResourceAccess::ReadWrite => {
                         // A read-write resource is read before it is written, so
                         // the module needs an identity carrying its current bytes
                         // whatever the resource's lifetime is. An `Output`
@@ -846,34 +846,6 @@ impl InstanceCore {
             state.insert(value, bytes);
         }
         Ok(())
-    }
-
-    /// Move dispatch results onto the canonical values they implement.
-    ///
-    /// `produced` is consumed. It was borrowed and each buffer cloned, which
-    /// copied every output byte a dispatch returned, on every dispatch, into a
-    /// map whose only reader then cloned it again on the way out. The caller
-    /// owns the dispatch result and drops it here, so there is nothing for the
-    /// copy to protect.
-    ///
-    /// A binding's output slot is assigned per buffer, so two bindings cannot
-    /// name one slot. If one ever does, the second finds the slot already taken
-    /// and is refused rather than served the bytes of the value that took it.
-    ///
-    /// # Errors
-    ///
-    /// Returns `unmapped_buffer` for a buffer outside the artifact ABI, and
-    /// `missing` when the dispatch produced no bytes for a declared output
-    /// index.
-    pub fn absorb_outputs(
-        &self,
-        plan: &BindingPlan,
-        program: &Program,
-        produced: Vec<Vec<u8>>,
-        state: &mut BTreeMap<ArtifactValueId, Vec<u8>>,
-        missing: impl Fn(usize, &str) -> BackendError,
-    ) -> Result<(), BackendError> {
-        self.absorb_outputs_for_module(0, plan, program, produced, state, missing)
     }
 
     /// Move `values` out of executed state, rejecting any that is absent.

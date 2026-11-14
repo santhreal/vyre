@@ -20,7 +20,7 @@
 //! loop stays one load and one store per word.
 
 use naga::{BinaryOperator, Block, Expression, Span, Statement};
-use vyre_lower::{AsyncWaitSpec, KernelOp, MemoryProxyFence};
+use vyre_compiler::lower::{AsyncWaitSpec, KernelOp, MemoryProxyFence};
 
 use super::BodyBuilder;
 use crate::naga::EmitError;

@@ -1,7 +1,7 @@
 use std::fmt::Write as _;
 
 use rustc_hash::FxHashSet;
-use vyre_lower::{
+use vyre_compiler::lower::{
     BindingVisibility, DescriptorTrapTag, KernelDescriptor, KernelOpKind, MemoryClass,
     TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS,
 };
@@ -119,7 +119,7 @@ impl ModuleBuilder {
     ///
     /// The tag markers carry the code-to-tag table in the PTX text, so the host
     /// decodes word 2 from the module it actually loaded rather than from a
-    /// descriptor it was separately handed. `vyre-lower` owns the numbering, so a
+    /// descriptor it was separately handed. `vyre-compiler` owns the numbering, so a
     /// code means the same tag here as on every other target.
     fn write_trap_sidecar(&mut self, trap_tags: &[DescriptorTrapTag]) -> Result<(), EmitError> {
         if trap_tags.is_empty() {
@@ -150,7 +150,7 @@ impl ModuleBuilder {
         // One walk for the whole emission: the sidecar declaration below and the
         // body's per-trap store both need the same code-to-tag table, and a second
         // walk could disagree with the first only by being a different function.
-        let trap_tags = vyre_lower::descriptor_trap_tags(&desc.body).map_err(|source| {
+        let trap_tags = vyre_compiler::lower::descriptor_trap_tags(&desc.body).map_err(|source| {
             EmitError::InvalidDescriptor(format!("trap tag codes unavailable: {source}"))
         })?;
         if self.options.cooperative_grid_sync && descriptor_grid_sync_barrier_count(desc) > 0 {

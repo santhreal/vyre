@@ -13,8 +13,8 @@
 
 use std::collections::BTreeMap;
 
-use vyre_megakernel::allocation::AllocationPlan;
-use vyre_megakernel::ArtifactValueId;
+use vyre_compiler::allocation::AllocationPlan;
+use vyre_compiler::ArtifactValueId;
 use vyre_runtime::{ArtifactMaterializer, BackendError, Resource};
 
 /// Resident buffers backing every artifact-owned region the plan records.

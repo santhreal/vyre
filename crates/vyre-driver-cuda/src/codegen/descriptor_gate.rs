@@ -4,10 +4,10 @@ use vyre_foundation::ir::Program;
 
 pub(crate) fn validate_and_analyze(
     program: &Program,
-) -> Result<vyre_lower::KernelDescriptor, String> {
+) -> Result<vyre_compiler::lower::KernelDescriptor, String> {
     let trace = crate::instrumentation::cuda_stage_trace_enabled();
     let start = std::time::Instant::now();
-    let descriptor = vyre_lower::lower_baseline(program)
+    let descriptor = vyre_compiler::lower::lower_baseline(program)
         .map_err(|error| {
             format!(
                 "physical lowering failed before CUDA PTX emission: {error}. Fix: repair the source Program or add the missing neutral mapping before PTX emission."
@@ -37,7 +37,7 @@ pub(crate) fn compute_capability(target_sm: u32) -> vyre_emit::ptx::ComputeCapab
 mod tests {
     use super::*;
     use vyre_foundation::ir::{BufferDecl, DataType, Expr, Ident, Node, Program};
-    use vyre_lower::emit_adversarial_corpus;
+    use vyre_compiler::lower::emit_adversarial_corpus;
 
     #[test]
     fn validates_simple_store_program() {
@@ -56,7 +56,7 @@ mod tests {
 
         assert_eq!(descriptor.dispatch.workgroup_size, [128, 1, 1]);
         assert_eq!(descriptor.bindings.slots.len(), 1);
-        assert!(vyre_lower::verify(&descriptor).is_ok());
+        assert!(vyre_compiler::lower::verify(&descriptor).is_ok());
     }
 
     #[test]
@@ -74,7 +74,7 @@ mod tests {
     fn adversarial_success_corpus_passes_verification_and_ptx_emit() {
         for case in emit_adversarial_corpus::success_cases() {
             let descriptor =
-                vyre_lower::verify_descriptor(&case.descriptor).unwrap_or_else(|error| {
+                vyre_compiler::lower::verify_descriptor(&case.descriptor).unwrap_or_else(|error| {
                     panic!(
                         "Fix: `{}` ({:?}) must pass shared descriptor verification: {error:?}",
                         case.id, case.family
@@ -98,7 +98,7 @@ mod tests {
     #[test]
     fn adversarial_rejection_corpus_returns_structured_cuda_errors() {
         for case in emit_adversarial_corpus::rejection_cases() {
-            let result = vyre_lower::verify_descriptor(&case.descriptor)
+            let result = vyre_compiler::lower::verify_descriptor(&case.descriptor)
                 .map_err(|error| {
                     format!(
                         "CUDA descriptor verification failed for `{}`: {error:?}. Fix: repair the shared lower-IR descriptor.",

@@ -1,6 +1,6 @@
 //! A device profile reports which workgroup widths it admits, as facts.
 //!
-//! WHY: launch geometry has one selection owner, `vyre-megakernel`. A driver
+//! WHY: launch geometry has one selection owner, `vyre-compiler`. A driver
 //! that returned widths in preference order would be a second cost model, so
 //! these tests assert legality and ascending order and never a winner. The
 //! class closed here is a profile admitting a width its own limits reject, and

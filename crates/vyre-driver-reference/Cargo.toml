@@ -17,7 +17,7 @@ categories = ["algorithms", "api-bindings"]
 vyre-runtime.workspace = true
 vyre-foundation.workspace = true
 vyre-reference.workspace = true
-vyre-megakernel.workspace = true
+vyre-compiler.workspace = true
 
 [package.metadata.docs.rs]
 all-features = true

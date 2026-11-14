@@ -27,7 +27,7 @@ use vyre_foundation::logical::LogicalProgramGraph;
 use vyre_foundation::transform::grid_sync_split::contains_grid_sync;
 use vyre_foundation::validate::BackendCapabilities;
 use vyre_libs::reduce::grid_stride_tree::grid_stride_tree_sum_u32;
-use vyre_megakernel::{
+use vyre_compiler::{
     CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
     SearchBudget, ValidatedCompileRequest,
 };
@@ -70,13 +70,13 @@ fn lower_and_emit(program: &Program) -> Result<(Vec<String>, naga::Module), Stri
         .map_err(|error| format!("{error:?}"))?;
     let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new())
         .map_err(|error| format!("{error:?}"))?;
-    let schedule = vyre_megakernel::baseline_schedule(&logical);
+    let schedule = vyre_compiler::baseline_schedule(&logical);
     let phase = schedule
         .phases
         .first()
         .ok_or_else(|| "selected schedule has no phase".to_string())?
         .id;
-    let lowered = vyre_lower::lower_scheduled(program, &schedule, phase)
+    let lowered = vyre_compiler::lower::lower_scheduled(program, &schedule, phase)
         .map_err(|error| format!("{error:?}"))?;
     let segments = vyre_emit::naga::grid_segment_entry_points(lowered.descriptor())
         .map_err(|error| format!("{error}"))?;

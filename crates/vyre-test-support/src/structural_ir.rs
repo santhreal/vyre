@@ -77,7 +77,7 @@ pub fn render_structural_ir(program: &Program) -> String {
 /// A golden that stopped naming an entry point silently stopped covering it.
 #[must_use]
 pub fn golden_contains(corpus: &str, id: &str) -> bool {
-    vyre_lower::artifact_golden::contains_case(corpus, id)
+    vyre_compiler::lower::artifact_golden::contains_case(corpus, id)
 }
 
 /// Write `actual` to `path`, creating parent directories.
@@ -126,7 +126,7 @@ impl StructuralIrGolden {
     /// Render `(entry point id, program)` pairs into a golden corpus.
     #[must_use]
     pub fn render<'a>(&self, entry_points: impl IntoIterator<Item = (&'a str, Program)>) -> String {
-        vyre_lower::artifact_golden::render_sections_with_header(
+        vyre_compiler::lower::artifact_golden::render_sections_with_header(
             &self.header(),
             entry_points
                 .into_iter()
@@ -439,7 +439,7 @@ fn split_sections(corpus: &str) -> (Vec<&str>, Vec<(&str, Vec<&str>)>) {
     let mut header = Vec::new();
     let mut sections: Vec<(&str, Vec<&str>)> = Vec::new();
     for line in corpus.lines() {
-        if let Some(id) = vyre_lower::artifact_golden::section_id(line) {
+        if let Some(id) = vyre_compiler::lower::artifact_golden::section_id(line) {
             sections.push((id, Vec::new()));
         } else if let Some((_, lines)) = sections.last_mut() {
             lines.push(line);

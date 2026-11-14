@@ -2,7 +2,7 @@
 //!
 //! Cases are generated from semantic `Program` IR, exercised through the live
 //! registered release scheduler, and summarized for release tooling. Descriptor
-//! analyses remain in `vyre-lower` and are not optimization passes.
+//! analyses remain in `vyre-compiler` and are not optimization passes.
 
 use std::collections::BTreeMap;
 

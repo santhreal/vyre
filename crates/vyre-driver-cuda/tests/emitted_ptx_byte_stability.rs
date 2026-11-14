@@ -8,9 +8,9 @@
 //! bundle back out. Every one of those steps sits between a `Program` and the
 //! `.visible .entry main` text, and none of them needs a device.
 //!
-//! The program corpus is `vyre_lower::program_stability_corpus`, shared with the
+//! The program corpus is `vyre_compiler::lower::program_stability_corpus`, shared with the
 //! reference-oracle golden. The section format and the comparison live in
-//! `vyre_lower::artifact_golden`. This file supplies only the PTX rendering.
+//! `vyre_compiler::lower::artifact_golden`. This file supplies only the PTX rendering.
 //!
 //! Materialization and dispatch are covered by the live tests in
 //! `tests/target_compiler.rs`; this file deliberately stops at the bytes.
@@ -25,11 +25,11 @@ use std::path::PathBuf;
 use vyre_runtime::materialize::{self, MaterializerTarget};
 use vyre_foundation::ir::{BufferAccess, Program, ProgramGraph};
 use vyre_foundation::validate::BackendCapabilities;
-use vyre_lower::artifact_golden::{
+use vyre_compiler::lower::artifact_golden::{
     assert_matches_golden, contains_case, render_sections, write_golden,
 };
-use vyre_lower::program_stability_corpus::{self, StabilityCase};
-use vyre_megakernel::{
+use vyre_compiler::lower::program_stability_corpus::{self, StabilityCase};
+use vyre_compiler::{
     Artifact, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts,
     ObjectiveMetric, SearchBudget, TargetCompiler, TargetPayload,
 };
@@ -80,7 +80,7 @@ fn artifact_for(case: &StabilityCase) -> Artifact {
     )
     .validate()
     .unwrap_or_else(|error| panic!("Fix: corpus case `{}` must validate: {error}", case.id));
-    vyre_megakernel::compile(&request)
+    vyre_compiler::compile(&request)
         .unwrap_or_else(|error| panic!("Fix: corpus case `{}` must compile: {error}", case.id))
 }
 

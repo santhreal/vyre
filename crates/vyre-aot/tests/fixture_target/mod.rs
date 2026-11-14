@@ -7,10 +7,10 @@ use vyre_aot::{
 };
 use vyre_runtime::Device;
 use vyre_foundation::ir::{Program, ProgramGraph};
-use vyre_megakernel::{
+use vyre_compiler::{
     compile_selected_modules, EmittedTargetModule, TargetModuleBundle, TargetModuleImage,
 };
-use vyre_megakernel::{TargetCompileError, TargetCompiler};
+use vyre_compiler::{TargetCompileError, TargetCompiler};
 
 use vyre_test_support::artifact_fixtures::{compile_graph, params_and_out_graph};
 
@@ -48,7 +48,7 @@ impl TargetCompiler for FixtureTargetCompiler {
 
     fn compile(
         &self,
-        artifact: &vyre_megakernel::Artifact,
+        artifact: &vyre_compiler::Artifact,
     ) -> Result<TargetPayload, TargetCompileError> {
         compile_selected_modules(
             artifact,
@@ -103,7 +103,7 @@ impl vyre_runtime::ArtifactMaterializer for FixtureMaterializer {
 
     fn materialize(
         &self,
-        artifact: &vyre_megakernel::Artifact,
+        artifact: &vyre_compiler::Artifact,
         payload: &TargetPayload,
     ) -> Result<Box<dyn vyre_runtime::ArtifactInstance>, vyre_runtime::BackendError> {
         Ok(
@@ -241,9 +241,9 @@ inventory::submit! {
 
 /// The launch geometry `neutral` recorded for `node`.
 fn recorded_launch(
-    neutral: &vyre_megakernel::Artifact,
-    node: vyre_megakernel::ArtifactNodeId,
-) -> &vyre_megakernel::GeometryRecord {
+    neutral: &vyre_compiler::Artifact,
+    node: vyre_compiler::ArtifactNodeId,
+) -> &vyre_compiler::GeometryRecord {
     neutral
         .geometry()
         .iter()
@@ -278,7 +278,7 @@ fn compiled_artifact_with_format(format_name: &str) -> ArtifactEnvelope {
         .value;
     let group = &neutral.fusion()[0];
     let program = Program::from_wire(&neutral.nodes()[0].program).unwrap();
-    let descriptor = vyre_lower::lower_physical(&program)
+    let descriptor = vyre_compiler::lower::lower_physical(&program)
         .unwrap()
         .into_descriptor();
     let program = program.to_wire().unwrap();
@@ -289,7 +289,7 @@ fn compiled_artifact_with_format(format_name: &str) -> ArtifactEnvelope {
         program,
         descriptor,
         entry_point: "main".into(),
-        numeric: vyre_megakernel::ModuleNumericRecord::default(),
+        numeric: vyre_compiler::ModuleNumericRecord::default(),
         bytes: b"target-payload-fixture".to_vec(),
     }])
     .to_bytes()
@@ -359,11 +359,11 @@ pub(crate) fn artifact_over(
                 slot: resource.slot,
                 memory: TargetResourceMemory::Global,
                 access: match resource.access {
-                    vyre_megakernel::AbiAccess::ReadOnly | vyre_megakernel::AbiAccess::Uniform => {
+                    vyre_compiler::AbiAccess::ReadOnly | vyre_compiler::AbiAccess::Uniform => {
                         TargetResourceAccess::ReadOnly
                     }
-                    vyre_megakernel::AbiAccess::WriteOnly => TargetResourceAccess::WriteOnly,
-                    vyre_megakernel::AbiAccess::ReadWrite => TargetResourceAccess::ReadWrite,
+                    vyre_compiler::AbiAccess::WriteOnly => TargetResourceAccess::WriteOnly,
+                    vyre_compiler::AbiAccess::ReadWrite => TargetResourceAccess::ReadWrite,
                 },
             })
             .collect(),

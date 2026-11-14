@@ -15,7 +15,7 @@
 
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_megakernel::SemanticExecutionError;
+use vyre_compiler::SemanticExecutionError;
 
 use super::pattern_match_via_encoded::rewrite_action as ra;
 

@@ -14,7 +14,7 @@ mod native {
         Submission, TimedDispatchResult, VyreBackend,
     };
     use vyre_foundation::ir::Program;
-    use vyre_megakernel::{Artifact, TargetPayload};
+    use vyre_compiler::{Artifact, TargetPayload};
 
     use crate::runtime::{MetalBackend, MetalTargetModule};
     use crate::target_compiler::METAL_TARGET_FORMAT_VERSION;

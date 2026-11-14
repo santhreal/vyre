@@ -126,7 +126,7 @@ fn measuring_variants_is_a_target_fact_and_not_a_node_count() {
 /// it answers depends on a node count. It used to route on one: three
 /// predicates ignored their argument and answered the same value for every
 /// program, which read as a decision and was a constant. Selecting a schedule
-/// is `vyre-megakernel`'s.
+/// is `vyre-compiler`'s.
 #[test]
 fn the_shared_policy_answers_legality_and_ring_arithmetic() {
     let policy = SchedulingPolicy::standard();

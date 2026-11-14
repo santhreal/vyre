@@ -4,11 +4,11 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
-use vyre_foundation::ir::Program;
-use vyre_megakernel::{
+use vyre_compiler::{
     Artifact, ArtifactValueId, FusionRecord, ResourceLifetime, TargetModuleBundle,
     TargetModuleImage, TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceBinding,
 };
+use vyre_foundation::ir::Program;
 
 use crate::{BackendError, BindingPlan, Device, DeviceIdentity, DispatchConfig, ResidentOwner};
 

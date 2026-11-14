@@ -13,7 +13,7 @@ use vyre_libs_builder::plumbing::host::dispatch_buffers::{
 };
 use vyre_libs_graph::graph::chebyshev_filter::{chebyshev_filter, MAX_K as CHEBYSHEV_MAX_K};
 use vyre_libs_math::math::spectral_shape::mp_edge_clip;
-use vyre_megakernel::{
+use vyre_compiler::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
 

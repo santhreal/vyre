@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
-use vyre_megakernel::measure::DeviceState;
-use vyre_megakernel::{
+use vyre_compiler::measure::DeviceState;
+use vyre_compiler::{
     Artifact, ArtifactValueId, Digest, EmittedResources, TargetPayload, TargetPayloadFormat,
     TargetProfile,
 };

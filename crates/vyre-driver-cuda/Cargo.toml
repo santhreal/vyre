@@ -35,8 +35,7 @@ cuda = []
 [dependencies]
 vyre-runtime = { workspace = true }
 vyre-foundation = { workspace = true }
-vyre-megakernel = { workspace = true }
-vyre-lower.workspace = true
+vyre-compiler = { workspace = true }
 vyre-emit = { workspace = true, features = ["ptx"] }
 inventory.workspace = true
 tracing.workspace = true
@@ -64,7 +63,7 @@ vyre-test-support = { workspace = true, features = [
 # Byte-stability golden harness (`artifact_golden`) shared with the emitter
 # crates, so the emitted-PTX corpus is pinned the same way emitted artifacts
 # are instead of growing a second comparison spelling.
-vyre-lower = { workspace = true, features = ["test-fixtures"] }
+vyre-compiler = { workspace = true, features = ["test-fixtures"] }
 # Elementwise parity-gate scaffolding, so the live-device parity tests state
 # their case tables and references and nothing else.
 # Integration tests and benchmarks assert against the lower-layer libraries they

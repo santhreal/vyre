@@ -31,7 +31,7 @@
 //! | `vyre-libs::ml::probabilistic` | tractable Bayesian inference |
 //! | `vyre-libs::security::risk_score` | calibrated uncertainty on findings |
 //! | `vyre-libs::ml::density` | density estimation / anomaly detection |
-//! | `crates/vyre-megakernel/src/cost/mod.rs` | **vyre's dispatch cost model** as probabilistic circuit over Program features → calibrated runtime + uncertainty (paired with conformal intervals) → feed megakernel scheduler as soft constraints |
+//! | `crates/vyre-compiler/src/cost/mod.rs` | **vyre's dispatch cost model** as probabilistic circuit over Program features → calibrated runtime + uncertainty (paired with conformal intervals) → feed megakernel scheduler as soft constraints |
 //!
 //! # Encoding
 //!

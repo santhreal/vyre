@@ -4,7 +4,7 @@
 //! the canonical LEGO path:
 //!
 //! ```text
-//! Program -> vyre-lower::lower_physical -> PhysicalKernel
+//! Program -> vyre-compiler::lower_physical -> PhysicalKernel
 //! KernelDescriptor -> vyre_emit::naga -> naga::Module
 //! naga::Module -> naga::back::msl -> MSL native_module artifact
 //! ```
@@ -20,7 +20,7 @@ use naga::{AddressSpace, StorageAccess};
 use thiserror::Error;
 use vyre_foundation::diagnostics::{CauseKind, CompilerLevel, Diagnostic, DiagnosticStage};
 use vyre_foundation::ir::DataType;
-use vyre_lower::{BindingSlot, BindingVisibility, KernelDescriptor, MemoryClass};
+use vyre_compiler::lower::{BindingSlot, BindingVisibility, KernelDescriptor, MemoryClass};
 
 /// Target identity every diagnostic this emitter raises carries.
 const TARGET: &str = "metal";
@@ -68,7 +68,7 @@ pub enum EmitError {
     #[error("KernelDescriptor artifact hash failed: {0}. Fix: keep KernelDescriptor serde stable before using it as native_module artifact identity.")]
     DescriptorHash(String),
     /// Program pre-emission lowering failed.
-    #[error("Program physical lowering failed before Metal artifact emission: {0}. Fix: route through vyre-lower::lower_physical and repair the neutral descriptor mapping.")]
+    #[error("Program physical lowering failed before Metal artifact emission: {0}. Fix: route through vyre-compiler::lower_physical and repair the neutral descriptor mapping.")]
     PreEmit(String),
 }
 
@@ -153,7 +153,7 @@ impl EmitError {
             .with_stage(DiagnosticStage::Lower)
             .with_compiler_level(CompilerLevel::Lowering)
             .with_fix(
-                "route through vyre-lower::lower_physical and repair the neutral descriptor mapping",
+                "route through vyre-compiler::lower_physical and repair the neutral descriptor mapping",
             )
             .with_cause(CauseKind::Lowering, "pre_emit_lowering", msg.clone()),
         }

@@ -1,6 +1,6 @@
 use super::*;
 use vyre_foundation::ir::MemoryOrdering;
-use vyre_lower::descriptor_builder::{body, descriptor, effect, global_wo, lit, op};
+use vyre_compiler::lower::descriptor_builder::{body, descriptor, effect, global_wo, lit, op};
 
 fn barrier_kernel(ordering: MemoryOrdering) -> KernelDescriptor {
     descriptor("barrier_scope")

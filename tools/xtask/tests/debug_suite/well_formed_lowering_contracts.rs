@@ -11,14 +11,14 @@
 //! `find_uncarriered_assigns`, `diff_descriptors`) live here, so the
 //! contracts naturally land alongside.
 
-use vyre_lower::lower_physical;
+use vyre_compiler::lower::lower_physical;
 use xtask::debug::{
     carrier_summary, diff_descriptors, dump_descriptor, dump_wgsl, dump_wgsl_with_lines,
     find_dangling_refs, find_uncarriered_assigns, fixtures::loop_carry_smoke,
     DescriptorDumpOptions,
 };
 
-fn lowered_smoke() -> (vyre_foundation::ir::Program, vyre_lower::KernelDescriptor) {
+fn lowered_smoke() -> (vyre_foundation::ir::Program, vyre_compiler::lower::KernelDescriptor) {
     let program = loop_carry_smoke();
     let desc = lower_physical(&program)
         .map(|lowered| lowered.into_descriptor())
@@ -96,7 +96,7 @@ fn carrier_summary_finals_populated_for_loop_carry_smoke() {
     }
 }
 
-fn count_total_ops(body: &vyre_lower::KernelBody) -> usize {
+fn count_total_ops(body: &vyre_compiler::lower::KernelBody) -> usize {
     let mut n = body.ops.len();
     for c in &body.child_bodies {
         n += count_total_ops(c);

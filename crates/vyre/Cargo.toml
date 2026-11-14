@@ -19,7 +19,7 @@ exclude = ["**/SKILL.md"]
 vyre-runtime.workspace = true
 vyre-foundation.workspace = true
 vyre-spec.workspace = true
-vyre-megakernel.workspace = true
+vyre-compiler.workspace = true
 vyre-driver-cuda = { workspace = true, optional = true }
 vyre-driver-wgpu = { workspace = true, optional = true }
 

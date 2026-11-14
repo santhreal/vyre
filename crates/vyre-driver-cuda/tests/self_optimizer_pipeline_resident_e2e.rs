@@ -11,7 +11,7 @@ use std::time::Instant;
 
 use vyre::ir::{Expr, Node, Program};
 use vyre_driver_cuda::{registered_backend_id, CUDA_BACKEND_ID};
-use vyre_megakernel::{
+use vyre_compiler::{
     CompileObjective, Digest, ExternalFacts, ObjectiveMetric, SearchBudget, SemanticExecutionPolicy,
 };
 use vyre_pass_engine::optimizer::pipeline::gpu_optimize;

@@ -7,8 +7,8 @@
 //! on `BodyCtx` in a sibling module named for the concept it emits.
 
 use rustc_hash::{FxHashMap, FxHashSet};
-use vyre_lower::BindingSlot;
-use vyre_lower::Name;
+use vyre_compiler::lower::BindingSlot;
+use vyre_compiler::lower::Name;
 
 use crate::ptx::reg::Reg;
 use crate::ptx::PtxEmitOptions;
@@ -133,7 +133,7 @@ pub(super) struct BodyCtx<'a> {
     /// that can hang the kernel.
     pub(super) nonuniform_cond_depth: u32,
     /// Stable numeric code per distinct trap tag, from
-    /// `vyre_lower::descriptor_trap_tags`. A trap writes its code into sidecar
+    /// `vyre_compiler::lower::descriptor_trap_tags`. A trap writes its code into sidecar
     /// word 2, and the host decodes that word through the same table, so the
     /// numbering must come from the shared owner rather than emission order
     /// here: a code minted locally would decode to a different tag on a host

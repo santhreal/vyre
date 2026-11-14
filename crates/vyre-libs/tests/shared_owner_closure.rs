@@ -845,7 +845,7 @@ const DISPATCH_TREE: &str = "src/graph/dispatch/";
 
 /// Signatures that derive a result set independently of the declarations.
 ///
-/// `vyre_megakernel::writable_graph_value_buffers` answers which buffers a node
+/// `vyre_compiler::writable_graph_value_buffers` answers which buffers a node
 /// writes and `returned_graph_values` answers which values a completion
 /// carries. A wrapper that matches the result list by position, or checks its
 /// length against a number it summed itself, is a second answer to one of them,
@@ -892,7 +892,7 @@ fn no_graph_dispatch_wrapper_derives_its_own_result_set() {
 
     assert!(
         offenders.is_empty(),
-        "Fix: these wrappers derive their own result set. Read each buffer by the name the Program declares through `dispatch_bridge::dispatch_u32_outputs_from_prepared_into`, or compare the returned identities against `vyre_megakernel::returned_graph_values`:\n  {}",
+        "Fix: these wrappers derive their own result set. Read each buffer by the name the Program declares through `dispatch_bridge::dispatch_u32_outputs_from_prepared_into`, or compare the returned identities against `vyre_compiler::returned_graph_values`:\n  {}",
         offenders.join("\n  ")
     );
 }

@@ -4,7 +4,7 @@
 //! emission does not reallocate while writing. Every number here is an
 //! estimate; being wrong costs a reallocation, never correctness.
 
-use vyre_lower::{BindingLayout, KernelBody, KernelDescriptor, MemoryClass};
+use vyre_compiler::lower::{BindingLayout, KernelBody, KernelDescriptor, MemoryClass};
 
 pub(super) fn estimated_module_text_capacity(desc: &KernelDescriptor) -> usize {
     512usize

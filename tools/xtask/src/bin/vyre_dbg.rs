@@ -136,7 +136,7 @@ fn read_bytes_bounded(path: &Path, max_bytes: u64) -> Result<Vec<u8>, String> {
     Ok(bytes)
 }
 
-fn read_kdesc(path: &Path) -> Result<vyre_lower::KernelDescriptor, String> {
+fn read_kdesc(path: &Path) -> Result<vyre_compiler::lower::KernelDescriptor, String> {
     let mut file = std::fs::File::open(path)
         .map_err(|e| format!("Failed to open kdesc {}: {e}", path.display()))?;
     bincode::serde::decode_from_std_read(&mut file, bincode::config::standard())
@@ -173,7 +173,7 @@ fn main() {
                     exit(3);
                 }
             };
-            let desc = match vyre_lower::lower_physical(&p).map(|lowered| lowered.into_descriptor())
+            let desc = match vyre_compiler::lower::lower_physical(&p).map(|lowered| lowered.into_descriptor())
             {
                 Ok(d) => d,
                 Err(e) => {
@@ -227,7 +227,7 @@ fn main() {
                     exit(3);
                 }
             };
-            let desc = match vyre_lower::lower_physical(&p).map(|lowered| lowered.into_descriptor())
+            let desc = match vyre_compiler::lower::lower_physical(&p).map(|lowered| lowered.into_descriptor())
             {
                 Ok(d) => d,
                 Err(e) => {
@@ -262,7 +262,7 @@ fn main() {
                     exit(3);
                 }
             };
-            let desc = match vyre_lower::lower_physical(&p).map(|lowered| lowered.into_descriptor())
+            let desc = match vyre_compiler::lower::lower_physical(&p).map(|lowered| lowered.into_descriptor())
             {
                 Ok(d) => d,
                 Err(e) => {
@@ -297,7 +297,7 @@ fn main() {
                     exit(3);
                 }
             };
-            let desc = match vyre_lower::lower_physical(&p).map(|lowered| lowered.into_descriptor())
+            let desc = match vyre_compiler::lower::lower_physical(&p).map(|lowered| lowered.into_descriptor())
             {
                 Ok(d) => d,
                 Err(e) => {
@@ -329,7 +329,7 @@ fn main() {
                 }
             };
             let desc_a =
-                match vyre_lower::lower_physical(&p_a).map(|lowered| lowered.into_descriptor()) {
+                match vyre_compiler::lower::lower_physical(&p_a).map(|lowered| lowered.into_descriptor()) {
                     Ok(d) => d,
                     Err(e) => {
                         eprintln!("Lowering failed: {:?}", e);
@@ -337,7 +337,7 @@ fn main() {
                     }
                 };
             let desc_b =
-                match vyre_lower::lower_physical(&p_b).map(|lowered| lowered.into_descriptor()) {
+                match vyre_compiler::lower::lower_physical(&p_b).map(|lowered| lowered.into_descriptor()) {
                     Ok(d) => d,
                     Err(e) => {
                         eprintln!("Lowering failed: {:?}", e);

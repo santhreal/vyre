@@ -1,9 +1,9 @@
 //! The canonical compiler artifact fixtures, owned by the workspace.
 //!
-//! Every crate downstream of `vyre-megakernel` that tests admission, packaging,
+//! Every crate downstream of `vyre-compiler` that tests admission, packaging,
 //! or artifact reporting needs the same input: a one-node graph over a few
 //! external values, compiled under fixed facts and a bounded search. Four crates
-//! each carried their own copy of that setup, and `vyre-megakernel` and
+//! each carried their own copy of that setup, and `vyre-compiler` and
 //! `vyre-runtime` carried it byte-identically because their assertions compare
 //! digests that only agree while the two copies agree.
 //!
@@ -22,7 +22,7 @@ use vyre_foundation::ir::{
     ValueLifetime,
 };
 use vyre_foundation::validate::BackendCapabilities;
-use vyre_megakernel::{
+use vyre_compiler::{
     compile, Artifact, ArtifactNodeId, ArtifactValueId, CompileObjective, CompileRequest,
     DeviceFacts, Digest, ExternalFacts, ObjectiveMetric, SearchBudget, TargetEntryPoint,
     TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
@@ -188,7 +188,7 @@ fn device_facts_for(collectives: bool, native_f16: bool) -> DeviceFacts {
 
 /// The canonical read-only single-input artifact.
 ///
-/// `vyre-megakernel` and `vyre-runtime` both assert against this exact artifact,
+/// `vyre-compiler` and `vyre-runtime` both assert against this exact artifact,
 /// including its digest, so it is one function rather than two copies that have
 /// to stay identical for those assertions to keep meaning what they say.
 pub fn single_input_graph(workgroup_size: [u32; 3]) -> ProgramGraph {

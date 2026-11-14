@@ -16,8 +16,8 @@
 use super::*;
 
 use naga::{BinaryOperator, Expression};
-use vyre_lower::descriptor_builder::op;
-use vyre_lower::GridIndexSpace;
+use vyre_compiler::lower::descriptor_builder::op;
+use vyre_compiler::lower::GridIndexSpace;
 
 /// A store of a literal at `global_invocation_id[axis]`: the smallest descriptor
 /// whose emitted index arithmetic is the whole subject.

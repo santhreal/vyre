@@ -19,7 +19,7 @@ use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Progra
 
 fn assert_emits_clean(prog: Program, label: &str) {
     // Verified lowering owns semantic optimization and descriptor canonicalization.
-    let lk = vyre_lower::lower_physical(&prog)
+    let lk = vyre_compiler::lower::lower_physical(&prog)
         .unwrap_or_else(|e| panic!("{label}: lower_physical failed: {e}"));
     let module = vyre_emit::naga::emit(lk.descriptor())
         .unwrap_or_else(|e| panic!("{label}: emit failed: {e}"));
@@ -417,7 +417,7 @@ fn dump_python312_lexer_naga() {
         .expect("python312_lexer must have a valid logical domain");
     let schedule = vyre_test_support::selected_schedules::baseline(&logical);
     let phase = schedule.phases[0].id;
-    let lk = vyre_lower::lower_scheduled(&prog, &schedule, phase)
+    let lk = vyre_compiler::lower::lower_scheduled(&prog, &schedule, phase)
         .expect("python312_lexer selected schedule must lower");
     let module = vyre_emit::naga::emit(lk.descriptor()).expect("python312_lexer emit must succeed");
     let wgsl = naga::back::wgsl::write_string(

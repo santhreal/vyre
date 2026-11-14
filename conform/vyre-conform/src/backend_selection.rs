@@ -141,7 +141,7 @@ pub fn partition_by_host_availability(
 /// Registered target facts, the digest a receipt carries for them, and what
 /// resolving them has cost.
 struct RegisteredTargetFacts {
-    facts: vyre_megakernel::DeviceFacts,
+    facts: vyre_compiler::DeviceFacts,
     digest: String,
     /// Acquisitions of this backend the cache has performed. One is the whole
     /// contract; the field exists so that is observable rather than inferred.
@@ -172,7 +172,7 @@ static TARGET_FACTS: LazyLock<Mutex<BTreeMap<&'static str, Arc<RegisteredTargetF
 /// Returns the acquisition refusal when this host cannot acquire the backend.
 pub fn registered_target_facts(
     registration: &'static vyre_runtime::BackendRegistration,
-) -> Result<vyre_megakernel::DeviceFacts, vyre_runtime::BackendError> {
+) -> Result<vyre_compiler::DeviceFacts, vyre_runtime::BackendError> {
     Ok(registered_facts(registration)?.facts)
 }
 

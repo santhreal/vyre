@@ -51,31 +51,6 @@ impl<'a> GpuMappedBuffer<'a> {
         }
     }
 
-    /// Construct from a host-visible address plus an explicit owner anchor.
-    ///
-    /// # Safety
-    ///
-    /// The caller must uphold that `ptr` is the start of `len` host-visible
-    /// bytes owned by `_owner`, that the mapping stays live and unaliased for
-    /// the borrow of `_owner`, and that no other handle reads or writes the
-    /// range. `_owner` ties the region's lifetime to something the borrow
-    /// checker can see, but it does not establish that `ptr` names it.
-    #[must_use]
-    #[allow(unsafe_code)]
-    pub unsafe fn from_host_visible_owner<O: ?Sized>(
-        _owner: &'a mut O,
-        ptr: *mut u8,
-        len: usize,
-    ) -> Self {
-        Self {
-            // SAFETY: the caller has upheld that `ptr` names `len` live
-            // host-visible bytes that stay mapped and unaliased.
-            raw: unsafe { RawBufferPointer::new(ptr) },
-            len,
-            _owner: PhantomData,
-        }
-    }
-
     /// Carve out a sub-region of this mapped buffer.
     ///
     /// # Errors

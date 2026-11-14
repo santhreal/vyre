@@ -215,7 +215,7 @@ pub(crate) unsafe fn dispatch_program(
     }
 
     // The lowered module carries one descriptor the Program never declared: the
-    // reserved trap-diagnostic sidecar `vyre-lower` appends to a kernel that
+    // reserved trap-diagnostic sidecar `vyre-compiler` appends to a kernel that
     // emits a trap. It is bound here, zeroed, and read back below.
     let trap_sidecar = bind_trap_sidecar(device, spv_words, &mut dispatch_bindings)?;
 

@@ -45,18 +45,18 @@ fn build_encoded_analysis_program(
 }
 
 fn execute_retained_program(
-    executor: &dyn vyre_megakernel::SemanticExecutor,
-    policy: &vyre_megakernel::SemanticExecutionPolicy,
+    executor: &dyn vyre_compiler::SemanticExecutor,
+    policy: &vyre_compiler::SemanticExecutionPolicy,
     stage: &str,
     program: vyre_foundation::ir::Program,
     input_bytes: &[Vec<u8>],
-) -> Result<Vec<Vec<u8>>, vyre_megakernel::SemanticExecutionError> {
+) -> Result<Vec<Vec<u8>>, vyre_compiler::SemanticExecutionError> {
     use std::collections::BTreeMap;
     use vyre_foundation::ir::{
         BufferAccess, GraphInput, ProgramGraph, ShapeDim, ValueContract, ValueLifetime,
     };
     use vyre_foundation::logical::LogicalProgramGraph;
-    use vyre_megakernel::{
+    use vyre_compiler::{
         SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionRequest,
     };
 
@@ -150,14 +150,14 @@ fn execute_retained_program(
 
 fn run_encoded_analysis_kernel(
     arena: &expr_arena::ExprArenaEncoding,
-    executor: &dyn vyre_megakernel::SemanticExecutor,
-    policy: &vyre_megakernel::SemanticExecutionPolicy,
+    executor: &dyn vyre_compiler::SemanticExecutor,
+    policy: &vyre_compiler::SemanticExecutionPolicy,
     inputs: &mut Vec<Vec<u8>>,
     output: &mut Vec<u32>,
     build_program: fn(u32) -> vyre_foundation::ir::Program,
     stage: &str,
     output_name: &str,
-) -> Result<(), vyre_megakernel::SemanticExecutionError> {
+) -> Result<(), vyre_compiler::SemanticExecutionError> {
     use vyre_libs::dispatch_buffers::{
         decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
     };
@@ -169,7 +169,7 @@ fn run_encoded_analysis_kernel(
     write_u32_slice_le_bytes(&mut inputs[2], &arena.arg1);
     write_u32_slice_le_bytes(&mut inputs[3], &arena.arg2);
 
-    let mut execution = vyre_megakernel::execute_single_program(
+    let mut execution = vyre_compiler::execute_single_program(
         executor,
         stage,
         build_program(count),
@@ -177,7 +177,7 @@ fn run_encoded_analysis_kernel(
         policy,
     )?;
     if execution.outputs.len() != 1 {
-        return Err(vyre_megakernel::SemanticExecutionError::Backend(format!(
+        return Err(vyre_compiler::SemanticExecutionError::Backend(format!(
             "{stage} semantic execution expected exactly one {output_name} output, got {}. Fix: return the canonical graph output",
             execution.outputs.len()
         )));
@@ -189,7 +189,7 @@ fn run_encoded_analysis_kernel(
         output,
     )
     .map_err(|error| {
-        vyre_megakernel::SemanticExecutionError::Backend(format!(
+        vyre_compiler::SemanticExecutionError::Backend(format!(
             "{stage} semantic output decoding failed: {error}"
         ))
     })

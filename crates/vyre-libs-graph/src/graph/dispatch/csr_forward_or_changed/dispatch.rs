@@ -16,7 +16,7 @@ use vyre_foundation::ir::{
 };
 use vyre_foundation::logical::LogicalProgramGraph;
 use vyre_libs_builder::plumbing::host::scratch::reserve_vec as reserve_graph_vec;
-use vyre_megakernel::{
+use vyre_compiler::{
     returned_graph_values, SemanticExecutionError, SemanticExecutionPolicy,
     SemanticExecutionRequest, SemanticExecutor,
 };
@@ -535,7 +535,7 @@ mod semantic_tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     use vyre_foundation::ir::{ShapeDim, ValueLifetime};
-    use vyre_megakernel::{Digest, SearchBudget, SemanticExecutionOutput};
+    use vyre_compiler::{Digest, SearchBudget, SemanticExecutionOutput};
 
     use super::*;
 

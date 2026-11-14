@@ -6,7 +6,7 @@ use crate::naga::EmitError;
 use naga::{BinaryOperator, Literal, ScalarKind, UnaryOperator};
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BinOp, DataType, UnOp};
-use vyre_lower::{KernelBody, KernelOpKind, LiteralValue};
+use vyre_compiler::lower::{KernelBody, KernelOpKind, LiteralValue};
 
 pub(super) fn naga_literal(literal: &LiteralValue) -> Result<Literal, EmitError> {
     match literal {
@@ -209,7 +209,7 @@ fn barrier_body_spaces(body: &KernelBody) -> (bool, bool) {
 ///
 /// `GridSync` is device wide. No shading language this emitter targets has a
 /// whole-grid barrier, so a dispatch-level fence is cut into one entry point per
-/// segment by [`vyre_lower::dispatch_segments`] and never reaches here. A fence
+/// segment by [`vyre_compiler::lower::dispatch_segments`] and never reaches here. A fence
 /// that does reach here sits under a branch or a loop, where no launch boundary
 /// expresses it.
 pub(super) fn barrier_flags(
@@ -252,7 +252,7 @@ pub(super) fn barrier_flags(
 #[cfg(test)]
 mod tests {
     use super::{barrier_flags, MemoryOrdering};
-    use vyre_lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
+    use vyre_compiler::lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
 
     fn body(kinds: &[KernelOpKind], children: Vec<KernelBody>) -> KernelBody {
         KernelBody {

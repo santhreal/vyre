@@ -3,14 +3,14 @@ use std::path::Path;
 use std::sync::{Arc, RwLock};
 
 use thiserror::Error;
+use vyre_compiler::{
+    ArtifactEnvelope, ArtifactValueId, CompileError, Digest, ResourceLifetime, TargetCompileError,
+    TargetEntryPoint, ValidatedCompileRequest,
+};
 use vyre_foundation::failure_domain::{
     govern_rwlock_read, govern_rwlock_write, RecoveryClass, TypedRecoveryError,
 };
 use vyre_foundation::ir::Program;
-use vyre_megakernel::{
-    ArtifactEnvelope, ArtifactValueId, CompileError, Digest, ResourceLifetime, TargetCompileError,
-    TargetEntryPoint, ValidatedCompileRequest,
-};
 use vyre_runtime::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BackendRegistration, BindingSet,
     BoundResource, Completion, DeviceIdentity, Resource, Submission,
@@ -88,7 +88,7 @@ impl ArtifactSession {
         materializer: Arc<dyn ArtifactMaterializer>,
     ) -> Result<Self, ArtifactSessionError> {
         let compiler = registration.target_compiler()?;
-        let artifact = vyre_megakernel::compile_measured(
+        let artifact = vyre_compiler::compile_measured(
             request,
             &DeviceFinalists {
                 compiler: compiler.as_ref(),
@@ -96,7 +96,7 @@ impl ArtifactSession {
                 representative_inputs: request.representative_inputs(),
             },
         )?;
-        let envelope = vyre_megakernel::attach_target(artifact, compiler.as_ref())?;
+        let envelope = vyre_compiler::attach_target(artifact, compiler.as_ref())?;
         Self::from_envelope_with_materializer(registration, envelope, materializer)
     }
 

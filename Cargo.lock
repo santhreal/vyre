@@ -3232,11 +3232,11 @@ dependencies = [
  "serde_json",
  "syn 2.0.117",
  "toml",
+ "vyre-compiler",
  "vyre-driver-cuda",
  "vyre-driver-wgpu",
  "vyre-foundation",
  "vyre-libs",
- "vyre-megakernel",
  "vyre-runtime",
  "vyre-spec",
  "vyre-test-support",
@@ -3259,9 +3259,8 @@ dependencies = [
  "sha2 0.11.0",
  "tempfile",
  "thiserror 2.0.19",
+ "vyre-compiler",
  "vyre-foundation",
- "vyre-lower",
- "vyre-megakernel",
  "vyre-runtime",
  "vyre-safetensors",
  "vyre-test-support",
@@ -3298,13 +3297,12 @@ dependencies = [
  "toml",
  "vyre",
  "vyre-alloc-probe",
+ "vyre-compiler",
  "vyre-driver-cuda",
  "vyre-driver-wgpu",
  "vyre-emit",
  "vyre-foundation",
  "vyre-libs",
- "vyre-lower",
- "vyre-megakernel",
  "vyre-pass-engine",
  "vyre-primitives",
  "vyre-reference",
@@ -3313,6 +3311,26 @@ dependencies = [
  "vyre-spec",
  "vyre-test-support",
  "wide",
+]
+
+[[package]]
+name = "vyre-compiler"
+version = "0.8.0"
+dependencies = [
+ "bincode",
+ "blake3",
+ "imbl",
+ "inventory",
+ "rustc-hash 2.1.3",
+ "serde",
+ "serde_json",
+ "smallvec",
+ "thiserror 2.0.19",
+ "toml",
+ "vyre-compiler",
+ "vyre-foundation",
+ "vyre-spec",
+ "vyre-test-support",
 ]
 
 [[package]]
@@ -3330,6 +3348,7 @@ dependencies = [
  "thiserror 2.0.19",
  "toml",
  "vyre",
+ "vyre-compiler",
  "vyre-conform-spec",
  "vyre-driver-cuda",
  "vyre-driver-reference",
@@ -3337,8 +3356,6 @@ dependencies = [
  "vyre-driver-wgpu",
  "vyre-foundation",
  "vyre-libs",
- "vyre-lower",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
  "vyre-registry-link",
@@ -3374,11 +3391,10 @@ dependencies = [
  "tempfile",
  "tracing",
  "vyre",
+ "vyre-compiler",
  "vyre-emit",
  "vyre-foundation",
  "vyre-libs",
- "vyre-lower",
- "vyre-megakernel",
  "vyre-pass-engine",
  "vyre-primitives",
  "vyre-reference",
@@ -3394,11 +3410,10 @@ dependencies = [
  "serde_json",
  "toml",
  "tracing",
+ "vyre-compiler",
  "vyre-driver-wgpu",
  "vyre-emit",
  "vyre-foundation",
- "vyre-lower",
- "vyre-megakernel",
  "vyre-runtime",
  "vyre-test-support",
 ]
@@ -3407,8 +3422,8 @@ dependencies = [
 name = "vyre-driver-reference"
 version = "0.8.0"
 dependencies = [
+ "vyre-compiler",
  "vyre-foundation",
- "vyre-megakernel",
  "vyre-reference",
  "vyre-registry-link",
  "vyre-runtime",
@@ -3421,10 +3436,9 @@ version = "0.8.0"
 dependencies = [
  "ash",
  "tempfile",
+ "vyre-compiler",
  "vyre-emit",
  "vyre-foundation",
- "vyre-lower",
- "vyre-megakernel",
  "vyre-reference",
  "vyre-runtime",
  "vyre-test-support",
@@ -3456,12 +3470,11 @@ dependencies = [
  "tracing-subscriber",
  "vyre",
  "vyre-alloc-probe",
+ "vyre-compiler",
  "vyre-conform",
  "vyre-emit",
  "vyre-foundation",
  "vyre-libs",
- "vyre-lower",
- "vyre-megakernel",
  "vyre-pass-engine",
  "vyre-primitives",
  "vyre-reference",
@@ -3488,9 +3501,9 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.19",
  "tracing",
+ "vyre-compiler",
  "vyre-foundation",
  "vyre-libs",
- "vyre-lower",
  "vyre-spec",
  "vyre-test-support",
 ]
@@ -3536,6 +3549,7 @@ dependencies = [
  "tree-sitter",
  "tree-sitter-go",
  "vyre",
+ "vyre-compiler",
  "vyre-emit",
  "vyre-foundation",
  "vyre-libs-analysis",
@@ -3557,8 +3571,6 @@ dependencies = [
  "vyre-libs-solvers",
  "vyre-libs-text",
  "vyre-libs-visual",
- "vyre-lower",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
  "vyre-runtime",
@@ -3571,6 +3583,7 @@ name = "vyre-libs-analysis"
 version = "0.8.0"
 dependencies = [
  "tracing",
+ "vyre-compiler",
  "vyre-driver-reference",
  "vyre-foundation",
  "vyre-libs-builder",
@@ -3578,7 +3591,6 @@ dependencies = [
  "vyre-libs-fixpoint",
  "vyre-libs-graph",
  "vyre-libs-math",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
  "vyre-spec",
@@ -3605,8 +3617,8 @@ version = "0.8.0"
 dependencies = [
  "inventory",
  "thiserror 2.0.19",
+ "vyre-compiler",
  "vyre-foundation",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-spec",
 ]
@@ -3641,6 +3653,7 @@ dependencies = [
 name = "vyre-libs-encoding"
 version = "0.8.0"
 dependencies = [
+ "vyre-compiler",
  "vyre-driver-reference",
  "vyre-foundation",
  "vyre-libs-bitset",
@@ -3652,7 +3665,6 @@ dependencies = [
  "vyre-libs-parsing",
  "vyre-libs-pattern",
  "vyre-libs-reduce",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
  "vyre-test-support",
@@ -3676,6 +3688,7 @@ version = "0.8.0"
 dependencies = [
  "inventory",
  "proptest",
+ "vyre-compiler",
  "vyre-driver-reference",
  "vyre-foundation",
  "vyre-libs-bitset",
@@ -3685,7 +3698,6 @@ dependencies = [
  "vyre-libs-math",
  "vyre-libs-reduce",
  "vyre-libs-visual",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
  "vyre-test-support",
@@ -3728,12 +3740,11 @@ dependencies = [
  "libm",
  "proptest",
  "thiserror 2.0.19",
+ "vyre-compiler",
  "vyre-foundation",
  "vyre-libs-builder",
  "vyre-libs-math",
  "vyre-libs-reduce",
- "vyre-lower",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
  "vyre-spec",
@@ -3780,12 +3791,12 @@ name = "vyre-libs-reasoning"
 version = "0.8.0"
 dependencies = [
  "proptest",
+ "vyre-compiler",
  "vyre-driver-reference",
  "vyre-foundation",
  "vyre-libs-analysis",
  "vyre-libs-builder",
  "vyre-libs-graph",
- "vyre-megakernel",
  "vyre-reference",
  "vyre-test-support",
 ]
@@ -3796,10 +3807,10 @@ version = "0.8.0"
 dependencies = [
  "inventory",
  "proptest",
+ "vyre-compiler",
  "vyre-driver-reference",
  "vyre-foundation",
  "vyre-libs-builder",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
  "vyre-test-support",
@@ -3809,13 +3820,13 @@ dependencies = [
 name = "vyre-libs-scheduling"
 version = "0.8.0"
 dependencies = [
+ "vyre-compiler",
  "vyre-driver-reference",
  "vyre-foundation",
  "vyre-libs-builder",
  "vyre-libs-graph",
  "vyre-libs-math",
  "vyre-libs-parsing",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
  "vyre-test-support",
@@ -3825,6 +3836,7 @@ dependencies = [
 name = "vyre-libs-solvers"
 version = "0.8.0"
 dependencies = [
+ "vyre-compiler",
  "vyre-driver-reference",
  "vyre-foundation",
  "vyre-libs-bitset",
@@ -3832,7 +3844,6 @@ dependencies = [
  "vyre-libs-fixpoint",
  "vyre-libs-graph",
  "vyre-libs-math",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
  "vyre-test-support",
@@ -3865,25 +3876,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "vyre-lower"
-version = "0.8.0"
-dependencies = [
- "bincode",
- "imbl",
- "inventory",
- "rustc-hash 2.1.3",
- "serde",
- "serde_json",
- "smallvec",
- "thiserror 2.0.19",
- "toml",
- "vyre-foundation",
- "vyre-lower",
- "vyre-spec",
- "vyre-test-support",
-]
-
-[[package]]
 name = "vyre-macros"
 version = "0.8.0"
 dependencies = [
@@ -3895,29 +3887,14 @@ dependencies = [
 ]
 
 [[package]]
-name = "vyre-megakernel"
-version = "0.8.0"
-dependencies = [
- "blake3",
- "inventory",
- "serde",
- "serde_json",
- "thiserror 2.0.19",
- "vyre-foundation",
- "vyre-lower",
- "vyre-spec",
- "vyre-test-support",
-]
-
-[[package]]
 name = "vyre-pass-engine"
 version = "0.8.0"
 dependencies = [
  "rustc-hash 2.1.3",
+ "vyre-compiler",
  "vyre-driver-reference",
  "vyre-foundation",
  "vyre-libs",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
  "vyre-test-support",
@@ -3947,8 +3924,8 @@ dependencies = [
  "rustc-hash 2.1.3",
  "smallvec",
  "vyre-alloc-probe",
+ "vyre-compiler",
  "vyre-foundation",
- "vyre-lower",
  "vyre-primitives",
  "vyre-spec",
  "vyre-test-support",
@@ -3959,14 +3936,13 @@ name = "vyre-registry-link"
 version = "0.8.0"
 dependencies = [
  "toml",
+ "vyre-compiler",
  "vyre-driver-cuda",
  "vyre-driver-metal",
  "vyre-driver-spirv",
  "vyre-driver-wgpu",
  "vyre-foundation",
  "vyre-libs",
- "vyre-lower",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-runtime",
  "vyre-spec",
@@ -3994,10 +3970,10 @@ dependencies = [
  "tracing",
  "ureq",
  "vyre",
+ "vyre-compiler",
  "vyre-driver-reference",
  "vyre-foundation",
  "vyre-libs",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
  "vyre-spec",
@@ -4040,9 +4016,8 @@ dependencies = [
  "smallvec",
  "tempfile",
  "toml",
+ "vyre-compiler",
  "vyre-foundation",
- "vyre-lower",
- "vyre-megakernel",
  "vyre-primitives",
  "vyre-reference",
  "vyre-runtime",
@@ -4730,11 +4705,10 @@ dependencies = [
  "tempfile",
  "toml",
  "vyre",
+ "vyre-compiler",
  "vyre-emit",
  "vyre-foundation",
  "vyre-libs",
- "vyre-lower",
- "vyre-megakernel",
  "vyre-test-support",
  "walkdir",
 ]

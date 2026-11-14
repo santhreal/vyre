@@ -1,5 +1,5 @@
 use super::*;
-use vyre_lower::descriptor_builder::{body, descriptor, lit, op};
+use vyre_compiler::lower::descriptor_builder::{body, descriptor, lit, op};
 use vyre_test_support::float_cast_closure::float_cast_must_fail_closed;
 
 /// A single-cast kernel: seed one literal, cast it to `target`.

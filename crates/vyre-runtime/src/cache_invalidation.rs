@@ -5,15 +5,15 @@
 //! depend on the composition modules that implement it directly.
 
 #[cfg(feature = "libs-compositions")]
+use vyre_compiler::SemanticExecutionError;
+use vyre_compiler::{SemanticExecutionPolicy, SemanticExecutor};
+#[cfg(feature = "libs-compositions")]
 use vyre_libs::encoding::scallop_provenance::provenance_closure_via_into;
 #[cfg(feature = "libs-compositions")]
 use vyre_libs::reasoning::do_calculus_change_impact::{
     predict_impact_via_into, project_impacted_lineage_entries_via_into, DoCalculusImpactScratch,
     ImpactedLineageProjectionScratch,
 };
-#[cfg(feature = "libs-compositions")]
-use vyre_megakernel::SemanticExecutionError;
-use vyre_megakernel::{SemanticExecutionPolicy, SemanticExecutor};
 /// Error raised by GPU-resident cache invalidation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CacheInvalidationError {
@@ -225,8 +225,8 @@ fn reserved_impact_mask(len: usize) -> Result<Vec<u32>, CacheInvalidationError> 
 #[cfg(all(test, feature = "libs-compositions"))]
 mod tests {
     use super::*;
+    use vyre_compiler::{Digest, SearchBudget};
     use vyre_driver_reference::ReferenceSemanticExecutor;
-    use vyre_megakernel::{Digest, SearchBudget};
     fn policy() -> SemanticExecutionPolicy {
         vyre_test_support::semantic_requests::unknown_policy(
             Digest([0; 32]),

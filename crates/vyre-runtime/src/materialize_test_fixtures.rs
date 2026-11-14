@@ -9,14 +9,14 @@
 
 use std::collections::BTreeMap;
 
-use vyre_foundation::ir::{
-    BufferAccess, DataType, ProgramGraph, ShapeDim, ValueContract, ValueLifetime,
-};
-use vyre_megakernel::{
+use vyre_compiler::{
     compile, Artifact, ArtifactNodeId, ArtifactValueId, CompileObjective, CompileRequest,
     DeviceFacts, Digest, ExternalFacts, ObjectiveMetric, SearchBudget, TargetEntryPoint,
     TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess, TargetResourceBinding,
     TargetResourceMemory,
+};
+use vyre_foundation::ir::{
+    BufferAccess, DataType, ProgramGraph, ShapeDim, ValueContract, ValueLifetime,
 };
 
 use crate::materialize::{InstanceCore, NEUTRAL_MESSAGES};
@@ -179,7 +179,7 @@ pub(super) fn test_payload(artifact: &Artifact, entries: Vec<TargetEntryPoint>) 
 pub(super) fn try_payload(
     artifact: &Artifact,
     entries: Vec<TargetEntryPoint>,
-) -> Result<TargetPayload, vyre_megakernel::CompileError> {
+) -> Result<TargetPayload, vyre_compiler::CompileError> {
     TargetPayload::new(
         artifact,
         test_format(),

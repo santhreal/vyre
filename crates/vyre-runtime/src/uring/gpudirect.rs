@@ -80,13 +80,6 @@ impl GpuDirectCapability {
             },
         }
     }
-
-    /// True when the fast path is available and callers should
-    /// construct a `GpuMappedBuffer::from_bar1_peer`-backed region.
-    #[must_use]
-    pub fn is_available(&self) -> bool {
-        matches!(self, GpuDirectCapability::Available { .. })
-    }
 }
 
 #[cfg(all(target_os = "linux", feature = "uring-cmd-nvme"))]
@@ -202,18 +195,5 @@ mod tests {
         // NVMe's zero-based encoding: 1 block → 0.
         let sqe = encode_nvme_read_sqe(1, 0, 1, 0);
         assert_eq!(sqe[48..52], 0u32.to_le_bytes());
-    }
-
-    #[test]
-    fn is_available_reflects_variant() {
-        let available = GpuDirectCapability::Available {
-            stats: "session_count=1".into(),
-        };
-        assert!(available.is_available());
-        let unavail = GpuDirectCapability::Unavailable {
-            reason: "test reason",
-        };
-        assert!(!unavail.is_available());
-        assert!(!GpuDirectCapability::FeatureDisabled.is_available());
     }
 }

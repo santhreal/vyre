@@ -12,7 +12,7 @@ use harness::self_optimizer::semantic_execution;
 use vyre::ir::Program;
 use vyre_runtime::self_optimizer_bench::report_scaling;
 use vyre_driver_wgpu::WgpuBackend;
-use vyre_megakernel::{SemanticExecutionPolicy, SemanticExecutor};
+use vyre_compiler::{SemanticExecutionPolicy, SemanticExecutor};
 use vyre_pass_engine::optimizer::pipeline::gpu_optimize;
 
 fn semantic_gpu_pipeline(

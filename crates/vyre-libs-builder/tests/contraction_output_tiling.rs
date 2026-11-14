@@ -19,7 +19,7 @@ use vyre_libs_builder::builder::gemm::{
     ContractionComposer, ContractionOutputTile, ContractionTiling,
 };
 use vyre_libs_builder::plumbing::operand::tensor_ref::{TensorRef, TensorRefError};
-use vyre_megakernel::DeviceFacts;
+use vyre_compiler::DeviceFacts;
 use vyre_spec::DataType;
 
 const ROWS: u32 = 64;

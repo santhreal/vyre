@@ -48,7 +48,7 @@ use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_libs_parsing::parsing::planar_rewrite::planar_rewrite_schedule;
-use vyre_megakernel::{
+use vyre_compiler::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
 

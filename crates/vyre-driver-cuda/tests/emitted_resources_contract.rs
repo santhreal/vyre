@@ -17,7 +17,7 @@ use crate::harness;
 use harness::add_one_program;
 use vyre_driver_cuda::cuda_factory;
 use vyre_foundation::ir::ProgramGraph;
-use vyre_megakernel::{
+use vyre_compiler::{
     compile, CompileObjective, CompileRequest, Digest, ExternalFacts, ObjectiveMetric, SearchBudget,
 };
 

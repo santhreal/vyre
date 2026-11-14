@@ -1,6 +1,6 @@
 //! Test: control flow.
 use super::*;
-use vyre_lower::descriptor_builder::{
+use vyre_compiler::lower::descriptor_builder::{
     body, counted_loop_head, descriptor, effect, global_rw, lit, KernelDescriptorBuilder, SlotCount,
 };
 

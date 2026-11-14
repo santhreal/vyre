@@ -2,7 +2,7 @@
 
 use naga::{BinaryOperator, Expression, Literal, ScalarKind};
 use vyre_foundation::ir::DataType;
-use vyre_lower::KernelOp;
+use vyre_compiler::lower::KernelOp;
 
 use super::super::op_lookup::scalar_cast_target;
 use super::super::BodyBuilder;

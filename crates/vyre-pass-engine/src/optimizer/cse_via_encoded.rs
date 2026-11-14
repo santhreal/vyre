@@ -37,7 +37,7 @@ use vyre_libs::dispatch_buffers::{
 use super::arena_cursor::ArenaCursor;
 use super::encode::EncodeError;
 use super::expr_arena::{encode_expr_arena, ExprArenaEncoding};
-use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 pub use super::cse_cross_scope::{apply_cross_scope_cse, apply_cross_scope_cse_with_lookup};
 pub use super::cse_programs::{
@@ -263,7 +263,7 @@ fn run_cse_kernels_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.hash_inputs[3], &arena.arg2);
     write_u32_slice_le_bytes(&mut scratch.hash_inputs[4], &arena.depths);
     write_u32_slice_le_bytes(&mut scratch.hash_inputs[5], &scratch.max_depth);
-    let mut hash_execution = vyre_megakernel::execute_single_program(
+    let mut hash_execution = vyre_compiler::execute_single_program(
         executor,
         "cse-structural-hash",
         build_structural_hash_program(n, arena.max_depth.saturating_add(1).max(1)),
@@ -287,7 +287,7 @@ fn run_cse_kernels_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.canonical_inputs[2], &arena.arg0);
     write_u32_slice_le_bytes(&mut scratch.canonical_inputs[3], &arena.arg1);
     write_u32_slice_le_bytes(&mut scratch.canonical_inputs[4], &arena.arg2);
-    let mut canonical_execution = vyre_megakernel::execute_single_program(
+    let mut canonical_execution = vyre_compiler::execute_single_program(
         executor,
         "cse-canonical-id",
         build_canonical_id_program(n),

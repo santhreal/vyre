@@ -1,0 +1,21 @@
+schema_version = 1
+contract = "vyre-kernel-family-surfaces:v1"
+
+
+[[family]]
+family_id = "lower.analyses"
+root = "crates/vyre-compiler/src/analyses"
+public_reexport = "crates/vyre-compiler/src/analyses/mod.rs"
+schedule_config = "crates/vyre-compiler/rules/schedules/lower_analyses.toml"
+evidence_writer = "crates/vyre-compiler/src/audit.rs"
+forbid_section_dividers = true
+forbidden_private_import_prefixes = ["vyre_emit::naga::", "vyre_emit::ptx::", "vyre_driver_cuda::", "vyre_driver_wgpu::"]
+
+[[family]]
+family_id = "emit.naga"
+root = "crates/vyre-emit/src/naga/emitter"
+public_reexport = "crates/vyre-emit/src/naga/emitter/mod.rs"
+schedule_config = "crates/vyre-compiler/rules/schedules/emit_naga.toml"
+evidence_writer = "crates/vyre-emit/src/naga/mod.rs"
+forbid_section_dividers = true
+forbidden_private_import_prefixes = ["vyre_compiler::lower::analyses::"]

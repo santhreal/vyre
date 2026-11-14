@@ -11,7 +11,7 @@ use vyre_libs::dispatch_buffers::{
 
 use super::dce_program::build_dce_bfs_program;
 use super::encode::{apply_live_mask, encode_program, EncodeError, EncodedProgram, ROOT_GRAPH_ID};
-use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 #[derive(Debug, Default)]
 struct DceKernelScratch {

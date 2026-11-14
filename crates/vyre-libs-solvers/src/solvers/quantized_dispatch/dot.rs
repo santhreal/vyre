@@ -4,7 +4,7 @@
 //! scales, which is what makes the oracle usable as a parity reference.
 
 use super::*;
-use vyre_megakernel::{
+use vyre_compiler::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
 

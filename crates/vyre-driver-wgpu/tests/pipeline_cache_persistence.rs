@@ -23,7 +23,7 @@ use vyre_driver_wgpu::WgpuBackend;
 use vyre_foundation::fp_parity;
 use vyre_foundation::ir::ProgramGraph;
 use vyre_foundation::operation::SemanticOperation;
-use vyre_megakernel::{
+use vyre_compiler::{
     CompileObjective, CompileRequest, Digest, ExternalFacts, ObjectiveMetric, SearchBudget,
 };
 

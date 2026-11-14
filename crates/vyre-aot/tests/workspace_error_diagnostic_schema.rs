@@ -11,8 +11,8 @@ use vyre_foundation::diagnostics::{
 };
 use vyre_foundation::validate::ValidationError;
 use vyre_foundation::IrError;
-use vyre_lower::LowerError;
-use vyre_megakernel::TargetCompileError;
+use vyre_compiler::lower::LowerError;
+use vyre_compiler::TargetCompileError;
 
 #[test]
 fn validation_error_maps_to_diagnostic_schema() {

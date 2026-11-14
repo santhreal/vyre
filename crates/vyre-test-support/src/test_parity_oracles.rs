@@ -6,7 +6,7 @@
 use std::collections::BTreeMap;
 
 use vyre_foundation::ir::Program;
-use vyre_megakernel::{
+use vyre_compiler::{
     Digest, SearchBudget, SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionPolicy,
     SemanticExecutionRequest, SemanticExecutor,
 };
@@ -258,11 +258,11 @@ pub fn semantic_output(
             "Fix: semantic test executor requires one graph node.".to_string(),
         ));
     }
-    let returned = vyre_megakernel::returned_graph_values(graph);
+    let returned = vyre_compiler::returned_graph_values(graph);
     let mut outputs: BTreeMap<_, Vec<u8>> =
         returned.iter().map(|value| (*value, Vec::new())).collect();
     for node in graph.nodes() {
-        let written = vyre_megakernel::writable_graph_values(node);
+        let written = vyre_compiler::writable_graph_values(node);
         if ordered.len() > written.len() {
             return Err(SemanticExecutionError::Backend(format!(
                 "Fix: semantic test executor returned {} output buffers for {} written graph values.",
@@ -301,12 +301,12 @@ pub fn semantic_output_named(
             "Fix: semantic test executor requires one graph node.".to_string(),
         ));
     }
-    let returned = vyre_megakernel::returned_graph_values(graph);
+    let returned = vyre_compiler::returned_graph_values(graph);
     let mut outputs: BTreeMap<_, Vec<u8>> =
         returned.iter().map(|value| (*value, Vec::new())).collect();
     let mut matched = vec![false; named.len()];
     for node in graph.nodes() {
-        for (value, buffer) in vyre_megakernel::writable_graph_value_buffers(node) {
+        for (value, buffer) in vyre_compiler::writable_graph_value_buffers(node) {
             let supplied = named
                 .iter()
                 .zip(matched.iter_mut())

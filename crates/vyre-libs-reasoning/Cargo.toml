@@ -25,7 +25,7 @@ reasoning = []
 
 [dependencies]
 vyre-foundation = { workspace = true, features = ["serde"] }
-vyre-megakernel.workspace = true
+vyre-compiler.workspace = true
 vyre-libs-builder = { workspace = true }
 vyre-libs-graph = { workspace = true, features = ["impact-mask"] }
 vyre-libs-analysis = { workspace = true }

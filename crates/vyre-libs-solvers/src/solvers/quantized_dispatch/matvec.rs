@@ -1,7 +1,7 @@
 //! Device dispatch of packed INT4 row-scaled matrix-vector products.
 
 use super::*;
-use vyre_megakernel::{
+use vyre_compiler::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
 

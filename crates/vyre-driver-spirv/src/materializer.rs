@@ -9,7 +9,7 @@ use vyre_runtime::{
     TimedDispatchResult,
 };
 use vyre_foundation::ir::Program;
-use vyre_megakernel::{Artifact, ArtifactInputSlot, TargetPayload};
+use vyre_compiler::{Artifact, ArtifactInputSlot, TargetPayload};
 
 use crate::{vulkan, SPIRV_BACKEND_ID};
 
@@ -50,7 +50,7 @@ impl ArtifactMaterializer for SpirvMaterializer {
                         "SPIR-V target module must begin with the SPIR-V magic word",
                     ));
                 }
-                let input_slots = vyre_megakernel::staged_input_slots(
+                let input_slots = vyre_compiler::staged_input_slots(
                     &admitted_module.image.descriptor,
                     &admitted_module.resource_bindings,
                     &admitted_module.program,

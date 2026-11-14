@@ -11,7 +11,7 @@
 use naga::{
     BinaryOperator, Block, Expression, Literal, LocalVariable, ScalarKind, Span, Statement, Type,
 };
-use vyre_lower::{KernelBody, KernelOp};
+use vyre_compiler::lower::{KernelBody, KernelOp};
 
 use super::carrier_scope::CarrierSeed;
 use super::BodyBuilder;
@@ -21,7 +21,7 @@ impl<'a> BodyBuilder<'a> {
     pub(super) fn emit_loop_index(
         &mut self,
         op: &KernelOp,
-        loop_var: &vyre_lower::Name,
+        loop_var: &vyre_compiler::lower::Name,
     ) -> Result<(), EmitError> {
         let local = *self.loop_locals.get(loop_var).ok_or_else(|| {
             EmitError::InvalidDescriptor(format!(
@@ -40,7 +40,7 @@ impl<'a> BodyBuilder<'a> {
         &mut self,
         body: &KernelBody,
         op: &KernelOp,
-        loop_var: &vyre_lower::Name,
+        loop_var: &vyre_compiler::lower::Name,
     ) -> Result<(), EmitError> {
         // Q7: identify loop-carried result ids  -  values produced
         // inside the loop child body that the parent body references

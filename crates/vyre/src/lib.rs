@@ -52,7 +52,7 @@ pub use vyre_spec::soundness;
 
 /// Whole-program compiler request, artifact, payload, receipt, and target-facet APIs.
 pub mod compiler {
-    pub use vyre_megakernel::{
+    pub use vyre_compiler::{
         attach_target, compile, compile_measured, compile_selected_modules, target_identity,
         AbiAccess, Artifact, ArtifactAbi, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId,
         BarrierPhaseRecord, BarrierRecord, BoundViolation, CompileError, CompileObjective,

@@ -19,7 +19,7 @@
 //!
 //! It does not claim lowering resolved the markers correctly, nor that a
 //! marker reaching an emitter is tolerable. `reject_logical_markers` in
-//! `vyre-lower` owns that property and refuses it by name.
+//! `vyre-compiler` owns that property and refuses it by name.
 
 use vyre_runtime::validation::{validate_program_contract, ProgramValidationCaps};
 use vyre_foundation::ir::{MemoryOrdering, Node, Program};

@@ -62,7 +62,7 @@ fn grouped_int4_affine_ptx_broadcasts_packed_weight_words() {
 
 #[test]
 fn ptx_emits_integer_comparisons() {
-    // The `cmp_normalize` lowering pass (vyre-lower) canonicalizes the
+    // The `cmp_normalize` lowering pass (vyre-compiler) canonicalizes the
     // inverse-relation comparisons for CSE: `Gt(a, b)` -> `Lt(b, a)` and
     // `Ge(a, b)` -> `Le(b, a)`. Backend emitters produce equivalent code
     // for Lt/Gt and Le/Ge, so the canonical direction is free at codegen.
@@ -541,6 +541,6 @@ fn ptx_emits_trap_as_lane_exit() {
     assert!(
         !secondary_text.contains("__vyre_descriptor_trap_sidecar"),
         "Fix: CUDA PTX must expose only the emitter-owned module-global trap record, not \
-         vyre-lower's internal descriptor binding."
+         vyre-compiler's internal descriptor binding."
     );
 }

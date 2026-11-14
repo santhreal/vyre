@@ -4,7 +4,7 @@
 //! here because they're the simplest consumers of `append_expr`.
 
 use naga::{BinaryOperator, Expression, Span, Statement};
-use vyre_lower::KernelOp;
+use vyre_compiler::lower::KernelOp;
 
 use super::BodyBuilder;
 use crate::naga::EmitError;

@@ -9,7 +9,7 @@ use vyre_runtime::{
     DispatchConfig, Submission, TimedDispatchResult,
 };
 use vyre_foundation::ir::Program;
-use vyre_megakernel::{Artifact, EmittedResources, TargetPayload};
+use vyre_compiler::{Artifact, EmittedResources, TargetPayload};
 
 use crate::backend::CudaBackend;
 use crate::pipeline::CudaCompiledPipeline;
@@ -24,7 +24,7 @@ pub(crate) struct CudaMaterializer {
 impl ArtifactMaterializer for CudaMaterializer {
     vyre_runtime::materializer_passthrough!(resident);
 
-    fn device_state(&self) -> vyre_megakernel::measure::DeviceState {
+    fn device_state(&self) -> vyre_compiler::measure::DeviceState {
         crate::device_state::device_state(self.backend.caps.ordinal)
     }
 

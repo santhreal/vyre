@@ -20,8 +20,8 @@
 
 use std::time::Instant;
 
+use vyre_compiler::{SemanticExecutionPolicy, SemanticExecutor};
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
-use vyre_megakernel::{SemanticExecutionPolicy, SemanticExecutor};
 
 /// Stack for the CPU oracle worker.
 ///

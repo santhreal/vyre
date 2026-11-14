@@ -6,7 +6,7 @@
 //! grid and no workgroup, or a workgroup a shared loop drops on the way to the
 //! device, cannot be expressed.
 
-use vyre_megakernel::GeometryRecord;
+use vyre_compiler::GeometryRecord;
 
 use crate::backend::{BackendError, DispatchConfig};
 

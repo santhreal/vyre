@@ -11,7 +11,7 @@ pub use ingestion::{
 pub use retained::{RetainedArtifactSession, RetainedSessionPhase, RetainedSessionTransition};
 pub use session::{ArtifactSession, ArtifactSessionError};
 use thiserror::Error;
-use vyre_megakernel::{
+use vyre_compiler::{
     Artifact, ArtifactEnvelope, CompileError, Diagnostic, TargetPayload, TargetPayloadFormat,
 };
 pub use workspace::ArtifactWorkspace;

@@ -181,7 +181,7 @@ mod module_lifecycle_tests {
     /// pinned together rather than left to a runtime NOT_FOUND.
     ///
     /// Does not catch a rename of the array LENGTH: the word count comes from
-    /// `vyre_lower::TRAP_SIDECAR_WORDS` on both sides, and a size disagreement
+    /// `vyre_compiler::lower::TRAP_SIDECAR_WORDS` on both sides, and a size disagreement
     /// surfaces as the byte-count check in `module_registry`.
     #[test]
     fn trap_sidecar_symbol_names_agree() {

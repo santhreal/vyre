@@ -13,8 +13,6 @@ use super::raw_platform::{
     IORING_SETUP_SQPOLL, IORING_SQ_NEED_WAKEUP,
 };
 
-pub(crate) use super::raw_platform::IOSQE_FIXED_FILE;
-
 /// Orchestrator for the `io_uring` ring.
 ///
 /// Lifetime: `MappedRing` owns the descriptor and the three mapped regions,

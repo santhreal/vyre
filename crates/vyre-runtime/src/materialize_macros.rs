@@ -25,11 +25,11 @@
 #[macro_export]
 macro_rules! artifact_instance_identity {
     () => {
-        fn artifact(&self) -> ::vyre_megakernel::Digest {
+        fn artifact(&self) -> ::vyre_compiler::Digest {
             self.core.artifact
         }
 
-        fn payload(&self) -> ::vyre_megakernel::Digest {
+        fn payload(&self) -> ::vyre_compiler::Digest {
             self.core.payload
         }
 
@@ -58,11 +58,11 @@ macro_rules! artifact_instance_unreported_resources {
         fn emitted_resources(
             &self,
         ) -> ::std::result::Result<
-            ::std::vec::Vec<::vyre_megakernel::EmittedResources>,
+            ::std::vec::Vec<::vyre_compiler::EmittedResources>,
             $crate::BackendError,
         > {
             ::std::result::Result::Ok(::std::vec![
-                ::vyre_megakernel::EmittedResources::default();
+                ::vyre_compiler::EmittedResources::default();
                 $crate::materialize::MaterializedInstance::modules(self).len()
             ])
         }
@@ -239,7 +239,7 @@ macro_rules! staged_input_gather {
             module: &'a Self::Module,
             _plan: &$crate::BindingPlan,
             state: &'a ::std::collections::BTreeMap<
-                ::vyre_megakernel::ArtifactValueId,
+                ::vyre_compiler::ArtifactValueId,
                 ::std::vec::Vec<u8>,
             >,
         ) -> ::std::result::Result<::std::vec::Vec<&'a [u8]>, $crate::BackendError> {

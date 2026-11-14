@@ -174,7 +174,7 @@ impl CudaCompiledPipeline {
     /// PTX for the acquired device.
     pub(crate) fn emitted_resources(
         &self,
-    ) -> Result<vyre_megakernel::EmittedResources, BackendError> {
+    ) -> Result<vyre_compiler::EmittedResources, BackendError> {
         self.backend
             .module_resources_with_key(&self.ptx_src, self.module_key)
     }

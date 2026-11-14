@@ -71,7 +71,7 @@ impl BodyCtx<'_> {
             EmitError::InvalidDescriptor(format!(
                 "trap tag `{tag}` has no code in the descriptor's trap tag table, so a host \
                  reading the sidecar could not name which trap fired. Fix: emit the trap from a \
-                 descriptor whose body declares it, so `vyre_lower::descriptor_trap_tags` numbers \
+                 descriptor whose body declares it, so `vyre_compiler::lower::descriptor_trap_tags` numbers \
                  it."
             ))
         })?;

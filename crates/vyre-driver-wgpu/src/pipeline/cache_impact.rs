@@ -7,7 +7,7 @@
 //! about which entries a change touched.
 
 use vyre_runtime::BackendError;
-use vyre_megakernel::{SemanticExecutionPolicy, SemanticExecutor};
+use vyre_compiler::{SemanticExecutionPolicy, SemanticExecutor};
 
 /// The rule-graph state one invalidation is evaluated against.
 pub(crate) struct RuleImpactQuery<'a> {

@@ -1,7 +1,7 @@
 //! Fixed semantic execution order for the optimizer pipeline.
 
 use vyre_foundation::ir::Program;
-use vyre_megakernel::{SemanticExecutionPolicy, SemanticExecutor};
+use vyre_compiler::{SemanticExecutionPolicy, SemanticExecutor};
 
 use super::canonicalize_via_encoded::{gpu_canonicalize, CanonicalizeError};
 use super::const_fold_via_encoded::{gpu_const_fold, ConstFoldError};

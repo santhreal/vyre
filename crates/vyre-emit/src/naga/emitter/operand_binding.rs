@@ -15,7 +15,7 @@
 
 use naga::{BinaryOperator, Expression, Span, Statement, Type};
 use vyre_foundation::ir::{BinOp, DataType};
-use vyre_lower::{KernelBody, KernelOp, LiteralValue};
+use vyre_compiler::lower::{KernelBody, KernelOp, LiteralValue};
 
 use super::carrier_scope::LocalPool;
 use super::BodyBuilder;

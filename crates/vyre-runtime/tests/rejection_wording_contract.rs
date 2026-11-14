@@ -20,7 +20,7 @@
 //! is every backend that does not override one.
 
 use vyre_runtime::materialize::{InstanceMessages, NEUTRAL_MESSAGES};
-use vyre_megakernel::ArtifactValueId;
+use vyre_compiler::ArtifactValueId;
 
 /// Render every rejection in `messages` as (field, text) for one value.
 fn rendered(messages: InstanceMessages, value: ArtifactValueId) -> Vec<(&'static str, String)> {

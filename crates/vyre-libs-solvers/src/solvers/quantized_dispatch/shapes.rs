@@ -11,7 +11,7 @@ use vyre_libs_builder::plumbing::host::dispatch_buffers::{
 };
 use vyre_libs_builder::plumbing::host::program_cache::ProgramCache;
 use vyre_libs_math::math::quantized::i4_packed_words;
-use vyre_megakernel::{
+use vyre_compiler::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]

@@ -461,7 +461,7 @@ mod layout_config_contracts {
 
         assert_eq!(
             effective.workgroup_override, None,
-            "Fix: a legal declared width is launched as declared; report the device limit as a fact and let vyre-megakernel select a width."
+            "Fix: a legal declared width is launched as declared; report the device limit as a fact and let vyre-compiler select a width."
         );
     }
 
@@ -602,7 +602,7 @@ mod layout_config_contracts {
 mod host_input_classification_contracts {
     use rustc_hash::FxHashSet;
     use vyre_foundation::ir::BufferAccess;
-    use vyre_lower::{BindingVisibility, MemoryClass};
+    use vyre_compiler::lower::{BindingVisibility, MemoryClass};
 
     use super::*;
     use crate::pipeline::descriptor_fixture::{descriptor_of, slot};

@@ -1,6 +1,6 @@
 //! Test: types registers.
 use super::*;
-use vyre_lower::descriptor_builder::{
+use vyre_compiler::lower::descriptor_builder::{
     body, descriptor, global_ro, global_wo, lit, load_store_copy, op, SlotCount,
 };
 

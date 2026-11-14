@@ -141,7 +141,7 @@ pub(super) static EGRAPH_SATURATION: SyntheticCountWorkload = SyntheticCountWork
     name: "Release Egraph Saturation 1M",
     description: "Rewrite-equivalence predicate workload for optimization saturation evidence",
     tags: &["egraph", "optimization", "rewrite"],
-    owner_crate: "vyre-lower",
+    owner_crate: "vyre-compiler",
     primitive: "optimization rewrite saturation",
     metric_name: "rewrite_records",
     family: ReleaseMacroFamily::Egraph,

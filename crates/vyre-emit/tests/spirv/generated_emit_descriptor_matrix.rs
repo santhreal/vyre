@@ -5,8 +5,8 @@
 //! pinning verification, word emission, and byte emission contracts.
 
 use vyre_foundation::ir::{BinOp, DataType};
-use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op};
-use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue};
+use vyre_compiler::lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op};
+use vyre_compiler::lower::{KernelDescriptor, KernelOpKind, LiteralValue};
 
 fn generated_descriptor(seed: u32) -> KernelDescriptor {
     let chain_len = 1 + (seed as usize % 12);
@@ -62,7 +62,7 @@ fn words_from_le_bytes(bytes: &[u8]) -> Vec<u32> {
 fn generated_descriptors_verify_before_spirv_emission() {
     for seed in 0..256u32 {
         let desc = generated_descriptor(seed.wrapping_mul(0x045d_9f3b));
-        let descriptor = vyre_lower::verify_descriptor(&desc).unwrap_or_else(|err| {
+        let descriptor = vyre_compiler::lower::verify_descriptor(&desc).unwrap_or_else(|err| {
             panic!("descriptor verification failed for {}: {err:?}", desc.id)
         });
         let words = vyre_emit::spirv::emit(&descriptor)
@@ -77,7 +77,7 @@ fn generated_descriptors_verify_before_spirv_emission() {
 fn generated_descriptors_bytes_match_word_emission() {
     for seed in 0..128u32 {
         let desc = generated_descriptor(seed ^ 0xa501_7b1d);
-        let descriptor = vyre_lower::verify_descriptor(&desc).unwrap_or_else(|err| {
+        let descriptor = vyre_compiler::lower::verify_descriptor(&desc).unwrap_or_else(|err| {
             panic!("descriptor verification failed for {}: {err:?}", desc.id)
         });
         let words = vyre_emit::spirv::emit(&descriptor)
@@ -94,7 +94,7 @@ fn generated_descriptors_bytes_match_word_emission() {
 fn generated_descriptors_verify_before_byte_emission() {
     for seed in 0..128u32 {
         let desc = generated_descriptor(seed.rotate_left(7));
-        let descriptor = vyre_lower::verify_descriptor(&desc).unwrap_or_else(|err| {
+        let descriptor = vyre_compiler::lower::verify_descriptor(&desc).unwrap_or_else(|err| {
             panic!("descriptor verification failed for {}: {err:?}", desc.id)
         });
         let bytes = vyre_emit::spirv::emit_bytes(&descriptor)

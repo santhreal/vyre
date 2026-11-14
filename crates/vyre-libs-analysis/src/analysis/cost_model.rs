@@ -13,7 +13,7 @@ use vyre_libs_graph::graph::sum_product_circuit::{
     sum_product_depths, sum_product_evaluate_leveled,
 };
 use vyre_libs_math::math::conformal::{conformal_threshold, try_conformal_rank};
-use vyre_megakernel::{
+use vyre_compiler::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
 #[cfg(test)]
@@ -410,8 +410,8 @@ mod tests {
     impl SemanticExecutor for CostModelDispatcher {
         fn execute(
             &self,
-            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            request: &vyre_compiler::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError> {
             let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 match inputs.len() {

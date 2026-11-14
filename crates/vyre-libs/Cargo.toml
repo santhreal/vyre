@@ -174,7 +174,7 @@ scheduling = ["device", "telemetry", "math-kernels", "parsing-kernels", "graph",
 
 [dependencies]
 vyre-foundation = { workspace = true, features = ["serde"] }
-vyre-megakernel.workspace = true
+vyre-compiler.workspace = true
 vyre-spec.workspace = true
 vyre-primitives = { workspace = true, features = ["inventory-registry"] }
 inventory.workspace = true
@@ -204,7 +204,7 @@ vyre-libs-scheduling = { workspace = true, optional = true }
 vyre = { workspace = true }
 vyre-primitives = { workspace = true, features = ["hardware"], default-features = false }
 vyre-emit = { workspace = true, features = ["naga"] }
-vyre-lower = { workspace = true }
+vyre-compiler = { workspace = true }
 vyre-runtime = { workspace = true }
 vyre-reference = { workspace = true }
 proptest.workspace = true

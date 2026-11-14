@@ -7,13 +7,13 @@
 //! fails here: shared code may move, emitted output may not.
 //!
 //! The corpus, the section format, and the comparison are defined in
-//! `vyre_lower::artifact_golden`. This file supplies the per-target rendering.
+//! `vyre_compiler::lower::artifact_golden`. This file supplies the per-target rendering.
 
 use std::path::PathBuf;
 
 use naga::back::wgsl::{write_string, WriterFlags};
 use naga::valid::{Capabilities, ValidationFlags, Validator};
-use vyre_lower::{artifact_golden, KernelDescriptor};
+use vyre_compiler::lower::{artifact_golden, KernelDescriptor};
 
 struct Target {
     name: &'static str,
@@ -90,7 +90,7 @@ fn every_pinned_corpus_covers_every_shared_success_case() {
         let golden = std::fs::read_to_string(golden_path(target)).unwrap_or_else(|error| {
             panic!("Fix: pinned {} corpus must exist: {error}", target.name)
         });
-        for case in vyre_lower::emit_adversarial_corpus::success_cases() {
+        for case in vyre_compiler::lower::emit_adversarial_corpus::success_cases() {
             assert!(
                 golden.contains(&format!("===== {}\n", case.id)),
                 "Fix: pinned {} corpus is missing case `{}`; re-bless it.",

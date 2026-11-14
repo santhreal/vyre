@@ -6,7 +6,7 @@
 
 use smallvec::SmallVec;
 use vyre_runtime::BackendError;
-use vyre_lower::TRAP_SIDECAR_WORDS;
+use vyre_compiler::lower::TRAP_SIDECAR_WORDS;
 
 use crate::numeric::WGPU_NUMERIC;
 use crate::pipeline::binding::{consumes_host_input, usage_for_binding, validate_handle};

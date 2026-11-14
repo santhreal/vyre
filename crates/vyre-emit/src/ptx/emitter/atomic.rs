@@ -1,7 +1,7 @@
 use std::fmt::Write as _;
 
 use vyre_foundation::ir::{AtomicOp, DataType};
-use vyre_lower::{KernelOp, MemoryClass};
+use vyre_compiler::lower::{KernelOp, MemoryClass};
 
 use super::memory::MemOperand;
 use super::BodyCtx;

@@ -11,7 +11,7 @@ use vyre_aot::{
 };
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program, ProgramGraph};
 use vyre_foundation::validate::BackendCapabilities;
-use vyre_megakernel::{
+use vyre_compiler::{
     CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
     SearchBudget,
 };

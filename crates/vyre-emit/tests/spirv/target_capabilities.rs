@@ -1,19 +1,19 @@
 //! SPIR-V target-capability admission and exact-artifact contracts.
 //!
-//! Descriptors and target profiles come from `vyre_lower::descriptor_builder`,
+//! Descriptors and target profiles come from `vyre_compiler::lower::descriptor_builder`,
 //! the one owner of that scaffolding. What stays here is the part only this
 //! crate can assert: that admission does not perturb the emitted words, and
 //! which admission errors it produces, spelled exactly.
 
-use vyre_lower::descriptor_builder::{
+use vyre_compiler::lower::descriptor_builder::{
     all_subgroup_capabilities, descriptor, emission_target, op, permissive_workgroup_limits,
     target_without_subgroups, workgroup_limits,
 };
-use vyre_lower::{KernelOpKind, SubgroupCapabilities};
+use vyre_compiler::lower::{KernelOpKind, SubgroupCapabilities};
 
 const FIXTURE_ID: &str = "spirv-capability-fixture";
 
-fn baseline_target() -> vyre_lower::EmissionTargetCapabilities {
+fn baseline_target() -> vyre_compiler::lower::EmissionTargetCapabilities {
     emission_target(permissive_workgroup_limits(), all_subgroup_capabilities())
 }
 

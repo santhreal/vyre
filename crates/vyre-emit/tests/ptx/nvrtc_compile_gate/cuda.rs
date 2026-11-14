@@ -18,7 +18,7 @@ use super::fixtures::{
 use cudarc::driver::{sys::CUresult, CudaContext, LaunchConfig, PushKernelArg};
 use cudarc::nvrtc::Ptx;
 use vyre_foundation::ir::BinOp;
-use vyre_lower::KernelOpKind;
+use vyre_compiler::lower::KernelOpKind;
 
 fn driver_loads_ptx(ptx: &str) -> Result<(), String> {
     let ctx =

@@ -1,5 +1,5 @@
 use super::*;
-use vyre_lower::descriptor_builder::{body, descriptor, global_rw, lit, op, SlotCount};
+use vyre_compiler::lower::descriptor_builder::{body, descriptor, global_rw, lit, op, SlotCount};
 
 #[test]
 fn select_emits_selp_with_correct_dtype() {

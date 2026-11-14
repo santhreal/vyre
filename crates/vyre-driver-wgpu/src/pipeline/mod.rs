@@ -33,13 +33,13 @@ pub(crate) use vyre_runtime::enforce_actual_output_budget;
 use vyre_runtime::BackendLayoutFingerprint;
 use vyre_runtime::{admit_dispatch_grid, find_indirect_dispatch, infer_launch_grid};
 pub(crate) use vyre_runtime::{element_size_bytes, OutputBindingLayout};
-pub use vyre_runtime::{output_layout_from_program, IndirectDispatch, OutputLayout};
+pub use vyre_runtime::{IndirectDispatch, OutputLayout};
 use vyre_runtime::{BackendError, DispatchConfig, LaunchGeometry};
 use vyre_emit::naga::program::TrapTag;
 use vyre_foundation::execution_plan::{self, ExecutionPlan};
 use vyre_foundation::ir::Program;
 use vyre_foundation::validate::ValidationOptions;
-use vyre_lower::{TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS};
+use vyre_compiler::lower::{TRAP_SIDECAR_NAME, TRAP_SIDECAR_WORDS};
 
 pub(crate) use self::artifact::AuthenticatedTarget;
 use self::artifact::CachedPipelineArtifact;
@@ -224,7 +224,7 @@ impl WgpuPipeline {
                 .any(|slot| slot.name == TRAP_SIDECAR_NAME)
         {
             return Err(BackendError::new(format!(
-                "descriptor contains trap tags but no `{TRAP_SIDECAR_NAME}` binding. Fix: lower traps through vyre-lower so the sidecar binding is inserted."
+                "descriptor contains trap tags but no `{TRAP_SIDECAR_NAME}` binding. Fix: lower traps through vyre-compiler so the sidecar binding is inserted."
             )));
         }
         let trap_tags: Arc<[TrapTag]> = trap_tags_vec.into();
@@ -312,7 +312,7 @@ impl WgpuPipeline {
                 .map_err(|error| BackendError::InvalidProgram {
                     fix: format!("Fix: wgpu launch planning rejected the Program: {error}"),
                 })?,
-                vyre_lower::GridIndexSpace::GridLinearized
+                vyre_compiler::lower::GridIndexSpace::GridLinearized
             );
         let indirect = find_indirect_dispatch(compile_program)?;
         let mut public_output_bindings = FxHashSet::default();
@@ -627,9 +627,9 @@ impl WgpuPipeline {
 /// disagreed with the reference oracle on a `Persistent`-kind buffer and on a
 /// pipeline live-out whose access is not `ReadWrite`.
 pub fn host_input_slots(
-    descriptor: &vyre_lower::KernelDescriptor,
+    descriptor: &vyre_compiler::lower::KernelDescriptor,
     buffers: &[vyre_foundation::ir::BufferDecl],
-    authenticated_resource_bindings: Option<&[vyre_megakernel::TargetResourceBinding]>,
+    authenticated_resource_bindings: Option<&[vyre_compiler::TargetResourceBinding]>,
 ) -> Result<FxHashSet<(u32, u32)>, BackendError> {
     let mut slots = FxHashSet::default();
     reserve_hash_set_to_capacity(
@@ -644,7 +644,7 @@ pub fn host_input_slots(
             resource_bindings
                 .iter()
                 .filter(|binding| {
-                    binding.access != vyre_megakernel::TargetResourceAccess::WriteOnly
+                    binding.access != vyre_compiler::TargetResourceAccess::WriteOnly
                 })
                 .map(|binding| (binding.group, binding.slot)),
         ),

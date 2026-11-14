@@ -48,7 +48,7 @@ fn generated_canonical_envelopes_round_trip() {
 
     for seed in 0..512_u32 {
         let envelope_bytes = envelope.to_bytes().unwrap();
-        let decoded = vyre_megakernel::ArtifactEnvelope::from_bytes(&envelope_bytes)
+        let decoded = vyre_compiler::ArtifactEnvelope::from_bytes(&envelope_bytes)
             .expect("generated canonical envelope must parse");
         let payload = target_payload(&decoded);
         assert_eq!(decoded.neutral().digest(), expected_neutral, "seed {seed}");

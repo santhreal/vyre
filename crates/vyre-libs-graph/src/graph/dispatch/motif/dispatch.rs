@@ -10,7 +10,7 @@ use vyre_libs_reduce::reduce::reduction_metrics::{reduce_any_via, reduce_count_n
 use crate::graph::dispatch::dispatch_bridge::{
     dispatch_two_u32_outputs_from_prepared_into, refresh_keyed_dispatch_inputs, DispatchInput,
 };
-use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Dispatcher-backed motif match.
 ///

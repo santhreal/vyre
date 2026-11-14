@@ -25,7 +25,7 @@ analysis = []
 
 [dependencies]
 vyre-foundation = { workspace = true, features = ["serde"] }
-vyre-megakernel.workspace = true
+vyre-compiler.workspace = true
 vyre-spec.workspace = true
 vyre-primitives = { workspace = true, features = ["inventory-registry"] }
 tracing.workspace = true

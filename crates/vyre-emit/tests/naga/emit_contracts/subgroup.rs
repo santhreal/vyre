@@ -1,6 +1,6 @@
 //! Test: subgroup.
 use super::*;
-use vyre_lower::descriptor_builder::{body, descriptor, lit, op};
+use vyre_compiler::lower::descriptor_builder::{body, descriptor, lit, op};
 
 fn block_has_subgroup_collective(block: &naga::Block) -> bool {
     block.iter().any(|statement| match statement {
@@ -56,7 +56,7 @@ fn subgroup_add_emits_collective_operation() {
                     lit(0, 0),
                     op(
                         KernelOpKind::SubgroupReduce {
-                            op: vyre_lower::SubgroupReduceOp::Add,
+                            op: vyre_compiler::lower::SubgroupReduceOp::Add,
                         },
                         [0],
                         1,
@@ -79,7 +79,7 @@ fn subgroup_add_emits_collective_operation() {
 
 #[test]
 fn subgroup_reduce_maps_each_op_to_its_naga_operation() {
-    use vyre_lower::SubgroupReduceOp;
+    use vyre_compiler::lower::SubgroupReduceOp;
     let cases = [
         (SubgroupReduceOp::Add, naga::SubgroupOperation::Add),
         (SubgroupReduceOp::Mul, naga::SubgroupOperation::Mul),

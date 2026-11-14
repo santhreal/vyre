@@ -1,12 +1,12 @@
 //! Test: subgroup.
 use super::*;
-use vyre_lower::descriptor_builder::{body, counted_loop_head, descriptor, global_rw, lit, op};
+use vyre_compiler::lower::descriptor_builder::{body, counted_loop_head, descriptor, global_rw, lit, op};
 
 /// Single-seed subgroup reduction kernel: one literal reduced across the
 /// subgroup by `reduce_op`.
 fn subgroup_reduce_kernel(
     id: &str,
-    reduce_op: vyre_lower::SubgroupReduceOp,
+    reduce_op: vyre_compiler::lower::SubgroupReduceOp,
     seed: LiteralValue,
 ) -> KernelDescriptor {
     descriptor(id)
@@ -85,7 +85,7 @@ fn f32_subgroup_shuffle_bitcasts_through_b32() {
 fn f32_subgroup_add_emits_shuffle_tree() {
     let kernel = subgroup_reduce_kernel(
         "add",
-        vyre_lower::SubgroupReduceOp::Add,
+        vyre_compiler::lower::SubgroupReduceOp::Add,
         LiteralValue::F32(5.0),
     );
     let s = emit(&kernel).unwrap();
@@ -109,7 +109,7 @@ fn f32_subgroup_add_emits_shuffle_tree() {
 fn u32_subgroup_add_emits_redux_sync() {
     let kernel = subgroup_reduce_kernel(
         "add_u32",
-        vyre_lower::SubgroupReduceOp::Add,
+        vyre_compiler::lower::SubgroupReduceOp::Add,
         LiteralValue::U32(5),
     );
     let s = emit(&kernel).unwrap();
@@ -122,7 +122,7 @@ fn u32_subgroup_mul_emits_idx_butterfly_not_redux() {
     // butterfly (laneid^offset source) and `mul.lo.u32`, all-lane-broadcast.
     let kernel = subgroup_reduce_kernel(
         "mul_u32",
-        vyre_lower::SubgroupReduceOp::Mul,
+        vyre_compiler::lower::SubgroupReduceOp::Mul,
         LiteralValue::U32(3),
     );
     let s = emit(&kernel).unwrap();
@@ -143,7 +143,7 @@ fn f32_subgroup_mul_emits_mul_f32_butterfly_not_redux() {
     // accumulator through b32 around each shuffle. All-lane broadcast.
     let kernel = subgroup_reduce_kernel(
         "mul_f32",
-        vyre_lower::SubgroupReduceOp::Mul,
+        vyre_compiler::lower::SubgroupReduceOp::Mul,
         LiteralValue::F32(3.0),
     );
     let s = emit(&kernel).unwrap();

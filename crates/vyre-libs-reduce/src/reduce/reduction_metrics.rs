@@ -14,7 +14,7 @@ use crate::reduce::{
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_megakernel::{
+use vyre_compiler::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
 
@@ -380,7 +380,7 @@ fn decode_scalar(
 mod tests {
     use super::*;
     use vyre_libs_builder::plumbing::host::dispatch_buffers::u32_slice_to_le_bytes;
-    use vyre_megakernel::{SemanticExecutionOutput, SemanticExecutionRequest};
+    use vyre_compiler::{SemanticExecutionOutput, SemanticExecutionRequest};
     use vyre_reference::composition_witness::{
         histogram_witness as reference_histogram_atomic_scatter,
         reduce_all_witness as reference_reduce_all_u32,

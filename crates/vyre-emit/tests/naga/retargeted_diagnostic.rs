@@ -8,7 +8,7 @@
 //! added here cannot reach a downstream emitter unprojected.
 
 use vyre_emit::naga::EmitError;
-use vyre_lower::{KernelOp, KernelOpKind, WorkgroupLimitViolation};
+use vyre_compiler::lower::{KernelOp, KernelOpKind, WorkgroupLimitViolation};
 
 /// One value per `EmitError` variant.
 ///

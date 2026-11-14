@@ -38,8 +38,7 @@ device-tests = []
 [dependencies]
 vyre-runtime = { workspace = true }
 vyre-foundation = { workspace = true }
-vyre-megakernel = { workspace = true }
-vyre-lower = { workspace = true }
+vyre-compiler = { workspace = true }
 vyre-emit = { workspace = true, features = ["metal"] }
 tracing.workspace = true
 serde_json.workspace = true

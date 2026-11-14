@@ -12,14 +12,14 @@ use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, Node, Program, ProgramGraph, ValueLifetime,
 };
 #[cfg(any(target_os = "macos", target_os = "ios"))]
-use vyre_megakernel::{SearchBudget, TargetModuleBundle};
+use vyre_compiler::{SearchBudget, TargetModuleBundle};
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 use vyre_test_support::graph_values::{graph_output, u32_scalar};
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 use vyre_test_support::semantic_requests::validated_unknown_request;
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
-fn artifact() -> vyre_megakernel::Artifact {
+fn artifact() -> vyre_compiler::Artifact {
     let program = Program::wrapped(
         vec![BufferDecl::output("out", 0, DataType::U32).with_count(1)],
         [64, 1, 1],
@@ -38,7 +38,7 @@ fn artifact() -> vyre_megakernel::Artifact {
         )
         .unwrap();
     let request = validated_unknown_request(graph, SearchBudget::new(1, 1, 0, 0, 1), 1_000_000);
-    vyre_megakernel::compile(&request).unwrap()
+    vyre_compiler::compile(&request).unwrap()
 }
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
@@ -87,7 +87,7 @@ fn registered_materializer_executes_authenticated_msl() {
         .wait()
         .unwrap();
     assert_eq!(
-        completion.outputs.get(&vyre_megakernel::ArtifactValueId(0)),
+        completion.outputs.get(&vyre_compiler::ArtifactValueId(0)),
         Some(&1_u32.to_le_bytes().to_vec())
     );
 }

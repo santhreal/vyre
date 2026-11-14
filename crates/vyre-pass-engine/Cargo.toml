@@ -47,7 +47,7 @@ vyre-foundation.workspace = true
 # than through `workspace = true`, which silently ignores `default-features = false`
 # unless the workspace entry states a `default-features` value of its own.
 vyre-libs = { version = "0.8.0", path = "../vyre-libs", default-features = false }
-vyre-megakernel.workspace = true
+vyre-compiler.workspace = true
 vyre-primitives = { workspace = true }
 rustc-hash.workspace = true
 

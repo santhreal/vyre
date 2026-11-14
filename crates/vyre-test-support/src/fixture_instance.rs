@@ -9,7 +9,7 @@
 use vyre_runtime::{
     ArtifactInstance, BackendError, BindingSet, Completion, DeviceIdentity, Submission,
 };
-use vyre_megakernel::{Artifact, Digest, EmittedResources, TargetPayload};
+use vyre_compiler::{Artifact, Digest, EmittedResources, TargetPayload};
 
 /// What a fixture instance does with one submission's bindings.
 type SubmitFn = dyn Fn(Digest, BindingSet) -> Result<Completion, BackendError> + Send + Sync;

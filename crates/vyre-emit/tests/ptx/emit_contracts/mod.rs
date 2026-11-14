@@ -5,11 +5,11 @@
 use vyre_emit::ptx::*;
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{AtomicOp, BinOp, DataType, UnOp};
-use vyre_lower::descriptor_builder::{
+use vyre_compiler::lower::descriptor_builder::{
     body, descriptor, global_ro, global_wo, lit, mma_f16_m16n8k16, op, store_literal_kernel,
     SlotCount,
 };
-use vyre_lower::{
+use vyre_compiler::lower::{
     AsyncTransaction, AsyncWaitSpec, BindingLayout, BindingSlot, BindingVisibility, Dispatch,
     FragmentValue, KernelBody, KernelDescriptor, KernelOp, KernelOpKind, LiteralValue,
     MatrixMmaElement, MatrixMmaLayout, MatrixMmaSpec, MatrixTileShape, MemoryClass,

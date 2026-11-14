@@ -5,7 +5,7 @@
 
 use naga::{BinaryOperator, Block, Expression, LocalVariable, Span, Statement, UnaryOperator};
 use vyre_foundation::ir::AtomicOp;
-use vyre_lower::{KernelOp, TRAP_SIDECAR_NAME};
+use vyre_compiler::lower::{KernelOp, TRAP_SIDECAR_NAME};
 
 use super::BodyBuilder;
 use crate::naga::EmitError;
@@ -90,7 +90,7 @@ impl BodyBuilder<'_> {
     pub(super) fn emit_trap(
         &mut self,
         op: &KernelOp,
-        tag: &vyre_lower::Name,
+        tag: &vyre_compiler::lower::Name,
     ) -> Result<(), EmitError> {
         let tag_code = *self.trap_tag_codes.get(tag).ok_or_else(|| {
             EmitError::InvalidDescriptor(format!(
@@ -158,7 +158,7 @@ impl BodyBuilder<'_> {
     ) -> Result<naga::Handle<Expression>, EmitError> {
         let slot = self.trap_sidecar_slot.ok_or_else(|| {
             EmitError::InvalidDescriptor(format!(
-                "Trap op requires descriptor sidecar `{TRAP_SIDECAR_NAME}`. Fix: lower through vyre-lower so the sidecar binding is present."
+                "Trap op requires descriptor sidecar `{TRAP_SIDECAR_NAME}`. Fix: lower through vyre-compiler so the sidecar binding is present."
             ))
         })?;
         let index = self.literal_u32(word);

@@ -1,6 +1,6 @@
 use vyre_runtime::target_dialect::{EmittedDialectModule, TargetDialect};
 use vyre_runtime::BackendError;
-use vyre_megakernel::{TargetCompileError, TargetCompiler, TargetProfile};
+use vyre_compiler::{TargetCompileError, TargetCompiler, TargetProfile};
 
 use crate::METAL_BACKEND_ID;
 
@@ -21,7 +21,7 @@ const METAL_DIALECT: TargetDialect = TargetDialect {
 };
 
 fn emit_metal_module(
-    selected: &vyre_megakernel::SelectedLowering,
+    selected: &vyre_compiler::SelectedLowering,
     _profile: &TargetProfile,
 ) -> Result<EmittedDialectModule, TargetCompileError> {
     let artifact = vyre_emit::metal::emit_artifact(selected.descriptor())

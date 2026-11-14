@@ -34,11 +34,11 @@ fn seed_program(seed: u32) -> Program {
     )
 }
 
-fn append_literal_ops(desc: &mut vyre_lower::KernelDescriptor, count: usize) {
+fn append_literal_ops(desc: &mut vyre_compiler::lower::KernelDescriptor, count: usize) {
     for offset in 0..count {
-        desc.body.ops.push(vyre_lower::KernelOp {
+        desc.body.ops.push(vyre_compiler::lower::KernelOp {
             result: Some(100_000 + offset as u32),
-            kind: vyre_lower::KernelOpKind::Literal,
+            kind: vyre_compiler::lower::KernelOpKind::Literal,
             operands: vec![offset as u32],
         });
     }
@@ -55,7 +55,7 @@ fn root_delta(diff: &DescriptorDiff) -> i64 {
 fn generated_root_op_count_deltas_match_controlled_mutations() {
     for seed in 0..512u32 {
         let program = seed_program(seed);
-        let before = vyre_lower::lower_physical(&program)
+        let before = vyre_compiler::lower::lower_physical(&program)
             .map(|lowered| lowered.into_descriptor())
             .expect("Fix: seed program must lower.");
         let mut after = before.clone();
@@ -81,7 +81,7 @@ fn generated_root_op_count_deltas_match_controlled_mutations() {
 fn generated_descriptor_diffs_round_trip_through_json() {
     for seed in 0..256u32 {
         let program = seed_program(seed ^ 0x5eed_5eed);
-        let before = vyre_lower::lower_physical(&program)
+        let before = vyre_compiler::lower::lower_physical(&program)
             .map(|lowered| lowered.into_descriptor())
             .expect("Fix: seed program must lower.");
         let mut after = before.clone();

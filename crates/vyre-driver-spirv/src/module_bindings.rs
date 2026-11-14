@@ -1,7 +1,7 @@
 //! Descriptor bindings an emitted SPIR-V module declares.
 //!
 //! The driver builds its descriptor set from the neutral `Program`, but the
-//! module it dispatches is lowered through `vyre-lower`, which appends a
+//! module it dispatches is lowered through `vyre-compiler`, which appends a
 //! reserved trap-diagnostic binding to any kernel that emits a trap. That
 //! binding belongs to no `Program` buffer, so the descriptor set had no entry
 //! for it and the shader accessed an unwritten descriptor: on an RTX 4090 every

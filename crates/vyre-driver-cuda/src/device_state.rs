@@ -8,7 +8,7 @@
 
 use std::process::Command;
 
-use vyre_megakernel::measure::{DeviceState, ThrottleState};
+use vyre_compiler::measure::{DeviceState, ThrottleState};
 
 /// Fields queried, in the order [`parse_device_state_row`] reads them.
 const QUERY_FIELDS: &str = "clocks.current.graphics,clocks.current.memory,temperature.gpu,power.draw,clocks_throttle_reasons.active";

@@ -1,7 +1,7 @@
 use std::fmt::Write as _;
 
 use rustc_hash::{FxHashMap, FxHashSet};
-use vyre_lower::{
+use vyre_compiler::lower::{
     BindingLayout, BindingSlot, DescriptorTrapTag, KernelDescriptor, KernelOpKind, MemoryClass,
     Name, TRAP_SIDECAR_NAME,
 };

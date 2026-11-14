@@ -21,7 +21,7 @@ use vyre_libs::dispatch_buffers::{
 
 use super::encode::EncodeError;
 use super::expr_arena::{encode_expr_arena, expr_kind, ExprArenaEncoding};
-use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 #[derive(Debug, Default)]
 struct ConstFoldKernelScratch {
@@ -111,7 +111,7 @@ fn run_const_fold_kernel_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[6], &seed);
     write_u32_slice_le_bytes(&mut scratch.inputs[7], &seed);
 
-    let mut execution = vyre_megakernel::execute_single_program(
+    let mut execution = vyre_compiler::execute_single_program(
         executor,
         "const-fold",
         build_const_fold_program_fused(n, arena.max_depth.saturating_add(1).max(1)),

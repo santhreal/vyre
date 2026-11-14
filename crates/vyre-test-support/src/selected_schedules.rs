@@ -24,7 +24,7 @@ use vyre_foundation::schedule::{
 #[cfg(feature = "semantic-requests")]
 #[must_use]
 pub fn baseline(logical: &vyre_foundation::logical::LogicalProgramGraph<'_>) -> SelectedSchedule {
-    vyre_megakernel::baseline_schedule(logical)
+    vyre_compiler::baseline_schedule(logical)
 }
 
 /// A phase per region, one thread wide, with no axes and no dependencies.

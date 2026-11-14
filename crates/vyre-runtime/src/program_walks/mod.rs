@@ -14,7 +14,7 @@ pub use indirect::{find_indirect_dispatch, IndirectDispatch};
 pub(crate) use launch_geometry::program_uses_launch_geometry_ids;
 pub use outputs::{
     element_size_bytes, enforce_actual_output_budget, output_binding_layout_parts,
-    output_binding_layouts, output_layout_from_program, OutputBindingLayout, OutputLayout,
+    output_binding_layouts, OutputBindingLayout, OutputLayout,
 };
 
 // Inline: `program_walks` is a `pub(crate)` module, so `infer_dispatch_grid` is

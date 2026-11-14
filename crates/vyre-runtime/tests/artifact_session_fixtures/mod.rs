@@ -12,7 +12,7 @@ use vyre_runtime::{
     ArtifactInstance, ArtifactMaterializer, BackendError, BackendRegistration, Device,
     ResidentOwner, Resource, VyreBackend,
 };
-use vyre_megakernel::{
+use vyre_compiler::{
     AbiAccess, Artifact, TargetEntryPoint, TargetPayload, TargetPayloadFormat, TargetProfile,
     TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
 };

@@ -1,12 +1,12 @@
 //! Adversarial emit program matrix for `vyre_emit::naga`.
 //!
-//! Hostile `KernelDescriptor` programs from `vyre_lower::emit_adversarial_corpus`
+//! Hostile `KernelDescriptor` programs from `vyre_compiler::lower::emit_adversarial_corpus`
 //! with structural assertions on lowered `naga::Module` output - not smoke
 //! `is_ok()` checks.
 
 use naga::valid::{Capabilities, ValidationFlags, Validator};
 use naga::{AddressSpace, TypeInner};
-use vyre_lower::emit_adversarial_corpus::{
+use vyre_compiler::lower::emit_adversarial_corpus::{
     self, EmitAdversarialCase, EmitAdversarialFamily, EmitOutcome,
 };
 
@@ -103,7 +103,7 @@ fn validate_module(module: &naga::Module, label: &str) {
 fn hostile_success_corpus_emits_structured_naga_modules() {
     for case in &emit_adversarial_corpus::success_cases() {
         let module = vyre_emit::naga::emit(
-            &vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
+            &vyre_compiler::lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
         )
         .unwrap_or_else(|err| {
             panic!(
@@ -120,7 +120,7 @@ fn hostile_success_corpus_emits_structured_naga_modules() {
 fn rejection_corpus_fails_without_panic() {
     for case in emit_adversarial_corpus::rejection_cases() {
         let err = vyre_emit::naga::emit(
-            &vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
+            &vyre_compiler::lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
         )
         .expect_err("Fix: rejection corpus case must be rejected by naga emit");
         let msg = format!("{err:?}");
@@ -137,7 +137,7 @@ fn dead_identity_chain_verifies_before_emit() {
     let case = emit_adversarial_corpus::case_by_id("adv_dead_identity")
         .expect("corpus must include adv_dead_identity");
     let descriptor =
-        vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor must pass verification");
+        vyre_compiler::lower::verify_descriptor(&case.descriptor).expect("descriptor must pass verification");
     let module = vyre_emit::naga::emit(&descriptor).expect("verified emit");
     assert_eq!(module.entry_points[0].name, "main");
 }
@@ -146,7 +146,7 @@ fn dead_identity_chain_verifies_before_emit() {
 fn multi_binding_preserves_distinct_global_types() {
     let case = emit_adversarial_corpus::case_by_id("adv_multi_binding").unwrap();
     let module = vyre_emit::naga::emit(
-        &vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
+        &vyre_compiler::lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
     )
     .unwrap();
     let mut scalar_kinds = std::collections::BTreeSet::new();
@@ -166,7 +166,7 @@ fn multi_binding_preserves_distinct_global_types() {
 #[test]
 fn hostile_workgroup_1024_survives_verify_then_emit() {
     let case = emit_adversarial_corpus::case_by_id("adv_hostile_wg_1024").unwrap();
-    let descriptor = vyre_lower::verify_descriptor(&case.descriptor)
+    let descriptor = vyre_compiler::lower::verify_descriptor(&case.descriptor)
         .expect("descriptor verification must succeed on corpus");
     let module = vyre_emit::naga::emit(&descriptor).expect("emit verified descriptor");
     assert_eq!(module.entry_points[0].workgroup_size, [1024, 1, 1]);
@@ -176,7 +176,7 @@ fn hostile_workgroup_1024_survives_verify_then_emit() {
 #[test]
 fn success_corpus_round_trips_through_naga_validator() {
     for case in &emit_adversarial_corpus::success_cases() {
-        let descriptor = vyre_lower::verify_descriptor(&case.descriptor)
+        let descriptor = vyre_compiler::lower::verify_descriptor(&case.descriptor)
             .expect("corpus success case must pass descriptor verification");
         let module = vyre_emit::naga::emit(&descriptor).expect("corpus success case must emit");
         validate_module(&module, case.id);

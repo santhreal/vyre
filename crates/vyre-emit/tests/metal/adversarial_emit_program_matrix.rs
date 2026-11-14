@@ -1,11 +1,11 @@
 //! Adversarial emit program matrix for `vyre_emit::metal`.
 //!
-//! Hostile `KernelDescriptor` programs from `vyre_lower::emit_adversarial_corpus`
+//! Hostile `KernelDescriptor` programs from `vyre_compiler::lower::emit_adversarial_corpus`
 //! must either emit a structured Metal native_module artifact or return a typed
 //! emitter error with fix text.
 
 use vyre_emit::metal::{EmitError, METAL_ARTIFACT_SCHEMA};
-use vyre_lower::emit_adversarial_corpus::{self, EmitAdversarialCase, EmitAdversarialFamily};
+use vyre_compiler::lower::emit_adversarial_corpus::{self, EmitAdversarialCase, EmitAdversarialFamily};
 
 fn assert_metal_artifact_structure(
     case: &EmitAdversarialCase,

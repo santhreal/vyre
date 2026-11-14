@@ -3,12 +3,12 @@
 //! substrate-neutral `KernelDescriptor` contract for that shape.
 
 use vyre_foundation::ir::{BinOp, DataType};
-use vyre_lower::descriptor_builder::{
+use vyre_compiler::lower::descriptor_builder::{
     body, descriptor, effect, global_rw, lit, op, store_literal_kernel,
 };
-use vyre_lower::{KernelDescriptor, KernelOp, KernelOpKind, LiteralValue};
+use vyre_compiler::lower::{KernelDescriptor, KernelOp, KernelOpKind, LiteralValue};
 
-fn out_slot(ty: DataType) -> vyre_lower::BindingSlot {
+fn out_slot(ty: DataType) -> vyre_compiler::lower::BindingSlot {
     global_rw(0, ty, "out")
 }
 
@@ -158,7 +158,7 @@ fn corpus() -> [KernelDescriptor; 8] {
 fn every_descriptor_emits_through_every_target() {
     for desc in corpus() {
         let id = &desc.id;
-        let verified = vyre_lower::verify_descriptor(&desc)
+        let verified = vyre_compiler::lower::verify_descriptor(&desc)
             .unwrap_or_else(|failure| panic!("`{id}` failed verification: {failure:?}"));
         assert_eq!(&verified.id, id, "verification preserves the kernel id");
 
@@ -198,7 +198,7 @@ fn ptx_contains_the_instruction_for_each_live_op() {
         (mul_store(), "mul.lo"),
         (fma_store(), "fma.rn"),
     ] {
-        let verified = vyre_lower::verify_descriptor(&desc).expect("descriptor verification");
+        let verified = vyre_compiler::lower::verify_descriptor(&desc).expect("descriptor verification");
         let ptx = vyre_emit::ptx::emit(&verified).expect("PTX emit");
         assert!(
             ptx.contains(instruction),

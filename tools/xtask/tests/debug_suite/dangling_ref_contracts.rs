@@ -1,12 +1,12 @@
 //! Dangling-reference detection agrees with the verifier verdict across nesting depths.
-use vyre_lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
+use vyre_compiler::lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
 use xtask::debug::find_dangling_refs;
 use xtask::debug::fixtures::loop_carry_smoke;
 
 #[test]
 fn find_dangling_refs_clean_program_returns_empty() {
     let prog = loop_carry_smoke();
-    let desc = vyre_lower::lower_physical(&prog)
+    let desc = vyre_compiler::lower::lower_physical(&prog)
         .map(|lowered| lowered.into_descriptor())
         .unwrap();
     let danglings = find_dangling_refs(&desc);
@@ -15,7 +15,7 @@ fn find_dangling_refs_clean_program_returns_empty() {
 
 #[test]
 fn find_dangling_refs_handcrafted_descriptor_finds_known_break() {
-    let mut desc = vyre_lower::lower_physical(&loop_carry_smoke())
+    let mut desc = vyre_compiler::lower::lower_physical(&loop_carry_smoke())
         .map(|lowered| lowered.into_descriptor())
         .unwrap();
 
@@ -54,7 +54,7 @@ fn find_dangling_refs_handcrafted_descriptor_finds_known_break() {
 
 #[test]
 fn find_dangling_refs_matches_verifier_verdict() {
-    let mut desc = vyre_lower::lower_physical(&loop_carry_smoke())
+    let mut desc = vyre_compiler::lower::lower_physical(&loop_carry_smoke())
         .map(|lowered| lowered.into_descriptor())
         .unwrap();
 
@@ -88,11 +88,11 @@ fn find_dangling_refs_matches_verifier_verdict() {
 
     let danglings = find_dangling_refs(&desc);
 
-    let verify_errs = vyre_lower::verify(&desc).unwrap_err();
+    let verify_errs = vyre_compiler::lower::verify(&desc).unwrap_err();
     let verify_dangling_ids: Vec<u32> = verify_errs
         .iter()
         .filter_map(|e| {
-            if let vyre_lower::VerifyErrorKind::DanglingResultRef { ref_id, .. } = &e.kind {
+            if let vyre_compiler::lower::VerifyErrorKind::DanglingResultRef { ref_id, .. } = &e.kind {
                 Some(*ref_id)
             } else {
                 None
@@ -106,7 +106,7 @@ fn find_dangling_refs_matches_verifier_verdict() {
 
 #[test]
 fn find_dangling_refs_handles_deep_nesting_six_levels() {
-    let mut desc = vyre_lower::lower_physical(&loop_carry_smoke())
+    let mut desc = vyre_compiler::lower::lower_physical(&loop_carry_smoke())
         .map(|lowered| lowered.into_descriptor())
         .unwrap();
 
@@ -173,7 +173,7 @@ fn find_dangling_refs_handles_deep_nesting_six_levels() {
 
 #[test]
 fn find_dangling_refs_does_not_flag_completed_child_results() {
-    let mut desc = vyre_lower::lower_physical(&loop_carry_smoke())
+    let mut desc = vyre_compiler::lower::lower_physical(&loop_carry_smoke())
         .map(|lowered| lowered.into_descriptor())
         .unwrap();
 

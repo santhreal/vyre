@@ -19,8 +19,8 @@ use std::collections::BTreeMap;
 
 use vyre_foundation::ir::{Program, ProgramGraph};
 use vyre_foundation::logical::LogicalProgramGraph;
-use vyre_lower::LiteralValue;
-use vyre_megakernel::{
+use vyre_compiler::lower::LiteralValue;
+use vyre_compiler::{
     ArtifactNodeId, FusionGroupId, TargetModuleBundle, TargetModuleImage,
     TARGET_MODULE_BUNDLE_SCHEMA_VERSION,
 };
@@ -31,13 +31,13 @@ fn image_for(operation_id: &str, program: &Program) -> Result<TargetModuleImage,
         .map_err(|error| format!("invalid program graph: {error}"))?;
     let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new())
         .map_err(|error| format!("invalid logical domain: {error}"))?;
-    let schedule = vyre_megakernel::baseline_schedule(&logical);
+    let schedule = vyre_compiler::baseline_schedule(&logical);
     let phase = schedule
         .phases
         .first()
         .map(|phase| phase.id)
         .ok_or_else(|| "selected schedule has no phase".to_string())?;
-    let lowered = vyre_lower::lower_scheduled(program, &schedule, phase)
+    let lowered = vyre_compiler::lower::lower_scheduled(program, &schedule, phase)
         .map_err(|error| format!("selected-schedule lowering failed: {error}"))?;
     let program = lowered
         .program
@@ -51,7 +51,7 @@ fn image_for(operation_id: &str, program: &Program) -> Result<TargetModuleImage,
         program,
         descriptor,
         entry_point: "main".to_string(),
-        numeric: vyre_megakernel::ModuleNumericRecord::default(),
+        numeric: vyre_compiler::ModuleNumericRecord::default(),
         bytes: Vec::new(),
     })
 }

@@ -1,7 +1,5 @@
 //! Megakernel launch geometry helpers.
 
-use vyre_runtime::BackendError;
-
 use super::grid::cached_geometry_from_slots;
 use super::sizing::ResidentSizingPolicy;
 
@@ -17,31 +15,6 @@ pub struct ResidentLaunchGeometry {
 }
 
 impl ResidentLaunchGeometry {
-    /// Build geometry for `item_count` host work items.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`BackendError`] when the host queue cannot be represented by
-    /// the u32 ring protocol.
-    pub fn from_item_count(
-        item_count: usize,
-        worker_count: u32,
-        max_workgroup_size_x: u32,
-    ) -> Result<Self, BackendError> {
-        let item_count = u32::try_from(item_count).map_err(|_| {
-            BackendError::new(
-                "megakernel work queue length exceeds u32::MAX. Fix: shard the queue before dispatch.",
-            )
-        })?;
-        let geometry = Self::from_slots(item_count, worker_count, max_workgroup_size_x);
-        if geometry.slot_count < item_count {
-            return Err(BackendError::new(
-                "megakernel work queue cannot be padded inside the u32 ring protocol. Fix: shard the queue before dispatch.",
-            ));
-        }
-        Ok(geometry)
-    }
-
     /// Build geometry for an already-sized ring.
     #[must_use]
     pub fn from_slots(slot_count: u32, worker_count: u32, max_workgroup_size_x: u32) -> Self {

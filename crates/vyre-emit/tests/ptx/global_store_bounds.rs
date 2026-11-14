@@ -13,8 +13,8 @@
 //! so a corpus case added later is checked here without being named.
 
 use vyre_emit::ptx::TRAP_SIDECAR_SYMBOL;
-use vyre_lower::descriptor_builder::{body, descriptor, effect, lit};
-use vyre_lower::{KernelOpKind, LiteralValue};
+use vyre_compiler::lower::descriptor_builder::{body, descriptor, effect, lit};
+use vyre_compiler::lower::{KernelOpKind, LiteralValue};
 
 /// Registers holding the trap sidecar base, as `mov.u64 %rdN, <symbol>;`.
 ///
@@ -48,13 +48,13 @@ fn unpredicated_global_stores(ptx: &str) -> Vec<&str> {
 
 #[test]
 fn the_shared_success_corpus_emits_no_unpredicated_global_store() {
-    let cases = vyre_lower::emit_adversarial_corpus::success_cases();
+    let cases = vyre_compiler::lower::emit_adversarial_corpus::success_cases();
     assert!(
         !cases.is_empty(),
         "Fix: the shared success corpus is empty, so this contract checks nothing."
     );
     for case in cases {
-        let descriptor = vyre_lower::verify_descriptor(&case.descriptor)
+        let descriptor = vyre_compiler::lower::verify_descriptor(&case.descriptor)
             .unwrap_or_else(|error| panic!("{}: corpus case must verify: {error:?}", case.id));
         let ptx = vyre_emit::ptx::emit(&descriptor)
             .unwrap_or_else(|error| panic!("{}: corpus case must emit: {error:?}", case.id));

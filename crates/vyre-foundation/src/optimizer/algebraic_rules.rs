@@ -1,8 +1,8 @@
 //! Shared algebraic rewrite legality rules.
 //!
 //! This module is the single source of truth for algebraic decisions that apply
-//! at more than one IR level. `vyre-foundation` Program passes and `vyre-lower`
-//! Lowered-descriptor (`vyre-lower`) rewrites adapt their local value representation into these
+//! at more than one IR level. `vyre-foundation` Program passes and `vyre-compiler`
+//! Lowered-descriptor (`vyre-compiler`) rewrites adapt their local value representation into these
 //! small rule inputs instead of independently re-encoding what `x + 0`, `x * 1`,
 //! or division by a power of two means.
 

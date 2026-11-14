@@ -1,6 +1,6 @@
 use std::fmt::Write as _;
 
-use vyre_lower::{
+use vyre_compiler::lower::{
     FragmentOperand, KernelOp, MatrixMmaElement, MatrixMmaLayout, MatrixMmaSpec, MatrixTileShape,
 };
 

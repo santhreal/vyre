@@ -1,6 +1,6 @@
 //! SPIR-V backend adapter for Vyre.
 //!
-//! Programs enter through `vyre_lower::lower_physical`; the canonical
+//! Programs enter through `vyre_compiler::lower::lower_physical`; the canonical
 //! `vyre_emit::spirv` writer owns descriptor-to-SPIR-V serialization. This crate
 //! owns backend registration and Vulkan execution only.
 //!

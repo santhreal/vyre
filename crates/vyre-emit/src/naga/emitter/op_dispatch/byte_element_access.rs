@@ -2,7 +2,7 @@
 
 use naga::{BinaryOperator, Expression};
 use vyre_foundation::ir::DataType;
-use vyre_lower::KernelOp;
+use vyre_compiler::lower::KernelOp;
 
 use super::super::BodyBuilder;
 use super::diagnostics::non_byte_load_route_message;

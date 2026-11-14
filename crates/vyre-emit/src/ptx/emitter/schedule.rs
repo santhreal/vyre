@@ -1,4 +1,4 @@
-use vyre_lower::{KernelOp, KernelOpKind};
+use vyre_compiler::lower::{KernelOp, KernelOpKind};
 
 pub(super) fn is_latency_load(op: &KernelOp) -> bool {
     matches!(
@@ -76,7 +76,7 @@ pub(super) fn op_reads_operand(op: &KernelOp, operand: u32) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_lower::descriptor_builder::mma_f16_m16n8k16;
+    use vyre_compiler::lower::descriptor_builder::mma_f16_m16n8k16;
 
     fn op(kind: KernelOpKind, operands: Vec<u32>, result: Option<u32>) -> KernelOp {
         KernelOp {

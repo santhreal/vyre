@@ -18,7 +18,7 @@ use vyre_aot::{
 use xtask::debug::ArtifactReport;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program, ProgramGraph};
 use vyre_foundation::validate::BackendCapabilities;
-use vyre_megakernel::{
+use vyre_compiler::{
     ArtifactEnvelope, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts,
     ObjectiveMetric, SearchBudget,
 };

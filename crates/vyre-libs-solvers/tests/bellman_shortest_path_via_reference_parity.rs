@@ -27,7 +27,7 @@
 use vyre_test_support::semantic_requests;
 
 use vyre_libs_solvers::solvers::bellman_tn_order::bellman_tn_order_via;
-use vyre_megakernel::SemanticExecutionError;
+use vyre_compiler::SemanticExecutionError;
 use vyre_reference::composition_witness::bellman_shortest_path_witness as cpu_ref;
 
 use vyre_driver_reference::ReferenceSemanticExecutor;

@@ -94,26 +94,7 @@ impl SpeculationReport {
             "driver",
         )
     }
-
-    /// Commit rate as a whole-percent, floored.
-    #[must_use]
-    pub fn commit_rate_pct(&self) -> u32 {
-        self.commit_rate_ppm() / 10_000
-    }
-
-    /// True when speculation is paying for itself vs the two-stage GPU
-    /// path at the caller's threshold. Integer-only comparison.
-    #[must_use]
-    pub fn worthwhile(&self, threshold_pct: u32) -> bool {
-        let threshold_ppm = u64::from(threshold_pct) * 10_000;
-        u64::from(self.commit_rate_ppm()) >= threshold_ppm
-    }
 }
-
-/// Default crossover threshold. Below this commit rate the
-/// speculative path underperforms the non-speculative GPU
-/// prefilter -> confirmer pair on empirical benchmarks.
-pub(crate) const DEFAULT_THRESHOLD_PCT: u32 = 15;
 
 /// Caller-controlled speculation policy.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -160,12 +141,6 @@ impl AdaptiveSpeculator {
             speculation_enabled: AtomicU32::new(1),
             samples: AtomicU32::new(0),
         }
-    }
-
-    /// Default-threshold speculator.
-    #[must_use]
-    pub fn default_threshold() -> Self {
-        Self::new(DEFAULT_THRESHOLD_PCT)
     }
 
     /// Current EMA-smoothed commit rate in ppm.
@@ -481,52 +456,6 @@ where
 mod tests {
     use super::*;
     use std::collections::HashSet;
-
-    #[test]
-    fn empty_report_has_zero_commit_rate() {
-        let r = SpeculationReport::empty();
-        assert_eq!(r.commit_rate_ppm(), 0);
-        assert_eq!(r.commit_rate_pct(), 0);
-        assert_eq!(r.attempted_tiles(), 0);
-        assert!(!r.worthwhile(1));
-    }
-
-    #[test]
-    fn commit_rate_exact_at_quarter() {
-        let r = SpeculationReport::from_counts(1, 3);
-        assert_eq!(r.commit_rate_ppm(), 250_000);
-        assert_eq!(r.commit_rate_pct(), 25);
-    }
-
-    #[test]
-    fn worthwhile_honors_threshold() {
-        let r = SpeculationReport::from_counts(20, 80);
-        assert!(r.worthwhile(20));
-        assert!(!r.worthwhile(25));
-    }
-
-    #[test]
-    fn all_rolled_back_is_zero_commit_rate() {
-        let r = SpeculationReport::from_counts(0, 1024);
-        assert_eq!(r.commit_rate_ppm(), 0);
-        assert!(!r.worthwhile(1));
-    }
-
-    #[test]
-    fn all_committed_is_full_commit_rate() {
-        let r = SpeculationReport::from_counts(1024, 0);
-        assert_eq!(r.commit_rate_ppm(), 1_000_000);
-        assert!(r.worthwhile(99));
-    }
-
-    #[test]
-    fn commit_rate_uses_exact_attempt_count_without_clamping() {
-        let r = SpeculationReport::from_counts(u32::MAX, u32::MAX);
-
-        assert_eq!(r.attempted_tiles(), 8_589_934_590);
-        assert_eq!(r.commit_rate_ppm(), 500_000);
-        assert!(!r.worthwhile(u32::MAX));
-    }
 
     #[test]
     fn parse_counter_tail_reads_pair() {

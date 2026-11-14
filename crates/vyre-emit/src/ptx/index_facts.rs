@@ -8,13 +8,13 @@
 //! body an emitter has in hand.
 //!
 //! What is NOT re-derived here: which operand positions name an SSA result,
-//! and which ids an op defines. Both come from `vyre-lower`, their one owner.
+//! and which ids an op defines. Both come from `vyre-compiler`, their one owner.
 //! A private copy of either table drifted out of agreement once already.
 
 use rustc_hash::FxHashMap;
 use vyre_foundation::ir::BinOp;
-use vyre_lower::operand_class::operand_is_result_reference;
-use vyre_lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
+use vyre_compiler::lower::operand_class::operand_is_result_reference;
+use vyre_compiler::lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
 
 pub(crate) struct IndexFacts {
     producer: FxHashMap<u32, usize>,
@@ -342,9 +342,9 @@ fn symbolic_affine_root(op: &KernelOp, result_id: u32) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_lower::descriptor_builder::mma_f16_m16n8k16;
-    use vyre_lower::descriptor_builder::{body, effect, lit, op};
-    use vyre_lower::{KernelBody, KernelOp, LiteralValue};
+    use vyre_compiler::lower::descriptor_builder::mma_f16_m16n8k16;
+    use vyre_compiler::lower::descriptor_builder::{body, effect, lit, op};
+    use vyre_compiler::lower::{KernelBody, KernelOp, LiteralValue};
 
     fn body_with_add(
         operands: Vec<u32>,
@@ -518,7 +518,7 @@ mod tests {
     /// Resolution guard for the operand-namespace clone family.
     ///
     /// This crate used to carry its own operand classifier. Step 0 proved it
-    /// had drifted from `vyre_lower::operand_class`: on operand counts the
+    /// had drifted from `vyre_compiler::lower::operand_class`: on operand counts the
     /// op contracts forbid, the local copy dropped trailing operands from the
     /// use map (`take(2)` on `StructuredForLoop`, `skip(1)` on the loads)
     /// while the owner kept them. The owner won, because under-counting uses
@@ -555,7 +555,7 @@ mod tests {
         );
     }
 
-    /// The MMA accumulator tuple is `vyre-lower`'s rule, not this crate's.
+    /// The MMA accumulator tuple is `vyre-compiler`'s rule, not this crate's.
     /// Every fragment id must resolve to the producing op without this file
     /// restating how wide the tuple is.
     #[test]

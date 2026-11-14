@@ -4,7 +4,7 @@
 //! uploaded once and only the activations vary per item.
 
 use super::*;
-use vyre_megakernel::{
+use vyre_compiler::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
 

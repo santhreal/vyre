@@ -3,7 +3,7 @@
 use super::*;
 use naga::{Expression, Literal};
 use vyre_foundation::fp_parity::FloatLoweringMode;
-use vyre_lower::descriptor_builder::{body, descriptor, lit, op};
+use vyre_compiler::lower::descriptor_builder::{body, descriptor, lit, op};
 
 /// BinOp::WrappingSub of two u32 literals must fold to wrapping_sub, not
 /// saturating_sub. 0u32 WrappingSub 1u32 must produce 0xFFFF_FFFFu32, the
@@ -122,7 +122,7 @@ fn select_with_u64_arms_emits_without_coerce_passthrough_panic() {
                 .ops([
                     // result 0: vyre.literal.u64(100)
                     op(
-                        KernelOpKind::OpaqueExpr(Box::new(vyre_lower::OpaqueExprData {
+                        KernelOpKind::OpaqueExpr(Box::new(vyre_compiler::lower::OpaqueExprData {
                             extension_id: 10,
                             extension_kind: "vyre.literal.u64".to_owned(),
                             payload: 100u64.to_le_bytes().to_vec(),
@@ -132,7 +132,7 @@ fn select_with_u64_arms_emits_without_coerce_passthrough_panic() {
                     ),
                     // result 1: vyre.literal.u64(200)
                     op(
-                        KernelOpKind::OpaqueExpr(Box::new(vyre_lower::OpaqueExprData {
+                        KernelOpKind::OpaqueExpr(Box::new(vyre_compiler::lower::OpaqueExprData {
                             extension_id: 11,
                             extension_kind: "vyre.literal.u64".to_owned(),
                             payload: 200u64.to_le_bytes().to_vec(),
@@ -201,7 +201,7 @@ fn select_with_u64_arms_emits_without_coerce_passthrough_panic() {
 /// strict mode to publish, and the emitted module would be identical under both
 /// modes for a reason unrelated to the barrier.
 fn multiply_add_f32_descriptor() -> KernelDescriptor {
-    use vyre_lower::descriptor_builder::{binop, load_global, store_global};
+    use vyre_compiler::lower::descriptor_builder::{binop, load_global, store_global};
 
     descriptor("f32_multiply_add")
         .slot(global_rw(0, DataType::F32, "buf").with_count(8))

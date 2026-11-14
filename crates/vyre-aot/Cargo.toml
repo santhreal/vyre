@@ -23,7 +23,7 @@ workspace = true
 [dependencies]
 vyre-foundation.workspace = true
 vyre-runtime.workspace = true
-vyre-megakernel.workspace = true
+vyre-compiler.workspace = true
 serde = { workspace = true, features = ["derive"] }
 serde_json.workspace = true
 thiserror.workspace = true
@@ -37,7 +37,7 @@ default = []
 ptx = []
 
 [dev-dependencies]
-vyre-lower.workspace = true
+vyre-compiler.workspace = true
 tempfile.workspace = true
 inventory.workspace = true
 # `product_workflow` drives the checkpoint-to-package-to-inspection path, which

@@ -13,7 +13,7 @@ mod op_routing;
 use std::mem::{self, Discriminant};
 
 use rustc_hash::FxHashMap;
-use vyre_lower::KernelOpKind;
+use vyre_compiler::lower::KernelOpKind;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) enum OpDispatchRoute {

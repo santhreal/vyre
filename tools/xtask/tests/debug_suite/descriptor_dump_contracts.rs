@@ -8,7 +8,7 @@ use program_fixtures::minimal_program;
 #[test]
 fn dump_descriptor_renders_minimal_program() {
     let p = minimal_program();
-    let desc = vyre_lower::lower_physical(&p)
+    let desc = vyre_compiler::lower::lower_physical(&p)
         .map(|lowered| lowered.into_descriptor())
         .unwrap();
     let dump = dump_descriptor(&desc, &DescriptorDumpOptions::default());
@@ -36,14 +36,14 @@ fn dump_descriptor_op_counts_match_walk() {
             )],
         )],
     );
-    let desc = vyre_lower::lower_physical(&p)
+    let desc = vyre_compiler::lower::lower_physical(&p)
         .map(|lowered| lowered.into_descriptor())
         .unwrap();
     let dump = dump_descriptor(&desc, &DescriptorDumpOptions::default());
 
     // Count ops manually
     let mut total_ops = 0;
-    fn walk_body(body: &vyre_lower::KernelBody, count: &mut usize) {
+    fn walk_body(body: &vyre_compiler::lower::KernelBody, count: &mut usize) {
         *count += body.ops.len();
         for child in &body.child_bodies {
             walk_body(child, count);
@@ -67,7 +67,7 @@ fn dump_descriptor_truncates_when_max_ops_per_body_set() {
             Node::store("out", Expr::u32(4), Expr::u32(5)),
         ],
     );
-    let desc = vyre_lower::lower_physical(&p)
+    let desc = vyre_compiler::lower::lower_physical(&p)
         .map(|lowered| lowered.into_descriptor())
         .unwrap();
     let dump = dump_descriptor(
@@ -88,7 +88,7 @@ fn dump_descriptor_truncates_when_max_ops_per_body_set() {
 #[test]
 fn dump_descriptor_show_literals_false_omits_literals_section() {
     let p = minimal_program();
-    let desc = vyre_lower::lower_physical(&p)
+    let desc = vyre_compiler::lower::lower_physical(&p)
         .map(|lowered| lowered.into_descriptor())
         .unwrap();
     let dump = dump_descriptor(

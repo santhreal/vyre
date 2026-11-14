@@ -10,7 +10,7 @@ use crate::graph::path_reconstruct::{
 use crate::graph::dispatch::dispatch_bridge::{
     dispatch_two_u32_outputs_from_prepared_into, refresh_keyed_dispatch_inputs, DispatchInput,
 };
-use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// GPU dispatch wrapper around the `reconstruct_path` CPU oracle. Returns the
 /// number of valid entries written to `scratch` (zero-padded to

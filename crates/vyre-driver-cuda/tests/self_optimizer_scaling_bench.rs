@@ -12,7 +12,7 @@ use std::thread;
 use vyre::ir::Program;
 use vyre_runtime::self_optimizer_bench::report_scaling;
 use vyre_driver_cuda::{registered_backend_id, CUDA_BACKEND_ID};
-use vyre_megakernel::{
+use vyre_compiler::{
     CompileObjective, Digest, ExternalFacts, ObjectiveMetric, SearchBudget,
     SemanticExecutionPolicy, SemanticExecutor,
 };

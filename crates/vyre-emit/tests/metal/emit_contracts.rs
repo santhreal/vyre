@@ -4,11 +4,11 @@
 
 use vyre_emit::metal::*;
 use vyre_foundation::ir::{DataType, Expr, Node, Program};
-use vyre_lower::descriptor_builder::{
+use vyre_compiler::lower::descriptor_builder::{
     body, descriptor, effect, global_ro, global_rw, lit, load_store_copy, shared_rw,
     store_literal_kernel, SlotCount,
 };
-use vyre_lower::{BindingVisibility, KernelDescriptor, KernelOpKind, LiteralValue, MemoryClass};
+use vyre_compiler::lower::{BindingVisibility, KernelDescriptor, KernelOpKind, LiteralValue, MemoryClass};
 
 fn empty_kernel() -> KernelDescriptor {
     descriptor("empty").dispatch(64, 1, 1).build()
@@ -132,7 +132,7 @@ fn metal_resource_count_without_sidecar_room_is_rejected() {
 #[test]
 fn trap_sidecar_compare_exchange_emits_msl_helper() {
     let program = Program::wrapped(vec![], [64, 1, 1], vec![Node::trap(Expr::u32(7), "fault")]);
-    let desc = vyre_lower::lower_physical(&program)
+    let desc = vyre_compiler::lower::lower_physical(&program)
         .map(|lowered| lowered.into_descriptor())
         .expect("Fix: trap programs must descriptor-lower");
     let artifact = emit_artifact(&desc).expect("Fix: trap descriptors must emit Metal MSL");
@@ -146,11 +146,11 @@ fn trap_sidecar_compare_exchange_emits_msl_helper() {
     let sidecar = artifact
         .bindings
         .iter()
-        .find(|binding| binding.name == vyre_lower::TRAP_SIDECAR_NAME)
+        .find(|binding| binding.name == vyre_compiler::lower::TRAP_SIDECAR_NAME)
         .expect("Fix: trap sidecar must stay host-bound in Metal metadata.");
     assert_eq!(
         sidecar.element_count,
-        Some(vyre_lower::TRAP_SIDECAR_WORDS),
+        Some(vyre_compiler::lower::TRAP_SIDECAR_WORDS),
         "Fix: trap sidecar metadata must preserve the four-word runtime ABI."
     );
 }

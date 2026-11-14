@@ -26,7 +26,7 @@ use vyre_runtime::{
     TimedDispatchResult,
 };
 use vyre_foundation::ir::Program;
-use vyre_megakernel::{Artifact, ArtifactValueId, TargetPayload};
+use vyre_compiler::{Artifact, ArtifactValueId, TargetPayload};
 
 use crate::target_artifacts;
 use target_artifacts::spirv;

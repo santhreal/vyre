@@ -471,7 +471,7 @@ pub const CANONICAL_SCHEMA_REGISTRY: &[SchemaDefinition] = &[
         domain_separator: "VYRE_ARTIFACT_PAYLOAD_V1",
         compatibility: CompatibilityDisposition::Supported,
         stale_fixtures: STALE_ARTIFACT_FIXTURES,
-        owning_package: "vyre-megakernel",
+        owning_package: "vyre-compiler",
     },
     SchemaDefinition {
         id: SchemaId::ScheduleRecord,

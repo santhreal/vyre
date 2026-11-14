@@ -8,12 +8,12 @@
 use std::fmt::Write as _;
 use std::num::NonZeroU32;
 
-use vyre_lower::analyses::{
+use vyre_compiler::lower::analyses::{
     derive_shared_access_profiles, select_bank_conflict_strategy, BankConflictMitigation,
     SharedBindingAccessProfile,
 };
-use vyre_lower::KernelDescriptor;
-use vyre_lower::MemoryClass;
+use vyre_compiler::lower::KernelDescriptor;
+use vyre_compiler::lower::MemoryClass;
 
 use super::BodyCtx;
 use crate::ptx::reg::{PtxType, Reg};
@@ -243,7 +243,7 @@ impl BodyCtx<'_> {
 mod tests {
     use super::*;
     use rustc_hash::FxHashSet;
-    use vyre_lower::analyses::{AccessPhase, AccessPhaseProfile, CANDIDATE_MITIGATIONS};
+    use vyre_compiler::lower::analyses::{AccessPhase, AccessPhaseProfile, CANDIDATE_MITIGATIONS};
 
     /// A profile stating one phase per entry of `strides`, all full width.
     fn profile(element_count: u32, strides: &[u32]) -> SharedBindingAccessProfile {
@@ -499,7 +499,7 @@ mod tests {
     #[test]
     fn every_declared_mitigation_strategy_has_an_emitter_decision() {
         let path = vyre_test_support::monorepo::vyre_workspace_root()
-            .join("crates/vyre-lower/src/analyses/bank_conflict/strategy.rs");
+            .join("crates/vyre-compiler/src/analyses/bank_conflict/strategy.rs");
         let source = vyre_test_support::read_source_file_bounded(&path).unwrap_or_else(|err| {
             panic!("Fix: cannot read the BankConflictMitigation declaration at {path:?}: {err}")
         });

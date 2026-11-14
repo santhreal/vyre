@@ -5,13 +5,13 @@
 //! `KernelOpKind` must have a deliberate decision: either emitted as native PTX
 //! or explicitly refused by name.
 //!
-//! The variant space and the probe descriptor belong to `vyre-lower`, which
+//! The variant space and the probe descriptor belong to `vyre-compiler`, which
 //! declares the enum. What stays here is the PTX answer for each refused
 //! variant, which is this crate's alone.
 
 use vyre_emit::ptx::{emit, EmitError};
-use vyre_lower::descriptor_builder::probe_kernel;
-use vyre_lower::{KernelOpKind, OpaqueExprData, OpaqueNodeData};
+use vyre_compiler::lower::descriptor_builder::probe_kernel;
+use vyre_compiler::lower::{KernelOpKind, OpaqueExprData, OpaqueNodeData};
 
 #[test]
 fn unsupported_variants_are_refused_by_name_on_ptx() {

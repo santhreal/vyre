@@ -1,7 +1,7 @@
 //! Compatibility entry points for callers that still hand this crate a
 //! high-level `Program`.
 //!
-//! These functions route through `vyre_lower::lower_physical` and the
+//! These functions route through `vyre_compiler::lower::lower_physical` and the
 //! descriptor emitter.
 //! lowering path.
 
@@ -35,7 +35,7 @@ pub fn emit_module(program: &Program, workgroup_size: [u32; 3]) -> Result<Module
 pub fn emit_module_with_capabilities(
     program: &Program,
     workgroup_size: [u32; 3],
-    target: &vyre_lower::EmissionTargetCapabilities,
+    target: &vyre_compiler::lower::EmissionTargetCapabilities,
 ) -> Result<Module, LoweringError> {
     emit_module_impl(program, workgroup_size, Some(target))
 }
@@ -43,7 +43,7 @@ pub fn emit_module_with_capabilities(
 fn emit_module_impl(
     program: &Program,
     workgroup_size: [u32; 3],
-    target: Option<&vyre_lower::EmissionTargetCapabilities>,
+    target: Option<&vyre_compiler::lower::EmissionTargetCapabilities>,
 ) -> Result<Module, LoweringError> {
     // Fail closed on the ONE IR-validity hazard that otherwise BOTH silently
     // miscompiles AND emits successfully: an `Fma` node with non-f32 operands
@@ -86,18 +86,18 @@ fn emit_module_impl(
             )));
         }
     }
-    let mut descriptor = vyre_lower::lower_physical(program)
+    let mut descriptor = vyre_compiler::lower::lower_physical(program)
         .map_err(|error| {
             LoweringError::invalid(format!(
-                "physical lowering failed before Naga Program compatibility emission: {error}. Fix: add the missing neutral mapping to vyre-lower before descriptor emission."
+                "physical lowering failed before Naga Program compatibility emission: {error}. Fix: add the missing neutral mapping to vyre-compiler before descriptor emission."
             ))
         })?
         .into_descriptor();
     descriptor.dispatch.workgroup_size = workgroup_size;
-    if let Err(errors) = vyre_lower::verify(&descriptor) {
+    if let Err(errors) = vyre_compiler::lower::verify(&descriptor) {
         return Err(LoweringError::invalid(format!(
             "KernelDescriptor verification failed after Naga Program compatibility workgroup override: {}. Fix: keep the requested workgroup size valid before emission.",
-            vyre_lower::format_verify_errors(&errors)
+            vyre_compiler::lower::format_verify_errors(&errors)
         )));
     }
     let emitted = match target {
@@ -120,7 +120,7 @@ fn emit_module_impl(
 pub fn emit_prepared_module_with_capabilities(
     program: &Program,
     workgroup_size: [u32; 3],
-    target: &vyre_lower::EmissionTargetCapabilities,
+    target: &vyre_compiler::lower::EmissionTargetCapabilities,
 ) -> Result<Module, LoweringError> {
     emit_module_with_capabilities(program, workgroup_size, target)
 }
@@ -132,9 +132,9 @@ pub fn emit_prepared_module_with_capabilities(
 /// Returns a lowering error when call inlining fails or the rewritten program
 /// cannot preserve the backend's buffer-access invariants.
 pub fn prepared_program(program: &Program) -> Result<Program, LoweringError> {
-    let lowered = vyre_lower::lower_physical(program).map_err(|error| {
+    let lowered = vyre_compiler::lower::lower_physical(program).map_err(|error| {
         LoweringError::invalid(format!(
-            "physical lowering failed before Naga Program compatibility preparation: {error}. Fix: route Program compatibility helpers through vyre_lower::lower_physical instead of local inlining or optimizer passes."
+            "physical lowering failed before Naga Program compatibility preparation: {error}. Fix: route Program compatibility helpers through vyre_compiler::lower::lower_physical instead of local inlining or optimizer passes."
         ))
     })?;
     let program = lowered.program;

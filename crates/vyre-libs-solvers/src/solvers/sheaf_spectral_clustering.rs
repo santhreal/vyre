@@ -26,7 +26,7 @@ use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     write_zero_bytes,
 };
 use vyre_libs_math::math::sheaf_laplacian_eigenvalue::sheaf_laplacian_eigenvalue;
-use vyre_megakernel::{
+use vyre_compiler::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
 
@@ -389,8 +389,8 @@ mod tests {
     impl SemanticExecutor for SpectrumDispatcher {
         fn execute(
             &self,
-            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            request: &vyre_compiler::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError> {
             let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 // Real-backend input contract: one input per input-consuming buffer in buffer order
@@ -432,8 +432,8 @@ mod tests {
     impl SemanticExecutor for ExtraSpectrumDispatcher {
         fn execute(
             &self,
-            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            request: &vyre_compiler::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError> {
             vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 Ok(vec![
@@ -454,8 +454,8 @@ mod tests {
     impl SemanticExecutor for TrailingLambdaDispatcher {
         fn execute(
             &self,
-            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            request: &vyre_compiler::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError> {
             vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 Ok(vec![u32_slice_to_le_bytes(&[1]), vec![1, 0, 0, 0, 2]])

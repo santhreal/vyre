@@ -13,7 +13,7 @@ use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
     ShapeDim, ValueContract, ValueLifetime,
 };
-use vyre_megakernel::{AbiAccess, Artifact, ArtifactEnvelope, Digest, ResourceLifetime};
+use vyre_compiler::{AbiAccess, Artifact, ArtifactEnvelope, Digest, ResourceLifetime};
 use vyre_runtime::artifact_admission::{
     ArtifactSession, ArtifactSessionError, ResourceIngestionError, ResourceManifest,
     ResourceManifestEntry, ResourceManifestSource, TypedResource, TypedResourceDataset,

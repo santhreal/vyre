@@ -15,8 +15,8 @@ use crate::buffer::{BindGroupCache, StagingBufferPool};
 /// was built against.
 pub(crate) struct AuthenticatedTarget<'a> {
     pub(crate) wgsl: &'a str,
-    pub(crate) descriptor: &'a vyre_lower::KernelDescriptor,
-    pub(crate) resource_bindings: &'a [vyre_megakernel::TargetResourceBinding],
+    pub(crate) descriptor: &'a vyre_compiler::lower::KernelDescriptor,
+    pub(crate) resource_bindings: &'a [vyre_compiler::TargetResourceBinding],
 }
 
 /// GPU pipeline + **all** per-program dispatch metadata co-located for

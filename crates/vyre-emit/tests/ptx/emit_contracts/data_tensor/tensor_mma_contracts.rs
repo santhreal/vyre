@@ -1,5 +1,5 @@
 use super::*;
-use vyre_lower::descriptor_builder::{body, descriptor, effect, global_wo, lit, SlotCount};
+use vyre_compiler::lower::descriptor_builder::{body, descriptor, effect, global_wo, lit, SlotCount};
 
 #[test]
 fn matrix_mma_emits_real_mma_sync_and_binds_all_four_results() {
@@ -28,7 +28,7 @@ fn matrix_mma_emits_real_mma_sync_and_binds_all_four_results() {
         .body(body().ops(ops).literals(literals))
         .build();
 
-    vyre_lower::verify(&kernel)
+    vyre_compiler::lower::verify(&kernel)
         .expect("MatrixMma must publish result ids base..base+4 to verifier");
     let s = emit_with_target(&kernel, ComputeCapability::SM_70).unwrap();
     assert!(s.contains("mma.sync.aligned.m16n8k16.row.col.f32.f16.f16.f32"));
@@ -122,7 +122,7 @@ fn a_declared_form_this_target_has_no_instruction_for_is_rejected() {
         ("staged_accumulator", staged_accumulator),
     ] {
         let kernel = mma_kernel(name, spec);
-        vyre_lower::verify(&kernel).unwrap_or_else(|errors| {
+        vyre_compiler::lower::verify(&kernel).unwrap_or_else(|errors| {
             panic!("Fix: {name} must be a statable descriptor: {errors:?}")
         });
         let error = emit_with_target(&kernel, ComputeCapability::SM_70).expect_err(&format!(

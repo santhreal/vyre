@@ -20,7 +20,7 @@ use std::path::{Path, PathBuf};
 
 use vyre_aot::{compile, ValidatedCompileRequest};
 use vyre_foundation::validate::BackendCapabilities;
-use vyre_megakernel::{
+use vyre_compiler::{
     CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
     SearchBudget,
 };
@@ -100,7 +100,7 @@ fn the_external_facts_digest_the_caller_states_reaches_the_artifact() {
     );
 
     let direct =
-        vyre_megakernel::compile(&request(STATED_FACTS, live_device_facts(), RANKED_BUDGET))
+        vyre_compiler::compile(&request(STATED_FACTS, live_device_facts(), RANKED_BUDGET))
             .expect("the same request must compile directly");
     assert_eq!(
         stated,
@@ -139,7 +139,7 @@ fn the_device_facts_the_caller_names_reach_the_artifact() {
     );
 
     let direct =
-        vyre_megakernel::compile(&request(STATED_FACTS, live_device_facts(), RANKED_BUDGET))
+        vyre_compiler::compile(&request(STATED_FACTS, live_device_facts(), RANKED_BUDGET))
             .expect("the same request must compile directly");
     assert_eq!(
         live,

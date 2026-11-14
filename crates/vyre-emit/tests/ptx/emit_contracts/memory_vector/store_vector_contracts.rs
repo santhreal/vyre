@@ -1,5 +1,5 @@
 use super::*;
-use vyre_lower::descriptor_builder::{effect, folded_literal_vector_store, lit, op};
+use vyre_compiler::lower::descriptor_builder::{effect, folded_literal_vector_store, lit, op};
 
 #[test]
 fn emit_fuses_four_adjacent_u32_stores_to_ptx_vector_store() {

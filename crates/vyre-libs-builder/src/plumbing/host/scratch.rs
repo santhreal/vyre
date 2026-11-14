@@ -1,6 +1,6 @@
 //! Shared fallible scratch reservation helpers.
 
-use vyre_megakernel::SemanticExecutionError;
+use vyre_compiler::SemanticExecutionError;
 
 /// Reserve additional items in a scratch vector with a standard, actionable
 /// allocation diagnostic.

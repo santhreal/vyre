@@ -3,7 +3,7 @@
 use crate::graph::persistent_bfs::{
     copy_persistent_bfs_seed_frontier_into, PersistentBfsStaticInputKey,
 };
-use vyre_megakernel::SemanticExecutionError;
+use vyre_compiler::SemanticExecutionError;
 
 /// Caller-owned semantic execution scratch for persistent BFS expansion.
 #[derive(Debug, Default)]

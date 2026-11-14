@@ -319,7 +319,7 @@ mod tests {
                 ),
                 (
                     "release.egraph_saturation.1m",
-                    "vyre-lower",
+                    "vyre-compiler",
                     ReleaseMacroFamily::Egraph,
                     3,
                 ),

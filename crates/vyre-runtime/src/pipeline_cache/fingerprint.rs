@@ -1,6 +1,6 @@
 //! Content-addressed cache identity for one authenticated neutral artifact.
 
-use vyre_megakernel::Artifact;
+use vyre_compiler::Artifact;
 
 /// The exact canonical artifact digest used as a pipeline-cache key.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

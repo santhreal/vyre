@@ -1,5 +1,5 @@
 use super::*;
-use vyre_lower::descriptor_builder::{body, effect, lit};
+use vyre_compiler::lower::descriptor_builder::{body, effect, lit};
 
 #[test]
 fn emit_does_not_fuse_vector_store_across_value_producer_gap() {

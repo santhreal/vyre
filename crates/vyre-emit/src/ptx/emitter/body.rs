@@ -2,7 +2,7 @@ use std::fmt::Write as _;
 
 use smallvec::SmallVec;
 use vyre_foundation::ir::BinOp;
-use vyre_lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
+use vyre_compiler::lower::{KernelBody, KernelOp, KernelOpKind, LiteralValue};
 
 use super::operand_use_scan::body_descendants_read_operand;
 use super::schedule::{

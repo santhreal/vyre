@@ -1,6 +1,6 @@
 //! Wgpu artifact emission.
 //!
-//! Core IR is lowered through `vyre-lower`; this module only applies wgpu
+//! Core IR is lowered through `vyre-compiler`; this module only applies wgpu
 //! runtime policy, emits a Naga module via `vyre_emit::naga`, and writes WGSL
 //! accepted by `wgpu`.
 
@@ -57,7 +57,7 @@ pub struct WgpuProgram {
 ///
 /// The shader text is produced only after structural Naga IR construction and
 /// validation. Callers that need the module itself should use
-/// [`vyre_lower::lower_physical`] and [`vyre_emit::naga::emit`].
+/// [`vyre_compiler::lower::lower_physical`] and [`vyre_emit::naga::emit`].
 ///
 /// # Errors
 ///
@@ -177,16 +177,16 @@ pub(crate) fn launch_element_count(
 ///
 /// Returns when the program's launch element count cannot be derived.
 pub(crate) fn launch_grid_index(
-    descriptor: &vyre_lower::KernelDescriptor,
+    descriptor: &vyre_compiler::lower::KernelDescriptor,
     program: &vyre_foundation::ir::Program,
     config: &vyre_runtime::DispatchConfig,
     workgroup_size: [u32; 3],
-) -> Result<vyre_lower::GridIndexSpace, LoweringError> {
+) -> Result<vyre_compiler::lower::GridIndexSpace, LoweringError> {
     let Some(max_per_axis) = config.max_workgroups_per_axis else {
-        return Ok(vyre_lower::GridIndexSpace::PerAxis);
+        return Ok(vyre_compiler::lower::GridIndexSpace::PerAxis);
     };
     if config.launch_grid().is_some() {
-        return Ok(vyre_lower::GridIndexSpace::PerAxis);
+        return Ok(vyre_compiler::lower::GridIndexSpace::PerAxis);
     }
     let element_count = launch_element_count(program)?;
     let single_axis = vyre_runtime::infer_dispatch_grid_for_count(element_count, workgroup_size)
@@ -196,9 +196,9 @@ pub(crate) fn launch_grid_index(
         .zip(max_per_axis)
         .all(|(extent, ceiling)| ceiling == 0 || *extent <= ceiling);
     if fits || !descriptor.admits_grid_linearized_index() {
-        return Ok(vyre_lower::GridIndexSpace::PerAxis);
+        return Ok(vyre_compiler::lower::GridIndexSpace::PerAxis);
     }
-    Ok(vyre_lower::GridIndexSpace::GridLinearized)
+    Ok(vyre_compiler::lower::GridIndexSpace::GridLinearized)
 }
 
 impl WgpuProgram {
@@ -283,13 +283,13 @@ fn strict_expanded(
 }
 
 pub(crate) fn emit_naga_module_for_descriptor(
-    descriptor: &vyre_lower::KernelDescriptor,
+    descriptor: &vyre_compiler::lower::KernelDescriptor,
     float_lowering: vyre_foundation::fp_parity::FloatLoweringMode,
 ) -> Result<naga::Module, LoweringError> {
-    if let Err(errors) = vyre_lower::verify(descriptor) {
+    if let Err(errors) = vyre_compiler::lower::verify(descriptor) {
         return Err(LoweringError::invalid(format!(
             "KernelDescriptor verification failed after wgpu workgroup selection: {}. Fix: keep DispatchConfig.workgroup_override within descriptor limits.",
-            vyre_lower::format_verify_errors(&errors)
+            vyre_compiler::lower::format_verify_errors(&errors)
         )));
     }
     vyre_emit::naga::emit_with_float_mode(descriptor, float_lowering).map_err(|error| {
@@ -300,7 +300,7 @@ pub(crate) fn emit_naga_module_for_descriptor(
 }
 
 fn dump_kdesc_if_requested(
-    descriptor: &vyre_lower::KernelDescriptor,
+    descriptor: &vyre_compiler::lower::KernelDescriptor,
     module: Option<&naga::Module>,
 ) {
     if let Ok(dir) = std::env::var("VYRE_DUMP_KDESC")
@@ -441,7 +441,7 @@ pub(crate) fn write_wgsl(module: &naga::Module) -> Result<String, LoweringError>
     Ok(wgsl)
 }
 
-fn binding_assignments(descriptor: &vyre_lower::KernelDescriptor) -> Vec<WgpuBindingAssignment> {
+fn binding_assignments(descriptor: &vyre_compiler::lower::KernelDescriptor) -> Vec<WgpuBindingAssignment> {
     let mut assignments = Vec::with_capacity(descriptor.bindings.slots.len());
     for slot in &descriptor.bindings.slots {
         let Some(group) = descriptor_bind_group(slot.memory_class) else {
@@ -460,7 +460,7 @@ fn binding_assignments(descriptor: &vyre_lower::KernelDescriptor) -> Vec<WgpuBin
 }
 
 fn static_workgroups(
-    descriptor: &vyre_lower::KernelDescriptor,
+    descriptor: &vyre_compiler::lower::KernelDescriptor,
     workgroup_size: [u32; 3],
 ) -> [u32; 3] {
     let output_words = descriptor
@@ -468,11 +468,11 @@ fn static_workgroups(
         .slots
         .iter()
         .filter(|slot| {
-            matches!(slot.memory_class, vyre_lower::MemoryClass::Global)
+            matches!(slot.memory_class, vyre_compiler::lower::MemoryClass::Global)
                 && matches!(
                     slot.visibility,
-                    vyre_lower::BindingVisibility::WriteOnly
-                        | vyre_lower::BindingVisibility::ReadWrite
+                    vyre_compiler::lower::BindingVisibility::WriteOnly
+                        | vyre_compiler::lower::BindingVisibility::ReadWrite
                 )
         })
         .filter_map(|slot| slot.element_count)
@@ -494,7 +494,7 @@ fn static_workgroups(
 mod tests {
     use super::*;
     use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-    use vyre_lower::emit_adversarial_corpus;
+    use vyre_compiler::lower::emit_adversarial_corpus;
 
     #[test]
     fn wgpu_program_lowers_through_kernel_descriptor() {
@@ -525,30 +525,30 @@ mod tests {
 
     #[test]
     fn descriptor_binding_assignments_skip_non_resource_slots() {
-        let descriptor = vyre_lower::KernelDescriptor {
+        let descriptor = vyre_compiler::lower::KernelDescriptor {
             id: "bindings".into(),
-            bindings: vyre_lower::BindingLayout {
+            bindings: vyre_compiler::lower::BindingLayout {
                 slots: vec![
-                    vyre_lower::BindingSlot {
+                    vyre_compiler::lower::BindingSlot {
                         slot: 0,
                         element_type: DataType::U32,
                         element_count: Some(8),
-                        memory_class: vyre_lower::MemoryClass::Shared,
-                        visibility: vyre_lower::BindingVisibility::ReadWrite,
+                        memory_class: vyre_compiler::lower::MemoryClass::Shared,
+                        visibility: vyre_compiler::lower::BindingVisibility::ReadWrite,
                         name: "scratch".to_owned(),
                     },
-                    vyre_lower::BindingSlot {
+                    vyre_compiler::lower::BindingSlot {
                         slot: 1,
                         element_type: DataType::U32,
                         element_count: Some(8),
-                        memory_class: vyre_lower::MemoryClass::Global,
-                        visibility: vyre_lower::BindingVisibility::WriteOnly,
+                        memory_class: vyre_compiler::lower::MemoryClass::Global,
+                        visibility: vyre_compiler::lower::BindingVisibility::WriteOnly,
                         name: "out".to_owned(),
                     },
                 ],
             },
-            dispatch: vyre_lower::Dispatch::new(8, 1, 1),
-            body: vyre_lower::KernelBody {
+            dispatch: vyre_compiler::lower::Dispatch::new(8, 1, 1),
+            body: vyre_compiler::lower::KernelBody {
                 ops: vec![],
                 child_bodies: vec![],
                 literals: vec![],
@@ -623,20 +623,20 @@ mod tests {
     /// dispatching 8× too many workgroups.
     #[test]
     fn static_workgroups_multi_dimensional_uses_total_threads() {
-        let descriptor = vyre_lower::KernelDescriptor {
+        let descriptor = vyre_compiler::lower::KernelDescriptor {
             id: "multidim".into(),
-            bindings: vyre_lower::BindingLayout {
-                slots: vec![vyre_lower::BindingSlot {
+            bindings: vyre_compiler::lower::BindingLayout {
+                slots: vec![vyre_compiler::lower::BindingSlot {
                     slot: 0,
                     element_type: DataType::U32,
                     element_count: Some(256),
-                    memory_class: vyre_lower::MemoryClass::Global,
-                    visibility: vyre_lower::BindingVisibility::ReadWrite,
+                    memory_class: vyre_compiler::lower::MemoryClass::Global,
+                    visibility: vyre_compiler::lower::BindingVisibility::ReadWrite,
                     name: "out".to_owned(),
                 }],
             },
-            dispatch: vyre_lower::Dispatch::new(8, 8, 1),
-            body: vyre_lower::KernelBody {
+            dispatch: vyre_compiler::lower::Dispatch::new(8, 8, 1),
+            body: vyre_compiler::lower::KernelBody {
                 ops: vec![],
                 child_bodies: vec![],
                 literals: vec![],

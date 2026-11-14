@@ -334,6 +334,15 @@ interface = "Reproducible workload benchmarks and their recorded evidence."
 responsibility = "Own reproducible workload benchmarks against the best available native baseline for each class, not against vyre's own unfused output."
 
 [[crate]]
+package = "vyre-compiler"
+path = "crates/vyre-compiler"
+layer = "compiler-boundary"
+seam = "megakernel-compiler"
+interface = "Verified lowering, megakernel candidate search, cost and objective selection, allocation, and canonical artifact schemas."
+responsibility = "Lower validated Program IR to verified kernel descriptors, select and compile the megakernel artifact for one device, and define the artifact, envelope and target payload schemas."
+facade_exported = true
+
+[[crate]]
 package = "vyre-conform"
 path = "conform/vyre-conform"
 layer = "conformance"
@@ -585,29 +594,12 @@ interface = "Visual rendering and compositing effect compositions."
 responsibility = "Own visual rendering and compositing effects including blur, shadow, blend modes, gradients, and color conversions. Does not own display presentation, backend lowering, or runtime execution."
 
 [[crate]]
-package = "vyre-lower"
-path = "crates/vyre-lower"
-layer = "lowering"
-seam = "lowering"
-interface = "The single verified selected-module representation, lowered from semantic IR."
-responsibility = "Consume validated selected schedule phases and semantic programs, then own the single validated PhysicalKernel lowering boundary plus its backend-neutral pre-emission transforms."
-
-[[crate]]
 package = "vyre-macros"
 path = "crates/vyre-macros"
 layer = "foundation"
 seam = "registration-macros"
 interface = "Compile-time registration generation."
 responsibility = "Provide compile-time registration and declaration macros without depending on runtime crates."
-
-[[crate]]
-package = "vyre-megakernel"
-path = "crates/vyre-megakernel"
-layer = "compiler-boundary"
-seam = "megakernel-compiler"
-interface = "Schedule search, immutable artifact identity and authenticated target-payload construction."
-responsibility = "Construct foundation-owned selected schedules through bounded whole-ProgramGraph search, and own immutable Artifact identity and authenticated TargetPayload construction. Does not own logical semantics, schedule schemas, physical-kernel lowering, admission, execution, or lifecycle policy."
-facade_exported = true
 
 [[crate]]
 package = "vyre-pass-engine"
@@ -647,7 +639,7 @@ path = "crates/vyre-runtime"
 layer = "runtime"
 seam = "runtime"
 interface = "Backend-neutral target, materialization, submission and completion contracts, the backend registry, and artifact admission, residency, recovery and readback."
-responsibility = "Define the device, target compiler registration, artifact materialization, binding, submission, completion, capability and dispatch contracts every backend registers into, and execute the artifact\'s selected persistence: sessions, recovery, residency, scheduling, caches, readback, and IO."
+responsibility = "Define the device, target compiler registration, artifact materialization, binding, submission, completion, capability and dispatch contracts every backend registers into, and execute the artifact's selected persistence: sessions, recovery, residency, scheduling, caches, readback, and IO."
 facade_exported = true
 
 [[crate]]

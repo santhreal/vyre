@@ -10,7 +10,7 @@ use std::sync::Arc;
 use rustc_hash::FxHashSet;
 use vyre_runtime::{BackendError, BackendLayoutClass, BackendLayoutFingerprint, BackendLayoutSlot};
 use vyre_emit::naga::program::TrapTag;
-use vyre_lower::TRAP_SIDECAR_NAME;
+use vyre_compiler::lower::TRAP_SIDECAR_NAME;
 
 use crate::descriptor_mapping::{
     descriptor_binding_key, descriptor_buffer_access, descriptor_memory_kind,
@@ -53,7 +53,7 @@ pub struct BufferBindingInfo {
 
 /// Build buffer binding metadata for a lowered kernel descriptor.
 pub fn descriptor_buffer_bindings(
-    descriptor: &vyre_lower::KernelDescriptor,
+    descriptor: &vyre_compiler::lower::KernelDescriptor,
     public_output_bindings: &FxHashSet<u32>,
     host_input_bindings: &FxHashSet<(u32, u32)>,
 ) -> Result<Vec<BufferBindingInfo>, BackendError> {
@@ -216,9 +216,9 @@ pub(crate) fn create_bind_group_layouts(
 /// verbatim: no reprojection, no second allocation, and no way for a code to
 /// mean one thing here and another in an emitter.
 pub(crate) fn descriptor_trap_tags(
-    descriptor: &vyre_lower::KernelDescriptor,
+    descriptor: &vyre_compiler::lower::KernelDescriptor,
 ) -> Result<Vec<TrapTag>, BackendError> {
-    vyre_lower::descriptor_trap_tags(&descriptor.body).map_err(|source| {
+    vyre_compiler::lower::descriptor_trap_tags(&descriptor.body).map_err(|source| {
         BackendError::new(format!(
             "descriptor trap tag table unavailable: {source}. Fix: split nested kernel bodies before descriptor metadata extraction."
         ))
@@ -230,7 +230,7 @@ pub(crate) fn descriptor_trap_tags(
 // this runs on any host.
 #[cfg(test)]
 mod tests {
-    use vyre_lower::{BindingVisibility, MemoryClass};
+    use vyre_compiler::lower::{BindingVisibility, MemoryClass};
 
     use super::*;
     use crate::pipeline::descriptor_fixture::{descriptor_of, full_grid, slot};

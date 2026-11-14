@@ -10,7 +10,7 @@
 //! This module owns the IR half of that cut, which is the same on every
 //! consumer: detection, hoisting a fence out of the wrappers that hide it,
 //! segmenting the entry sequence, and making each segment self-contained.
-//! `vyre_megakernel::grid_sync` applies it to a `ProgramGraph` before schedule
+//! `vyre_compiler::grid_sync` applies it to a `ProgramGraph` before schedule
 //! search, and `vyre_runtime::grid_sync` applies it at dispatch time. Neither
 //! owns the transform, because two copies of a fence walk that disagree by one
 //! `Node` variant is a kernel that runs with no cross-block synchronization and

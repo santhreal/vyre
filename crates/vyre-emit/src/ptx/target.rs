@@ -1,4 +1,4 @@
-use vyre_lower::analyses::TargetBankGeometry;
+use vyre_compiler::lower::analyses::TargetBankGeometry;
 
 /// Target compute capability for PTX emit. Defaults to `sm_70` (Volta),
 /// the broad-compatibility floor for the shipped PTX op set.

@@ -274,7 +274,7 @@ pub fn validate_program_contract(
     // backend receives the program, exactly as an unsupported collective is
     // resolved above. Validating them against the backend's operation set
     // asked whether a backend executes `vyre.node.logical_barrier`, which none
-    // does and none needs to; `reject_logical_markers` in `vyre-lower` is what
+    // does and none needs to; `reject_logical_markers` in `vyre-compiler` is what
     // proves lowering actually closed them. Costs no allocation for a program
     // that is already physical.
     let schedule_lowered =

@@ -9,7 +9,7 @@ use vyre_foundation::logical::{LogicalProgramGraph, LOGICAL_ALGORITHM_VERSION};
 use vyre_foundation::operation::{OperationRegistration, OperationRegistry, OperationTier};
 use vyre_foundation::schedule::SchedulePhaseId;
 use vyre_foundation::visit::{for_each_expr, for_each_node};
-use vyre_lower::lower_scheduled;
+use vyre_compiler::lower::lower_scheduled;
 use vyre_test_support::logical_markers::{census, logical_marker_sum};
 
 const LOGICAL_EXPANSION_OP_ID: &str = "test::operation_registry::logical_expansion";
@@ -129,7 +129,7 @@ fn library_fixtures_are_canonical_semantic_registrations() {
                 continue;
             }
         };
-        let schedule = vyre_megakernel::baseline_schedule(&logical);
+        let schedule = vyre_compiler::baseline_schedule(&logical);
         let Some(phase) = schedule.phases.first().map(|phase| phase.id) else {
             domain_failures.push(format!("{}: selected schedule has no phase", entry.id));
             continue;

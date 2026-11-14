@@ -1,6 +1,6 @@
 //! Compatibility helpers for legacy Program-shaped Naga callers.
 //!
-//! Public entry points in this module route through `vyre-lower` and the
+//! Public entry points in this module route through `vyre-compiler` and the
 //! descriptor emitter. The descriptor path is the only production Naga lowering
 //! truth.
 

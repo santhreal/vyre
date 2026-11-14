@@ -19,7 +19,7 @@ use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_f32_output_exact, ensure_input_slots, write_f32_slice_le_bytes, write_zero_bytes,
 };
 use vyre_libs_math::math::tensor_train_decompose::tensor_train_decompose_step;
-use vyre_megakernel::{
+use vyre_compiler::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
 

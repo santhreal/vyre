@@ -33,7 +33,7 @@ use vyre_libs::dispatch_buffers::{decode_u32_output_exact, u32_slice_to_le_bytes
 
 use super::encode::{encode_program, EncodeError};
 use super::expr_arena::{encode_expr_arena, ExprArenaEncoding};
-use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Max expression nesting depth this GPU-native pre-filter flags.
 ///
@@ -113,7 +113,7 @@ pub fn gpu_validate_limits_from_encoding(
         node_count,
         arena.expr_count,
     ]);
-    let mut execution = vyre_megakernel::execute_single_program(
+    let mut execution = vyre_compiler::execute_single_program(
         executor,
         "validate-limits",
         build_validate_limits_program(arena.expr_count.max(1)),

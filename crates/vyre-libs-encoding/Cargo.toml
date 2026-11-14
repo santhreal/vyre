@@ -26,7 +26,7 @@ nn-paging = ["dep:vyre-libs-nn", "vyre-libs-nn/nn-attention"]
 
 [dependencies]
 vyre-foundation = { workspace = true, features = ["serde"] }
-vyre-megakernel.workspace = true
+vyre-compiler.workspace = true
 vyre-primitives = { workspace = true, features = ["inventory-registry"] }
 vyre-libs-builder = { workspace = true }
 vyre-libs-bitset = { workspace = true }

@@ -3,7 +3,7 @@
 //! Owns the entry point that turns one verified `KernelDescriptor` into PTX
 //! module text, and the module tree that does it. Each submodule is named for
 //! the PTX concept it owns; none of them owns descriptor shaping, which stays
-//! in `vyre-lower`.
+//! in `vyre-compiler`.
 
 mod async_copy;
 mod atomic;
@@ -37,7 +37,7 @@ mod vector;
 use body_ctx::BodyCtx;
 use module::ModuleBuilder;
 use text_capacity::estimated_module_text_capacity;
-use vyre_lower::KernelDescriptor;
+use vyre_compiler::lower::KernelDescriptor;
 
 use crate::ptx::{EmitError, PtxEmitOptions};
 

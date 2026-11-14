@@ -9,7 +9,7 @@
 //! [`optimizer::pipeline::gpu_optimize`] runs canonicalization, constant
 //! folding, dead-code elimination, and algebraic identities in one fixed
 //! algorithmic order with a caller-supplied
-//! `vyre_megakernel::SemanticExecutionPolicy`.
+//! `vyre_compiler::SemanticExecutionPolicy`.
 
 #[cfg(feature = "optimizer")]
 /// The encoder plus the passes that run the compiler against its own

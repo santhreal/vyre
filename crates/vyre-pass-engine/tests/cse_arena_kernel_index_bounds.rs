@@ -21,7 +21,7 @@
 #![cfg(feature = "optimizer")]
 
 use vyre_driver_reference::ReferenceSemanticExecutor;
-use vyre_megakernel::{execute_single_program, Digest, SearchBudget, SemanticExecutionPolicy};
+use vyre_compiler::{execute_single_program, Digest, SearchBudget, SemanticExecutionPolicy};
 use vyre_pass_engine::optimizer::cse_via_encoded::{
     build_canonical_delta_compact_program, build_canonical_id_program,
     build_structural_hash_program,

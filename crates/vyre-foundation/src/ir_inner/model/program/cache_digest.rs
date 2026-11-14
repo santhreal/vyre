@@ -12,9 +12,9 @@
 //! # Why these inputs and no others
 //!
 //! The input set is derived from the single Program-to-emitter boundary rather
-//! than guessed. `vyre_lower::lower_physical` is the only production
+//! than guessed. `vyre_compiler::lower::lower_physical` is the only production
 //! Program-to-physical-kernel boundary, and every emitter reads only its verified
-//! `KernelDescriptor`. `crates/vyre-lower/src/verified_lowering.rs` reads exactly these program
+//! `KernelDescriptor`. `crates/vyre-compiler/src/verified_lowering.rs` reads exactly these program
 //! inputs into that descriptor:
 //!
 //! - `Program::workgroup_size` into `Dispatch`
@@ -67,7 +67,7 @@
 //! declaration-level disciplines that feed validation verdicts, and none of
 //! them reaches an emitter, so a backend artifact cache must not vary on them.
 //! Do not "fix" this to match the other two keys. A field added to
-//! `BufferDecl` belongs here only if `vyre_lower::lower` reads it into the
+//! `BufferDecl` belongs here only if `vyre_compiler::lower::lower` reads it into the
 //! descriptor.
 
 use super::{BufferDecl, MemoryKind, Program};
@@ -190,7 +190,7 @@ fn append_buffer_cache_key(scratch: &mut Vec<u8>, buffer: &BufferDecl) -> Result
     )?;
     scratch.push(access_tag);
 
-    // Read by vyre_lower::lower as the requested host binding slot, then emitted
+    // Read by vyre_compiler::lower::lower as the requested host binding slot, then emitted
     // as the corresponding primary-text binding. Absent from v2, which let two
     // programs with different binding layouts share one compiled-pipeline entry.
     scratch.extend_from_slice(&buffer.binding().to_le_bytes());
@@ -204,7 +204,7 @@ fn append_buffer_cache_key(scratch: &mut Vec<u8>, buffer: &BufferDecl) -> Result
     )?;
 
     // Fixed width so the count lane can never shift the following bytes:
-    // zero means "no static element count", matching how vyre_lower maps a
+    // zero means "no static element count", matching how vyre_compiler::lower maps a
     // zero count to `element_count: None`.
     let static_count = if buffer.has_static_element_count() {
         buffer.count()

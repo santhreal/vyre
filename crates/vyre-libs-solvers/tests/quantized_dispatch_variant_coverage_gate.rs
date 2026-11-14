@@ -33,7 +33,7 @@ use vyre_libs_solvers::solvers::quantized_dispatch::{
     i4x8_batched_matvec_f32_scaled_via, i4x8_dot_f32_scaled_via, i4x8_matvec_f32_scaled_via,
     unpack_i4x8_via, PackedI4BatchedMatmul,
 };
-use vyre_megakernel::{
+use vyre_compiler::{
     writable_graph_values, Digest, SemanticExecutionError, SemanticExecutionOutput,
     SemanticExecutionRequest, SemanticExecutor,
 };

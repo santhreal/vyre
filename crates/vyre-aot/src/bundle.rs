@@ -37,7 +37,7 @@ use crate::artifact::{registration, TargetId};
 use crate::launcher::{emit_launcher_rust, LauncherError, LauncherOpts};
 use crate::manifest::Manifest;
 use crate::VERSION;
-use vyre_megakernel::{ArtifactEnvelope, TargetEntryPoint, TargetPayload};
+use vyre_compiler::{ArtifactEnvelope, TargetEntryPoint, TargetPayload};
 
 const METRIC_RECORD_WORDS: u32 = 8;
 const MAX_BUNDLE_MANIFEST_BYTES: u64 = 1024 * 1024;
@@ -68,7 +68,7 @@ pub enum BundleError {
 
     /// Canonical artifact envelope validation failed.
     #[error("vyre-aot bundle: canonical artifact: {0}")]
-    CanonicalArtifact(#[from] vyre_megakernel::CompileError),
+    CanonicalArtifact(#[from] vyre_compiler::CompileError),
 
     /// LZMA compression failed.
     #[error("vyre-aot bundle: lzma error: {0}")]
@@ -520,7 +520,7 @@ fn target_payload<'envelope>(
     Ok(payload)
 }
 
-fn digest_hex(digest: vyre_megakernel::Digest) -> String {
+fn digest_hex(digest: vyre_compiler::Digest) -> String {
     digest
         .as_bytes()
         .iter()

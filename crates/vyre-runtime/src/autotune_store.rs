@@ -5,7 +5,7 @@
 //! TOML-backed dictionary keyed by `(SpecCacheKey hash, adapter_id)` so
 //! evidence from yesterday's run survives today's process boot.
 //!
-//! A record is evidence, never a launch decision. `vyre-megakernel` selects
+//! A record is evidence, never a launch decision. `vyre-compiler` selects
 //! every schedule and the artifact states the geometry it authorized, so the
 //! launch width lives in the `SpecCacheKey` the variant was compiled under and
 //! not in a record that would outlive that artifact.

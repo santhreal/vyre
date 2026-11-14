@@ -13,7 +13,7 @@
 //! owns is the emit function and the numbers in the profile, which are facts
 //! about the device, not plumbing.
 
-use vyre_megakernel::{
+use vyre_compiler::{
     compile_selected_modules, Artifact, EmittedTargetModule, SelectedLowering, TargetCompileError,
     TargetCompiler, TargetPayload, TargetPayloadFormat, TargetProfile,
 };

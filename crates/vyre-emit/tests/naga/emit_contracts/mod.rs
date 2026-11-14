@@ -6,10 +6,10 @@ use naga::{Binding, BuiltIn, Statement, TypeInner};
 use vyre_emit::naga::*;
 use vyre_foundation::ir::MemoryOrdering;
 use vyre_foundation::ir::{BinOp, DataType, UnOp};
-use vyre_lower::descriptor_builder::{
+use vyre_compiler::lower::descriptor_builder::{
     body, descriptor, effect, global_rw, lit, store_literal_kernel, SlotCount,
 };
-use vyre_lower::{
+use vyre_compiler::lower::{
     AsyncTransaction, AsyncWaitSpec, BindingSlot, BindingVisibility, KernelDescriptor,
     KernelOpKind, LiteralValue, MemoryClass, MemoryProxyFence, TransactionScope,
 };
@@ -44,10 +44,10 @@ fn trap_sidecar_slot(slot: u32) -> BindingSlot {
     BindingSlot {
         slot,
         element_type: DataType::U32,
-        element_count: Some(vyre_lower::TRAP_SIDECAR_WORDS),
+        element_count: Some(vyre_compiler::lower::TRAP_SIDECAR_WORDS),
         memory_class: MemoryClass::Global,
         visibility: BindingVisibility::ReadWrite,
-        name: vyre_lower::TRAP_SIDECAR_NAME.to_owned(),
+        name: vyre_compiler::lower::TRAP_SIDECAR_NAME.to_owned(),
     }
 }
 

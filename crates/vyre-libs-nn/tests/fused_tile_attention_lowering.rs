@@ -19,7 +19,7 @@ use vyre_libs_nn::nn::attention::fused_tile_attention;
 #[test]
 fn fused_tile_attention_lowers_to_a_verified_descriptor() {
     let program = fused_tile_attention("q", "k", "v", "out", 2, 2);
-    let lowered = vyre_lower::lower_baseline(&program);
+    let lowered = vyre_compiler::lower::lower_baseline(&program);
     assert!(
         lowered.is_ok(),
         "fused_tile_attention must lower to a verified descriptor: {}",

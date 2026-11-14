@@ -18,7 +18,7 @@ use vyre_libs::graph::dispatch::toposort::{
 };
 use vyre_libs::graph::level_wave::level_wave_program;
 use vyre_libs::graph::reachable::reachable_program;
-use vyre_megakernel::SemanticExecutionError;
+use vyre_compiler::SemanticExecutionError;
 use vyre_reference::composition_witness::{
     level_wave_witness as level_wave_cpu, reachable_witness as reachable,
     toposort_witness as toposort,

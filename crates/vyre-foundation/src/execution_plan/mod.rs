@@ -386,7 +386,7 @@ fn accuracy_plan(caps: &RequiredCapabilities, _provenance: &ProvenancePlan) -> A
 ///
 /// The plan states a fact and never a shape. It used to publish a recommended
 /// workgroup, tile, vector width and unroll depth, ranked here against the
-/// adapter, which was a second answer to a question `vyre-megakernel` already
+/// adapter, which was a second answer to a question `vyre-compiler` already
 /// owns and which nothing on the compile path realized.
 fn autotune_plan(program: &Program, adapter_caps: &AdapterCaps) -> AutotunePlan {
     let profile_declares_shapes = adapter_caps.ideal_unroll_depth > 0
@@ -645,7 +645,7 @@ mod tests {
     /// a recommended workgroup and tile ranked against the adapter here, and
     /// flagged any program above a node-count threshold as worth measuring on a
     /// target that declares nothing. A shape ranked outside
-    /// `vyre-megakernel` is a second cost model, and a threshold nobody
+    /// `vyre-compiler` is a second cost model, and a threshold nobody
     /// measured is not a fact.
     #[test]
     fn the_plan_reports_the_measurement_fact_and_no_shape() {

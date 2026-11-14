@@ -38,9 +38,9 @@ const PRODUCTION_ROUTING_CRATES: &[&str] = &[
     "vyre-driver-wgpu",
     "vyre-driver-spirv",
     "vyre-driver-cuda",
-    "vyre-megakernel",
+    "vyre-compiler",
     "vyre-aot",
-    "vyre-lower",
+    "vyre-compiler",
     "vyre-emit",
     "vyre-registry-link",
 ];

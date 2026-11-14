@@ -1,11 +1,11 @@
 use std::{collections::BTreeMap, sync::Arc};
+use vyre_compiler::{
+    compile_selected_modules, ArtifactNodeId, ArtifactValueId, EmittedTargetModule,
+    TargetResourceAccess,
+};
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
     ValueLifetime,
-};
-use vyre_megakernel::{
-    compile_selected_modules, ArtifactNodeId, ArtifactValueId, EmittedTargetModule,
-    TargetResourceAccess,
 };
 
 use vyre_test_support::elementwise_programs::element_copy_program;

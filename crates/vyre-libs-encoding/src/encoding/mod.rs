@@ -18,9 +18,9 @@ pub(crate) fn decode_first_output(
     words: usize,
     context: &'static str,
     out: &mut Vec<u32>,
-) -> Result<(), vyre_megakernel::SemanticExecutionError> {
+) -> Result<(), vyre_compiler::SemanticExecutionError> {
     if outputs.is_empty() {
-        return Err(vyre_megakernel::SemanticExecutionError::Backend(format!(
+        return Err(vyre_compiler::SemanticExecutionError::Backend(format!(
             "Fix: {context} expected at least one output buffer, got 0."
         )));
     }

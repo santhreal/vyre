@@ -15,7 +15,7 @@ use std::collections::BTreeMap;
 
 use vyre_runtime::BoundResource;
 use vyre_driver_wgpu::{registered_backend_id, WGPU_BACKEND_ID};
-use vyre_megakernel::{
+use vyre_compiler::{
     attach_target, compile, CompileObjective, CompileRequest, Digest, ExternalFacts,
     ObjectiveMetric, SearchBudget,
 };

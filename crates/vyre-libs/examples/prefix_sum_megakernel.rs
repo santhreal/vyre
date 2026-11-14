@@ -1,7 +1,7 @@
 //! Compile the `scan_prefix_sum` libs composition into a megakernel artifact.
 //!
 //! The builder returns IR. The artifact is what a runtime loads. Nothing here
-//! executes the program: `vyre-megakernel` compiles a typed graph into a
+//! executes the program: `vyre-compiler` compiles a typed graph into a
 //! backend-neutral artifact, and the checks below are on that artifact.
 use std::collections::BTreeMap;
 
@@ -9,7 +9,7 @@ use vyre_foundation::ir::{
     BufferAccess, Program, ProgramGraph, ShapeDim, ValueContract, ValueLifetime,
 };
 use vyre_libs::math::scan::scan_prefix_sum;
-use vyre_megakernel::{
+use vyre_compiler::{
     compile, Artifact, CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts,
     ObjectiveMetric, SearchBudget,
 };

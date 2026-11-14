@@ -9,7 +9,7 @@ use vyre_foundation::transform::schedule_lowering::lower_logical_schedule_borrow
 
 use super::grid_sync_split::wrap_grid_sync_split;
 use crate::backend::{ArtifactMaterializer, BackendError, VyreBackend};
-use vyre_megakernel::TargetCompiler;
+use vyre_compiler::TargetCompiler;
 
 /// One backend constructor contributed by a linked backend crate.
 ///

@@ -3,7 +3,7 @@
 use std::collections::BTreeMap;
 
 use vyre_driver_wgpu::{WgpuBackend, WGPU_BACKEND_ID};
-use vyre_megakernel::{
+use vyre_compiler::{
     CompileObjective, Digest, ExternalFacts, ObjectiveMetric, SearchBudget, SemanticExecutionPolicy,
 };
 use vyre_runtime::RegisteredSemanticExecutor;

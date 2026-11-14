@@ -9,7 +9,7 @@
 //! wrong answer rather than a rejection, which is how the fused operations in
 //! `vyre-libs::security` read their stage-one bitset as zero on every case.
 //!
-//! `vyre_megakernel::staged_input_slots` states which bindings a launch fills
+//! `vyre_compiler::staged_input_slots` states which bindings a launch fills
 //! and in what order; `gather_artifact_inputs` resolves each one to the value
 //! bound to it, and `BindingPlan::validate_named_inputs` checks the bytes
 //! against the declaration each name resolves to. The rejection paths here are
@@ -26,7 +26,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use vyre_runtime::materialize::{gather_artifact_inputs, InstanceCore, NEUTRAL_MESSAGES};
 use vyre_runtime::{BindingPlan, DeviceIdentity};
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Program};
-use vyre_megakernel::{ArtifactInputSlot, ArtifactValueId, Digest};
+use vyre_compiler::{ArtifactInputSlot, ArtifactValueId, Digest};
 
 /// Canonical identity of the value the seed input binds.
 const SEED: ArtifactValueId = ArtifactValueId(7);

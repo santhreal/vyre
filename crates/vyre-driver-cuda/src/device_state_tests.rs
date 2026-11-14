@@ -8,7 +8,7 @@
 //! What this does not catch: whether the management interface itself reports the
 //! truth. That is the driver's contract.
 
-use vyre_megakernel::measure::ThrottleState;
+use vyre_compiler::measure::ThrottleState;
 
 use super::device_state::parse_device_state_row;
 

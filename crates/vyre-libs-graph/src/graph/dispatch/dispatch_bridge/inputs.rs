@@ -7,7 +7,7 @@
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     ensure_input_slots, write_u32_slice_le_bytes, write_zero_u32_words,
 };
-use vyre_megakernel::SemanticExecutionError;
+use vyre_compiler::SemanticExecutionError;
 
 /// Stable fingerprint for a u32 dispatch slice.
 ///

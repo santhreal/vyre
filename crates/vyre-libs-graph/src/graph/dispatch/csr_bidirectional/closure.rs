@@ -7,7 +7,7 @@ use crate::graph::csr_closure_inputs::CsrClosureInputs;
 use crate::graph::dispatch::csr_bidirectional::dispatch::{
     bidirectional_step_dispatch_prepared_inputs_into, refresh_bidirectional_step_inputs,
 };
-use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Bidirectional closure over the semantic execution seam.
 ///

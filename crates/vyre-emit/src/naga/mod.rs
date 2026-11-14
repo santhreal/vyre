@@ -1,13 +1,13 @@
 //! Naga IR emitter for vyre `KernelDescriptor`.
 //!
-//! Consumes a substrate-neutral `vyre_lower::KernelDescriptor` and
+//! Consumes a substrate-neutral `vyre_compiler::lower::KernelDescriptor` and
 //! produces a `naga::Module`. The emitter owns only Naga construction;
 //! descriptor shaping and substrate-neutral analyses stay in
-//! `vyre-lower`.
+//! `vyre-compiler`.
 
 use std::sync::mpsc;
 use vyre_foundation::fp_parity::FloatLoweringMode;
-use vyre_lower::KernelDescriptor;
+use vyre_compiler::lower::KernelDescriptor;
 
 mod emitter;
 mod error;
@@ -91,14 +91,14 @@ pub fn emit_with_float_mode(
 /// the descriptor exceeds the supplied subgroup or workgroup capabilities.
 pub fn emit_with_capabilities(
     desc: &KernelDescriptor,
-    target: &vyre_lower::EmissionTargetCapabilities,
+    target: &vyre_compiler::lower::EmissionTargetCapabilities,
 ) -> Result<naga::Module, EmitError> {
-    let required = vyre_lower::required_subgroup_capabilities(desc);
+    let required = vyre_compiler::lower::required_subgroup_capabilities(desc);
     if let Some(capability) = target.subgroup.first_missing(required) {
         return Err(EmitError::UnsupportedCapability(capability));
     }
     if let Some(violation) =
-        vyre_lower::validate_workgroup_size(desc.dispatch.workgroup_size, target.workgroup)
+        vyre_compiler::lower::validate_workgroup_size(desc.dispatch.workgroup_size, target.workgroup)
             .into_iter()
             .next()
     {

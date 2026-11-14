@@ -1,18 +1,18 @@
 //! Staging one module's target-binding inputs out of the execution state.
 //!
-//! `vyre_megakernel::staged_input_slots` states which bindings a launch fills
+//! `vyre_compiler::staged_input_slots` states which bindings a launch fills
 //! and in what order; this resolves each one to the artifact value bound to it,
 //! which is where a fused artifact's inter-module values live.
 
 use std::collections::BTreeMap;
 
-use vyre_megakernel::{ArtifactInputSlot, ArtifactValueId};
+use vyre_compiler::{ArtifactInputSlot, ArtifactValueId};
 
 use crate::materialize::InstanceCore;
 use crate::BackendError;
 
 /// Borrow one module's staged bytes in the order
-/// [`vyre_megakernel::staged_input_slots`] produced.
+/// [`vyre_compiler::staged_input_slots`] produced.
 ///
 /// A slot this module also writes may be unbound on entry; it launches over the
 /// zeros the slot reserved, which is what the allocation holds.

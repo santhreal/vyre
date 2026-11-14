@@ -31,9 +31,9 @@ fn ac_count_suffix3_prefilter_naga_validates() {
         .expect("suffix3 AC count must form a valid graph");
     let logical = LogicalProgramGraph::validate(&graph, &BTreeMap::new())
         .expect("suffix3 AC count must have a valid logical domain");
-    let schedule = vyre_megakernel::baseline_schedule(&logical);
+    let schedule = vyre_compiler::baseline_schedule(&logical);
     let phase = schedule.phases[0].id;
-    let lowered = vyre_lower::lower_scheduled(&program, &schedule, phase)
+    let lowered = vyre_compiler::lower::lower_scheduled(&program, &schedule, phase)
         .expect("suffix3 AC count must lower through a selected schedule");
     let module =
         vyre_emit::naga::emit(lowered.descriptor()).expect("suffix3 AC count must emit to Naga");

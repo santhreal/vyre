@@ -88,7 +88,7 @@ fn reference_qsvt_apply_into(
     )
     .unwrap_or_else(|error| panic!("QSVT witness failed: {error}"));
 }
-use vyre_megakernel::{
+use vyre_compiler::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
 /// Caller-owned dispatch scratch for fixed-point QSVT transport residuals.
@@ -306,8 +306,8 @@ mod tests {
     impl SemanticExecutor for QsvtDispatcher {
         fn execute(
             &self,
-            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            request: &vyre_compiler::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError> {
             let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 // chebyshev_filter: 3 RO (cost/weights/coeffs) + plain-RW output(3)+scratch(4) = 5.
@@ -461,8 +461,8 @@ mod tests {
     impl SemanticExecutor for SiblingScratchDispatcher {
         fn execute(
             &self,
-            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            request: &vyre_compiler::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError> {
             let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 let weights =
@@ -482,8 +482,8 @@ mod tests {
     impl SemanticExecutor for EmptyOutputDispatcher {
         fn execute(
             &self,
-            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            request: &vyre_compiler::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError> {
             vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let ordered: Vec<Vec<u8>> = Vec::new();
             vyre_test_support::test_parity_oracles::semantic_output(request, ordered)
@@ -495,8 +495,8 @@ mod tests {
     impl SemanticExecutor for MalformedOutputDispatcher {
         fn execute(
             &self,
-            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            request: &vyre_compiler::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError> {
             vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let mut ordered: Vec<Vec<u8>> = vec![vec![1, 2, 3]];
             let output_count = request.logical().graph().nodes()[0].outputs.len();

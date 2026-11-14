@@ -119,16 +119,6 @@ impl SpecMap {
             .map(|(key, value)| (key.as_str(), value))
     }
 
-    /// Convert to a deterministic numeric constant map.
-    #[must_use]
-    pub fn to_numeric_constants(&self) -> std::collections::HashMap<String, f64> {
-        let mut out = std::collections::HashMap::with_capacity(self.entries.len());
-        for (key, value) in &self.entries {
-            out.insert(key.clone(), value.as_pipeline_f64());
-        }
-        out
-    }
-
     /// Compute this map's 64-bit cache contribution.
     #[must_use]
     pub fn cache_hash(&self) -> u64 {

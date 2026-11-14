@@ -9,7 +9,7 @@ const TARGET: &str = "naga";
 pub enum EmitError {
     /// Descriptor operation is unsupported by the Naga emitter.
     #[error("unsupported KernelOp kind in naga emit: {0:?}")]
-    UnsupportedOp(vyre_lower::KernelOp),
+    UnsupportedOp(vyre_compiler::lower::KernelOp),
 
     /// The requested target lacks a subgroup feature required by the descriptor.
     #[error("unsupported emission capability `{0}`")]
@@ -17,7 +17,7 @@ pub enum EmitError {
 
     /// The descriptor's workgroup shape exceeds the requested target limits.
     #[error("unsupported emission capability `workgroup`: {0}")]
-    UnsupportedWorkgroup(vyre_lower::WorkgroupLimitViolation),
+    UnsupportedWorkgroup(vyre_compiler::lower::WorkgroupLimitViolation),
 
     /// Naga module assembly failed.
     #[error("naga module construction failed: {0}")]

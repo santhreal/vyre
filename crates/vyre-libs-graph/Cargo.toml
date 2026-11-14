@@ -30,7 +30,7 @@ interactive-graphics = ["graph", "dep:vyre-libs-visual", "vyre-libs-visual?/visu
 
 [dependencies]
 vyre-foundation = { workspace = true, features = ["serde"] }
-vyre-megakernel.workspace = true
+vyre-compiler.workspace = true
 vyre-primitives = { workspace = true, features = ["inventory-registry"] }
 inventory.workspace = true
 vyre-libs-builder = { workspace = true }

@@ -7,10 +7,10 @@ use program_fixtures::minimal_program;
 #[test]
 fn diff_descriptors_identical_returns_empty_diff() {
     let p = minimal_program();
-    let desc1 = vyre_lower::lower_physical(&p)
+    let desc1 = vyre_compiler::lower::lower_physical(&p)
         .map(|lowered| lowered.into_descriptor())
         .unwrap();
-    let desc2 = vyre_lower::lower_physical(&p)
+    let desc2 = vyre_compiler::lower::lower_physical(&p)
         .map(|lowered| lowered.into_descriptor())
         .unwrap();
     let diff = diff_descriptors(&desc1, &desc2);
@@ -23,13 +23,13 @@ fn diff_descriptors_identical_returns_empty_diff() {
 #[test]
 fn diff_descriptors_after_descriptor_dce_removes_ops() {
     let p = minimal_program();
-    let mut desc_before = vyre_lower::lower_physical(&p)
+    let mut desc_before = vyre_compiler::lower::lower_physical(&p)
         .map(|lowered| lowered.into_descriptor())
         .unwrap();
     // Add a dead op manually
-    desc_before.body.ops.push(vyre_lower::KernelOp {
+    desc_before.body.ops.push(vyre_compiler::lower::KernelOp {
         result: Some(999),
-        kind: vyre_lower::KernelOpKind::Literal,
+        kind: vyre_compiler::lower::KernelOpKind::Literal,
         operands: vec![0],
     });
     let mut desc_after = desc_before.clone();

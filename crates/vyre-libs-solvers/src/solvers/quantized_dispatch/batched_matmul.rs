@@ -1,7 +1,7 @@
 //! Device dispatch of packed INT4 batched matmul.
 
 use super::*;
-use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Compute packed signed INT4 batched matrix multiply through the backend.
 ///

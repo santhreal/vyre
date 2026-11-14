@@ -322,7 +322,7 @@ fn opens_module(line: &str) -> bool {
 /// The type name in an `impl <Seam> for T` line, if that is the line.
 ///
 /// A qualified seam path is accepted: an impl written against
-/// `vyre_megakernel::SemanticExecutor` is the same route as one written against
+/// `vyre_compiler::SemanticExecutor` is the same route as one written against
 /// the imported name.
 fn implemented_type(line: &str) -> Option<&str> {
     let rest = line.strip_prefix("impl ")?;

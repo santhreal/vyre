@@ -6,7 +6,7 @@
 //! result id now names. It emits no instruction other than the literal
 //! materialization it must allocate for.
 
-use vyre_lower::{KernelOp, LiteralValue};
+use vyre_compiler::lower::{KernelOp, LiteralValue};
 
 use super::BodyCtx;
 use crate::ptx::reg::{PtxType, Reg};

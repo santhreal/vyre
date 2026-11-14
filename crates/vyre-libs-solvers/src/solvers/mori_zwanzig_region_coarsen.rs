@@ -51,7 +51,7 @@ use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     write_zero_bytes,
 };
 use vyre_libs_math::math::mori_zwanzig::mz_project_step;
-use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 #[cfg(test)]
 use vyre_reference::composition_witness::{
     cluster_projection_matrix_witness_into, mori_zwanzig_coarsen_via_clustering_witness_into,
@@ -368,8 +368,8 @@ mod tests {
     impl SemanticExecutor for MoriDispatcher {
         fn execute(
             &self,
-            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            request: &vyre_compiler::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError> {
             let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 assert_eq!(inputs.len(), 3);

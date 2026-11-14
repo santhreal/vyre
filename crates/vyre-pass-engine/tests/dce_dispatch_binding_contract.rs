@@ -6,7 +6,7 @@ use std::sync::Mutex;
 use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, GraphValueId, Node, Program, ValueLifetime};
 use vyre_foundation::validate::BackendCapabilities;
-use vyre_megakernel::{
+use vyre_compiler::{
     CompileObjective, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric, SearchBudget,
     SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionPolicy,
     SemanticExecutionRequest, SemanticExecutor,

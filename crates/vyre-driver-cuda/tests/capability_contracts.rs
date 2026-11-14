@@ -115,7 +115,7 @@ fn cuda_backend_caps_match_driver_attributes() {
     );
     assert!(
         backend.lowers_tensor_core_ops(),
-        "Fix: CUDA must advertise tensor-core lowering now that vyre-lower promotes MMA descriptors and vyre_emit::ptx emits mma.sync."
+        "Fix: CUDA must advertise tensor-core lowering now that vyre-compiler promotes MMA descriptors and vyre_emit::ptx emits mma.sync."
     );
     let flags = backend.pipeline_feature_flags();
     assert!(

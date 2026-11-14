@@ -1,14 +1,14 @@
 //! Naga emission target-capability admission contracts.
 //!
-//! Descriptors and target profiles come from `vyre_lower::descriptor_builder`,
+//! Descriptors and target profiles come from `vyre_compiler::lower::descriptor_builder`,
 //! the one owner of that scaffolding. What stays here is the part only this
 //! crate can assert: which admission errors it produces, spelled exactly.
 
-use vyre_lower::descriptor_builder::{
+use vyre_compiler::lower::descriptor_builder::{
     all_subgroup_capabilities, descriptor, emission_target, op, permissive_workgroup_limits,
     target_without_subgroups, workgroup_limits,
 };
-use vyre_lower::{KernelOpKind, SubgroupCapabilities};
+use vyre_compiler::lower::{KernelOpKind, SubgroupCapabilities};
 
 const FIXTURE_ID: &str = "capability-fixture";
 

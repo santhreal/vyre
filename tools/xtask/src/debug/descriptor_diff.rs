@@ -1,5 +1,5 @@
 use std::collections::{BTreeMap, HashSet};
-use vyre_lower::KernelDescriptor;
+use vyre_compiler::lower::KernelDescriptor;
 
 /// Structural differences between two lowered kernel descriptors.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -38,7 +38,7 @@ pub fn diff_descriptors(before: &KernelDescriptor, after: &KernelDescriptor) -> 
     let mut after_counts = BTreeMap::new();
 
     fn walk_counts(
-        body: &vyre_lower::KernelBody,
+        body: &vyre_compiler::lower::KernelBody,
         path: Vec<usize>,
         map: &mut BTreeMap<Vec<usize>, usize>,
     ) {

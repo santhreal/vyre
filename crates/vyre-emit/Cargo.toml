@@ -33,7 +33,7 @@ metal = ["naga", "dep:blake3", "dep:bincode"]
 
 [dependencies]
 vyre-foundation = { workspace = true }
-vyre-lower = { workspace = true }
+vyre-compiler = { workspace = true }
 serde = { workspace = true }
 thiserror = { workspace = true }
 rustc-hash = { workspace = true }
@@ -51,7 +51,7 @@ blake3 = { workspace = true }
 thiserror = { workspace = true }
 
 [dev-dependencies]
-vyre-lower = { workspace = true, features = ["test-fixtures"] }
+vyre-compiler = { workspace = true, features = ["test-fixtures"] }
 vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"] }
 vyre-spec = { workspace = true }
 # carrier_scope_regression lowers the real python312 lexer megakernel.

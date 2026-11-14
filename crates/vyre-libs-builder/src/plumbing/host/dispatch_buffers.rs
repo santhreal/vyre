@@ -8,7 +8,7 @@
 //! here rather than beside the seam in `vyre-foundation`: foundation is below
 //! `vyre-primitives` and cannot reach the packing it would have to duplicate.
 
-use vyre_megakernel::SemanticExecutionError;
+use vyre_compiler::SemanticExecutionError;
 
 /// Graph node identity for a single-program wrapper dispatch.
 ///
@@ -185,12 +185,12 @@ pub fn write_f32_slice_le_bytes(out: &mut Vec<u8>, values: &[f32]) {
 /// Twenty-five of them stated that call by hand, so the node identity and the
 /// projection were free to drift apart per module.
 pub fn execute_program(
-    dispatcher: &dyn vyre_megakernel::SemanticExecutor,
+    dispatcher: &dyn vyre_compiler::SemanticExecutor,
     program: vyre_foundation::ir::Program,
     inputs: &[Vec<u8>],
-    policy: &vyre_megakernel::SemanticExecutionPolicy,
+    policy: &vyre_compiler::SemanticExecutionPolicy,
 ) -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
-    vyre_megakernel::execute_single_program(dispatcher, HOST_WRAPPER_NODE, program, inputs, policy)
+    vyre_compiler::execute_single_program(dispatcher, HOST_WRAPPER_NODE, program, inputs, policy)
         .map(|output| output.outputs)
 }
 
@@ -199,10 +199,10 @@ pub fn execute_program(
 /// A wrapper that decodes one result rejects an empty output set with the same
 /// refusal, named for the caller.
 pub fn execute_program_first_output(
-    dispatcher: &dyn vyre_megakernel::SemanticExecutor,
+    dispatcher: &dyn vyre_compiler::SemanticExecutor,
     program: vyre_foundation::ir::Program,
     inputs: &[Vec<u8>],
-    policy: &vyre_megakernel::SemanticExecutionPolicy,
+    policy: &vyre_compiler::SemanticExecutionPolicy,
     context: &str,
 ) -> Result<Vec<u8>, SemanticExecutionError> {
     execute_program(dispatcher, program, inputs, policy)?

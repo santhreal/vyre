@@ -26,7 +26,7 @@ use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
     ValueContract, ValueLifetime,
 };
-use vyre_megakernel::{
+use vyre_compiler::{
     attach_target, compile, ArtifactValueId, CompileObjective, CompileRequest, Digest,
     ExternalFacts, ObjectiveMetric, SearchBudget,
 };

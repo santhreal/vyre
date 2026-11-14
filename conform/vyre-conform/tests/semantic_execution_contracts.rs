@@ -8,7 +8,7 @@ use vyre_conform::{
     check_family_outputs, check_schedule_agreement, submit_under_every_schedule, ProductionSession,
     ScheduleAgreement, ScheduleDisagreement, ScheduleOutcome, CONFORMANCE_SCHEDULES,
 };
-use vyre_megakernel::{
+use vyre_compiler::{
     writable_graph_values, CompileObjective, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
     RequiredSchedule, ScheduleProduction, SearchBudget, SemanticExecutionError,
     SemanticExecutionOutput, SemanticExecutionPolicy, SemanticExecutionRequest, SemanticExecutor,
@@ -527,9 +527,9 @@ fn every_registered_operation_reconciles_outputs_under_grid_sync_cuts() {
             Ok(graph) => graph,
             Err(_) => continue,
         };
-        let expected = vyre_megakernel::returned_graph_values(&graph);
+        let expected = vyre_compiler::returned_graph_values(&graph);
         let target_facts = DeviceFacts::unknown();
-        let request = vyre_megakernel::CompileRequest::new(
+        let request = vyre_compiler::CompileRequest::new(
             graph.clone(),
             ExternalFacts::new(Digest([0xAA; 32]), BTreeMap::new()),
             target_facts,
@@ -541,7 +541,7 @@ fn every_registered_operation_reconciles_outputs_under_grid_sync_cuts() {
             continue;
         };
 
-        let artifact = match vyre_megakernel::compile(&validated) {
+        let artifact = match vyre_compiler::compile(&validated) {
             Ok(artifact) => artifact,
             Err(_) => continue,
         };

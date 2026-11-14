@@ -185,7 +185,7 @@ pub(crate) fn plan_buffers(
         {
             continue;
         }
-        if binding.name == vyre_lower::TRAP_SIDECAR_NAME {
+        if binding.name == vyre_compiler::lower::TRAP_SIDECAR_NAME {
             buffers.push(PlannedBuffer {
                 binding: binding.slot,
                 metal_slot: binding.metal_buffer_index,
@@ -309,7 +309,7 @@ pub(crate) fn plan_resident_buffers(
         {
             continue;
         }
-        if binding.name == vyre_lower::TRAP_SIDECAR_NAME {
+        if binding.name == vyre_compiler::lower::TRAP_SIDECAR_NAME {
             let byte_len = trap_sidecar_byte_len()?;
             buffers.push(PlannedBuffer {
                 binding: binding.slot,
@@ -481,7 +481,7 @@ pub(crate) fn allocation_len_for_output(
 }
 
 fn trap_sidecar_byte_len() -> Result<usize, BackendError> {
-    usize::try_from(vyre_lower::TRAP_SIDECAR_WORDS)
+    usize::try_from(vyre_compiler::lower::TRAP_SIDECAR_WORDS)
         .map_err(|error| BackendError::InvalidProgram {
             fix: format!(
                 "Fix: trap sidecar word count cannot fit usize: {error}. Keep TRAP_SIDECAR_WORDS within the host index ABI."

@@ -20,7 +20,7 @@ use crate::BackendError;
 /// exactly one trapping lane writes the remaining words. Word 1 is the address
 /// operand the trapping op carried (an element index or byte offset, not a device
 /// pointer). Word 2 is the trap tag code from
-/// `vyre_lower::descriptor_trap_tags`, 1-based so 0 stays available for "no
+/// `vyre_compiler::lower::descriptor_trap_tags`, 1-based so 0 stays available for "no
 /// trap". Word 3 is the axis-0 global invocation id of the lane that claimed the
 /// record.
 pub const TRAP_RECORD_BYTES: usize = 16;
@@ -58,7 +58,7 @@ pub const UNKNOWN_TRAP_TAG: &str = "unknown trap tag code";
 pub fn decode_trap_record(bytes: &[u8]) -> Result<Option<TrapRecord>, BackendError> {
     let Some(record) = bytes.get(..TRAP_RECORD_BYTES) else {
         return Err(BackendError::new(format!(
-            "trap sidecar readback returned {} bytes but a trap record is {TRAP_RECORD_BYTES} bytes. Fix: allocate and read back the sidecar as vyre_lower::TRAP_SIDECAR_WORDS u32 words.",
+            "trap sidecar readback returned {} bytes but a trap record is {TRAP_RECORD_BYTES} bytes. Fix: allocate and read back the sidecar as vyre_compiler::lower::TRAP_SIDECAR_WORDS u32 words.",
             bytes.len()
         )));
     };

@@ -4,7 +4,7 @@
 use std::fmt::Write as _;
 
 use vyre_foundation::ir::DataType;
-use vyre_lower::KernelOpKind;
+use vyre_compiler::lower::KernelOpKind;
 
 pub(super) fn missing_literal_pool_index_message(literal_index: u32) -> String {
     let mut message: String = Default::default();

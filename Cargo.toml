@@ -6,7 +6,7 @@ resolver = "2"
 members = [
     "crates/vyre",
     "crates/vyre-foundation",
-    "crates/vyre-megakernel",
+    "crates/vyre-compiler",
     "crates/vyre-driver-metal",
     "crates/vyre-driver-wgpu",
     "crates/vyre-driver-spirv",
@@ -64,7 +64,6 @@ members = [
     # as a dev-dependency, without either reaching test-only crates.
     "crates/vyre-alloc-probe",
     "crates/vyre-bench",
-    "crates/vyre-lower",
     "crates/vyre-emit",
 ]
 
@@ -254,7 +253,7 @@ private_intra_doc_links = "warn"
 [workspace.dependencies]
 vyre = { version = "0.8.0", path = "crates/vyre", default-features = false }
 vyre-foundation = { version = "0.8.0", path = "crates/vyre-foundation" }
-vyre-megakernel = { version = "0.8.0", path = "crates/vyre-megakernel" }
+vyre-compiler = { version = "0.8.0", path = "crates/vyre-compiler" }
 vyre-driver-metal = { version = "0.8.0", path = "crates/vyre-driver-metal" }
 vyre-driver-wgpu = { version = "0.8.0", path = "crates/vyre-driver-wgpu" }
 vyre-driver-cuda = { version = "0.8.0", path = "crates/vyre-driver-cuda" }
@@ -300,7 +299,6 @@ vyre-pass-engine = { path = "crates/vyre-pass-engine" }
 vyre-aot = { path = "crates/vyre-aot" }
 vyre-bench = { path = "crates/vyre-bench" }
 vyre-conform = { path = "conform/vyre-conform", default-features = false }
-vyre-lower = { version = "0.8.0", path = "crates/vyre-lower" }
 vyre-emit = { version = "0.8.0", path = "crates/vyre-emit", default-features = false }
 vyre-conform-spec = { path = "conform/vyre-conform-spec" }
 

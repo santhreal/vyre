@@ -1,6 +1,6 @@
 //! Test: memory vector.
 use super::*;
-use vyre_lower::descriptor_builder::{effect, lit, op};
+use vyre_compiler::lower::descriptor_builder::{effect, lit, op};
 
 fn dynamic_reassociated_vector_load_kernel(seed: u32) -> KernelDescriptor {
     let stride = seed.wrapping_mul(13).wrapping_add(1) << 2;

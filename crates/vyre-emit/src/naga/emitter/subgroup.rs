@@ -2,7 +2,7 @@
 
 use naga::{Expression, Span, Statement};
 use vyre_foundation::ir::SubgroupReduceOp;
-use vyre_lower::{KernelOp, KernelOpKind};
+use vyre_compiler::lower::{KernelOp, KernelOpKind};
 
 use super::BodyBuilder;
 use crate::naga::EmitError;

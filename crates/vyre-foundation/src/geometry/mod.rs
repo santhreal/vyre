@@ -2,7 +2,7 @@
 //!
 //! Substrate-neutral operations declare the execution constraints their
 //! algorithm requires through [`GeometryRequirements`]. A backend reports which
-//! widths its authenticated profile admits, and `vyre-megakernel` builds and
+//! widths its authenticated profile admits, and `vyre-compiler` builds and
 //! orders the concrete [`LaunchGeometry`] candidates under the compile
 //! objective.
 //!

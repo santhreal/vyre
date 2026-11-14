@@ -1006,8 +1006,8 @@ fn compiler_source_crates_name_zero_workload_or_expert_baselines() {
     // 2. Compiler crates that must never name a workload or expert baseline
     let compiler_crate_dirs = [
         "crates/vyre-foundation/src",
-        "crates/vyre-megakernel/src",
-        "crates/vyre-lower/src",
+        "crates/vyre-compiler/src",
+        "crates/vyre-compiler/src",
         "crates/vyre-runtime/src",
         "crates/vyre-runtime/src",
         "crates/vyre-primitives/src",

@@ -1,6 +1,6 @@
 //! Ahead-of-time packaging for canonical Vyre compiler artifacts.
 //!
-//! The crate compiles frontend `Program` adapters through `vyre-megakernel`,
+//! The crate compiles frontend `Program` adapters through `vyre-compiler`,
 //! attaches bytes from a registered pure target compiler facet, and packages
 //! the authenticated [`ArtifactEnvelope`] with deployment metadata.
 
@@ -21,7 +21,7 @@ pub use bundle::{
 pub use compile::{compile, CompileError};
 pub use launcher::{emit_launcher_rust, LauncherError, LauncherOpts};
 pub use manifest::Manifest;
-pub use vyre_megakernel::{
+pub use vyre_compiler::{
     Artifact, ArtifactEnvelope, TargetEntryPoint, TargetPayload, TargetPayloadFormat,
     TargetProfile, TargetResourceAccess, TargetResourceBinding, TargetResourceMemory,
     ValidatedCompileRequest,

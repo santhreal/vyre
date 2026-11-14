@@ -189,15 +189,6 @@ impl DispatchConfig {
         }
     }
 
-    /// Grid a backend that infers coverage from buffer shapes must cover.
-    #[must_use]
-    pub fn coverage_grid(&self) -> Option<[u32; 3]> {
-        match &self.launch {
-            Some(launch) => Some(launch.grid()),
-            None => self.dispatch_grid,
-        }
-    }
-
     /// Workgroup-shared bytes the launch reserves, zero when none is stated.
     #[must_use]
     pub fn launch_dynamic_shared_bytes(&self) -> u32 {

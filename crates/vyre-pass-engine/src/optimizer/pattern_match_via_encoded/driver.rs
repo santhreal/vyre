@@ -4,7 +4,7 @@ use vyre_foundation::ir::Program;
 use vyre_libs::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
 };
-use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 use super::decode::rewrite_program_with_actions;
 use super::program::{build_pattern_match_program, build_pattern_match_program_with_cse};
@@ -130,7 +130,7 @@ fn run_cse_pattern_kernel_with_scratch_into(
     write_u32_slice_le_bytes(&mut scratch.inputs[4], &seed);
     write_u32_slice_le_bytes(&mut scratch.inputs[5], canonical);
 
-    let mut execution = vyre_megakernel::execute_single_program(
+    let mut execution = vyre_compiler::execute_single_program(
         executor,
         "pattern-match-cse",
         build_pattern_match_program_with_cse(n),

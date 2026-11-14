@@ -5,7 +5,7 @@
 
 use vyre_runtime::cache_invalidation::{impacted_entries_into, CacheInvalidationScratch};
 use vyre_driver_reference::ReferenceSemanticExecutor;
-use vyre_megakernel::{
+use vyre_compiler::{
     Digest, SearchBudget, SemanticExecutionError, SemanticExecutionOutput, SemanticExecutionPolicy,
     SemanticExecutionRequest, SemanticExecutor,
 };

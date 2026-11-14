@@ -12,7 +12,7 @@ use vyre_foundation::ir::Program;
 use crate::graph::dispatch::dispatch_bridge::{
     dispatch_single_u32_output_from_prepared_into, refresh_keyed_dispatch_inputs, DispatchInput,
 };
-use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Dispatcher-backed bidirectional CSR step.
 ///

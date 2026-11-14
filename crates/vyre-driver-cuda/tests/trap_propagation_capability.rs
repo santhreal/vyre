@@ -31,7 +31,7 @@ use vyre_runtime::VyreBackend;
 use vyre_driver_cuda::{CudaBackend, CudaBackendRegistration};
 use vyre_foundation::composition::wrap_anonymous_region;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_lower::TRAP_SIDECAR_NAME;
+use vyre_compiler::lower::TRAP_SIDECAR_NAME;
 
 const OP_ID: &str = "test::trap_propagation_capability";
 
@@ -63,7 +63,7 @@ fn trap_declaring_program() -> Program {
 #[test]
 fn cuda_advertises_trap_propagation_only_when_its_ptx_records_a_trap() {
     let program = trap_declaring_program();
-    let lowered = vyre_lower::lower_physical(&program)
+    let lowered = vyre_compiler::lower::lower_physical(&program)
         .expect("Fix: a trap-declaring program must lower before its emission can be judged.");
     assert!(
         lowered

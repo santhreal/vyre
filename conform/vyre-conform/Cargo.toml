@@ -75,7 +75,7 @@ vyre-driver-wgpu = { workspace = true, optional = true }
 vyre-driver-reference = { workspace = true }
 vyre-foundation = { workspace = true }
 vyre-libs = { workspace = true, features = ["full"] }
-vyre-megakernel = { workspace = true }
+vyre-compiler = { workspace = true }
 vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-reference = { workspace = true }
 # The registries this harness judges are read through their owner, which links
@@ -95,7 +95,7 @@ vyre-test-support = { workspace = true, features = [
 ] }
 # The bundle round-trip contract judges the descriptor a lowering produced, so it
 # needs the lowering that owns `LiteralValue` and its encoding.
-vyre-lower.workspace = true
+vyre-compiler.workspace = true
 # Run-time checkout root, so a contract binary reused across checkouts still
 # reports on the tree cargo was invoked in. publish = false on both sides.
 toml = { workspace = true }

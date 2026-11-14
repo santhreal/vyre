@@ -5,10 +5,10 @@
 //! pins the shared neutral program corpus run through
 //! [`vyre_reference::reference_eval`].
 //!
-//! The program corpus is `vyre_lower::program_stability_corpus`, shared with the
+//! The program corpus is `vyre_compiler::lower::program_stability_corpus`, shared with the
 //! emitted-artifact goldens: one `Program` pins both what a backend emits for it
 //! and what the oracle computes for it. The section format, the comparison, and
-//! the hex rendering live in `vyre_lower::artifact_golden`.
+//! the hex rendering live in `vyre_compiler::lower::artifact_golden`.
 
 #![forbid(unsafe_code)]
 
@@ -16,10 +16,10 @@ use std::fmt::Write as _;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-use vyre_lower::artifact_golden::{
+use vyre_compiler::lower::artifact_golden::{
     assert_matches_golden, contains_case, hex_words, render_sections, write_golden,
 };
-use vyre_lower::program_stability_corpus;
+use vyre_compiler::lower::program_stability_corpus;
 use vyre_reference::value::Value;
 
 fn golden_path() -> PathBuf {

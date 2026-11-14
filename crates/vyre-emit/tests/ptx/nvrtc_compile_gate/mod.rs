@@ -7,7 +7,7 @@
 //! structure and instruction presence.
 
 use vyre_foundation::ir::BinOp;
-use vyre_lower::KernelOpKind;
+use vyre_compiler::lower::KernelOpKind;
 
 mod fixtures;
 use fixtures::{

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
-use vyre_lower::operand_class::{classify_operand, OperandClass};
-use vyre_lower::{KernelBody, KernelDescriptor};
+use vyre_compiler::lower::operand_class::{classify_operand, OperandClass};
+use vyre_compiler::lower::{KernelBody, KernelDescriptor};
 
 /// A descriptor operand that references a result outside its valid body scope.
 #[derive(Debug, Clone, Serialize, Deserialize)]

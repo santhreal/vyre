@@ -1,7 +1,7 @@
 //! Body and structured-block emission: the op loop, blocks, and if/else.
 
 use naga::{Span, Statement};
-use vyre_lower::{KernelBody, KernelOp, KernelOpKind};
+use vyre_compiler::lower::{KernelBody, KernelOp, KernelOpKind};
 
 use super::super::BodyBuilder;
 use crate::naga::EmitError;

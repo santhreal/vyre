@@ -3,7 +3,7 @@
 
 use naga::{BinaryOperator, Expression, Literal};
 use vyre_foundation::ir::BinOp;
-use vyre_lower::KernelOp;
+use vyre_compiler::lower::KernelOp;
 
 use super::super::op_lookup::{binary_math_function, binary_operator};
 use super::super::BodyBuilder;

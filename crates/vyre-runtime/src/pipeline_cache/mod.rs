@@ -1,7 +1,7 @@
 //! Content-addressed neutral-artifact cache.
 //!
 //! [`crate::pipeline_cache::PipelineFingerprint`] derives directly from the authenticated neutral
-//! [`vyre_megakernel::Artifact`] identity. Dispatch inputs, target payloads,
+//! [`vyre_compiler::Artifact`] identity. Dispatch inputs, target payloads,
 //! device generations, and runtime policy do not enter this layer's key.
 //! Persisted blobs use a versioned, digest-bound frame and stale versions miss
 //! rather than being served.

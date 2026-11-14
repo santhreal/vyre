@@ -1,10 +1,10 @@
 //! Adversarial emit program matrix for `vyre_emit::spirv`.
 //!
-//! Hostile `KernelDescriptor` programs from `vyre_lower::emit_adversarial_corpus`
+//! Hostile `KernelDescriptor` programs from `vyre_compiler::lower::emit_adversarial_corpus`
 //! with structural assertions on lowered SPIR-V words.
 
 use vyre_emit::spirv::{EmitError, SPIRV_MAGIC};
-use vyre_lower::emit_adversarial_corpus::{self, EmitAdversarialCase, EmitAdversarialFamily};
+use vyre_compiler::lower::emit_adversarial_corpus::{self, EmitAdversarialCase, EmitAdversarialFamily};
 
 /// SPIR-V OpEntryPoint = 15, OpMemoryBarrier = 39, OpLoopMerge = 246.
 const OP_ENTRY_POINT: u32 = 15;
@@ -88,7 +88,7 @@ fn assert_spirv_structure(case: &EmitAdversarialCase, words: &[u32]) {
 fn hostile_success_corpus_emits_structured_spirv() {
     for case in &emit_adversarial_corpus::success_cases() {
         let words = vyre_emit::spirv::emit(
-            &vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
+            &vyre_compiler::lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
         )
         .unwrap_or_else(|err| {
             panic!(
@@ -104,7 +104,7 @@ fn hostile_success_corpus_emits_structured_spirv() {
 fn rejection_corpus_fails_without_panic() {
     for case in emit_adversarial_corpus::rejection_cases() {
         let result = vyre_emit::spirv::emit(
-            &vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
+            &vyre_compiler::lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
         );
         assert!(
             result.is_err(),
@@ -127,7 +127,7 @@ fn rejection_corpus_fails_without_panic() {
 fn dead_identity_chain_verifies_before_spirv_emit() {
     let case = emit_adversarial_corpus::case_by_id("adv_dead_identity").unwrap();
     let descriptor =
-        vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor must pass verification");
+        vyre_compiler::lower::verify_descriptor(&case.descriptor).expect("descriptor must pass verification");
     let words = vyre_emit::spirv::emit(&descriptor).expect("verified emit");
     assert_eq!(words[0], vyre_emit::spirv::SPIRV_MAGIC);
 }
@@ -135,7 +135,7 @@ fn dead_identity_chain_verifies_before_spirv_emit() {
 #[test]
 fn spirv_bytes_match_words_endianness_on_corpus() {
     for case in &emit_adversarial_corpus::success_cases() {
-        let descriptor = vyre_lower::verify_descriptor(&case.descriptor)
+        let descriptor = vyre_compiler::lower::verify_descriptor(&case.descriptor)
             .expect("corpus success case must pass descriptor verification");
         let words = vyre_emit::spirv::emit(&descriptor).unwrap();
         let bytes = vyre_emit::spirv::emit_bytes(&descriptor).unwrap();
@@ -149,12 +149,12 @@ fn spirv_bytes_match_words_endianness_on_corpus() {
 fn naga_module_path_matches_direct_emit_on_corpus() {
     for case in &emit_adversarial_corpus::success_cases() {
         let via_naga = vyre_emit::naga::emit(
-            &vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
+            &vyre_compiler::lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
         )
         .unwrap();
         let direct = vyre_emit::spirv::emit_from_naga_module(&via_naga).unwrap();
         let pipeline = vyre_emit::spirv::emit(
-            &vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
+            &vyre_compiler::lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
         )
         .unwrap();
         assert_eq!(
@@ -171,7 +171,7 @@ fn naga_module_path_matches_direct_emit_on_corpus() {
 #[test]
 fn success_corpus_spirv_magic_and_size_invariant() {
     for case in &emit_adversarial_corpus::success_cases() {
-        let descriptor = vyre_lower::verify_descriptor(&case.descriptor)
+        let descriptor = vyre_compiler::lower::verify_descriptor(&case.descriptor)
             .expect("corpus success case must pass descriptor verification");
         let words =
             vyre_emit::spirv::emit(&descriptor).expect("corpus success case must emit SPIR-V");

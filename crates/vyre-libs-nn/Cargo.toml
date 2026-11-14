@@ -34,7 +34,7 @@ llm = ["nn-moe"]
 
 [dependencies]
 vyre-foundation = { workspace = true, features = ["serde"] }
-vyre-megakernel.workspace = true
+vyre-compiler.workspace = true
 vyre-spec.workspace = true
 vyre-primitives = { workspace = true, features = ["inventory-registry"] }
 inventory.workspace = true
@@ -46,7 +46,7 @@ vyre-libs-math = { workspace = true }
 
 [dev-dependencies]
 proptest.workspace = true
-vyre-lower = { workspace = true }
+vyre-compiler = { workspace = true }
 vyre-test-support = { workspace = true, features = ["semantic-parity", "golden-corpus"] }
 vyre-primitives = { workspace = true, features = ["hardware"] }
 vyre-reference = { workspace = true }

@@ -17,13 +17,13 @@
 //! the three body shapes below, and by the golden corpora in each emitter.
 
 use vyre_foundation::ir::{DataType, MemoryOrdering};
-use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op, shared_rw};
-use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue};
+use vyre_compiler::lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op, shared_rw};
+use vyre_compiler::lower::{KernelDescriptor, KernelOpKind, LiteralValue};
 
 /// Workgroup scratch bindings live above the host-visible slot range, which
-/// `vyre_lower::verify` enforces. Read from the lowering constant rather than
+/// `vyre_compiler::lower::verify` enforces. Read from the lowering constant rather than
 /// written out, so a change to the range moves this fixture with it.
-const SCRATCH_SLOT: u32 = vyre_lower::WORKGROUP_SLOT_BASE;
+const SCRATCH_SLOT: u32 = vyre_compiler::lower::WORKGROUP_SLOT_BASE;
 
 /// Every ordering the memory model assigns a wire tag to. Read from the decoder
 /// rather than written out, so a new variant appears here without an edit.
@@ -122,14 +122,14 @@ fn both_spaces(ordering: MemoryOrdering) -> KernelDescriptor {
 }
 
 fn emit_ptx(desc: &KernelDescriptor) -> Result<String, String> {
-    let verified = vyre_lower::verify_descriptor(desc)
+    let verified = vyre_compiler::lower::verify_descriptor(desc)
         .unwrap_or_else(|error| panic!("descriptor `{}` must verify: {error:?}", desc.id));
     vyre_emit::ptx::emit(&verified).map_err(|error| format!("{error}"))
 }
 
 /// Flags of every barrier in the emitted module, in emission order.
 fn naga_barriers(desc: &KernelDescriptor) -> Result<Vec<naga::Barrier>, String> {
-    let verified = vyre_lower::verify_descriptor(desc)
+    let verified = vyre_compiler::lower::verify_descriptor(desc)
         .unwrap_or_else(|error| panic!("descriptor `{}` must verify: {error:?}", desc.id));
     let module = vyre_emit::naga::emit(&verified).map_err(|error| format!("{error}"))?;
     let mut flags = Vec::new();
@@ -295,7 +295,7 @@ fn wgsl_lowers_grid_sync_to_a_launch_boundary_and_never_a_barrier() {
         Vec::<naga::Barrier>::new(),
         "Fix: GridSync must never lower to a workgroup-scope WGSL barrier."
     );
-    let verified = vyre_lower::verify_descriptor(&desc)
+    let verified = vyre_compiler::lower::verify_descriptor(&desc)
         .unwrap_or_else(|error| panic!("descriptor `{}` must verify: {error:?}", desc.id));
     let names: Vec<String> = vyre_emit::naga::emit(&verified)
         .expect("Fix: a dispatch-level GridSync must emit on the Naga route")

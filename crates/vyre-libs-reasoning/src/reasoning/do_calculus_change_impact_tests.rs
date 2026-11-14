@@ -79,8 +79,8 @@ fn zero_node_validation_precedes_scratch_mutation() {
     impl SemanticExecutor for NoDispatch {
         fn execute(
             &self,
-            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            request: &vyre_compiler::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError> {
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 panic!("invalid zero-node inputs must fail before dispatch");
             };
@@ -463,8 +463,8 @@ struct InterventionDispatcher;
 impl SemanticExecutor for InterventionDispatcher {
     fn execute(
         &self,
-        request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-    ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+        request: &vyre_compiler::SemanticExecutionRequest<'_>,
+    ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError> {
         let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
         let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
             assert_mock_dispatch_contract(&inputs, 3);
@@ -518,8 +518,8 @@ struct Rule2Dispatcher;
 impl SemanticExecutor for Rule2Dispatcher {
     fn execute(
         &self,
-        request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-    ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+        request: &vyre_compiler::SemanticExecutionRequest<'_>,
+    ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError> {
         let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
         let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
             assert_mock_dispatch_contract(&inputs, 3);
@@ -633,8 +633,8 @@ fn intervention_delete_incoming_via_rejects_extra_outputs() {
     impl SemanticExecutor for ExtraOutDispatcher {
         fn execute(
             &self,
-            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            request: &vyre_compiler::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError> {
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 Ok(vec![
                     u32_slice_to_le_bytes(&[0, 2, 0, 4]),
@@ -675,8 +675,8 @@ fn rule2_reverse_incoming_via_rejects_extra_outputs() {
     impl SemanticExecutor for ExtraOutDispatcher {
         fn execute(
             &self,
-            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            request: &vyre_compiler::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError> {
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 Ok(vec![
                     u32_slice_to_le_bytes(&[0, 1, 1, 0]),
@@ -704,8 +704,8 @@ fn rule3_subgraph_via_handles_zero_nodes() {
     impl SemanticExecutor for DummyDispatcher {
         fn execute(
             &self,
-            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            request: &vyre_compiler::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError> {
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 panic!("dispatch should not be invoked for n=0");
             };
@@ -731,8 +731,8 @@ fn rule3_subgraph_via_derives_shape_from_inputs_not_gpu_scalar() {
     impl SemanticExecutor for CorruptedRedundantScalarDispatcher {
         fn execute(
             &self,
-            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            request: &vyre_compiler::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError> {
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 Ok(vec![
                     u32_slice_to_le_bytes(&[0, 1, 0, 0]),
@@ -764,8 +764,8 @@ fn rule3_subgraph_via_rejects_missing_outputs() {
     impl SemanticExecutor for MissingOutDispatcher {
         fn execute(
             &self,
-            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            request: &vyre_compiler::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError> {
             let mut output = vyre_test_support::test_parity_oracles::semantic_output(
                 request,
                 vec![
@@ -799,8 +799,8 @@ fn rule3_subgraph_via_rejects_extra_outputs() {
     impl SemanticExecutor for ExtraOutDispatcher {
         fn execute(
             &self,
-            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            request: &vyre_compiler::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError> {
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 Ok(vec![
                     u32_slice_to_le_bytes(&[0, 1, 0, 0]),
@@ -830,8 +830,8 @@ fn project_impacted_lineage_entries_handles_empty_lineage() {
     impl SemanticExecutor for PanicDispatcher {
         fn execute(
             &self,
-            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            request: &vyre_compiler::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError> {
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 panic!("empty lineage cells must not dispatch");
             };

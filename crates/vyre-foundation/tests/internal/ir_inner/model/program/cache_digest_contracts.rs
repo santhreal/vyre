@@ -455,7 +455,7 @@ fn normalized_cache_digest_erases_runtime_storage_lengths() {
 /// `has_static_element_count` must agree with descriptor lowering's memory
 /// classification across the entire `MemoryKind` x `BufferAccess` product.
 ///
-/// The predicate is a hand-mirror of `vyre-lower`'s `memory_class` arms, and a
+/// The predicate is a hand-mirror of `vyre-compiler`'s `memory_class` arms, and a
 /// hand-mirror drifts. Enumerating the full product means adding a
 /// `MemoryKind` variant fails this test instead of silently defaulting the new
 /// variant to erased, which would be a cache collision, or to keyed, which

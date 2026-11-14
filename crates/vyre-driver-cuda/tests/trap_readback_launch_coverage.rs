@@ -78,7 +78,6 @@ const RECORDED_DISPATCH_PATHS: &[(&str, &str, TrapAccounting)] = &[
 /// it. A call to one of these from a non-helper function is a dispatch path.
 const LAUNCH_HELPERS: &[&str] = &[
     "launch_cuda_function",
-    "launch_resolved_function",
     "launch_prevalidated_function",
     "replay_fixpoint_launches",
 ];

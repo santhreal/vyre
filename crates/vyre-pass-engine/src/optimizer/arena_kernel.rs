@@ -151,16 +151,16 @@ pub(super) struct FixedOutputExecutor {
 }
 
 #[cfg(test)]
-impl vyre_megakernel::SemanticExecutor for FixedOutputExecutor {
+impl vyre_compiler::SemanticExecutor for FixedOutputExecutor {
     fn execute(
         &self,
-        request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-    ) -> Result<vyre_megakernel::SemanticExecutionOutput, vyre_megakernel::SemanticExecutionError>
+        request: &vyre_compiler::SemanticExecutionRequest<'_>,
+    ) -> Result<vyre_compiler::SemanticExecutionOutput, vyre_compiler::SemanticExecutionError>
     {
         assert_eq!(request.logical().regions().len(), 1);
         assert_eq!(request.logical().regions()[0].name, self.pass);
         if request.inputs().len() != self.expected_inputs {
-            return Err(vyre_megakernel::SemanticExecutionError::InvalidRequest(
+            return Err(vyre_compiler::SemanticExecutionError::InvalidRequest(
                 format!(
                     "{} test executor expected {} graph inputs, got {}",
                     self.pass,
@@ -170,15 +170,15 @@ impl vyre_megakernel::SemanticExecutor for FixedOutputExecutor {
             ));
         }
         let node = &request.logical().graph().nodes()[0];
-        let written = vyre_megakernel::writable_graph_values(node);
+        let written = vyre_compiler::writable_graph_values(node);
         assert_eq!(written.len(), self.outputs.len());
         let outputs = written
             .into_iter()
             .zip(self.outputs.iter().cloned())
             .collect();
-        Ok(vyre_megakernel::SemanticExecutionOutput {
-            artifact: vyre_megakernel::Digest([0; 32]),
-            payload: vyre_megakernel::Digest([1; 32]),
+        Ok(vyre_compiler::SemanticExecutionOutput {
+            artifact: vyre_compiler::Digest([0; 32]),
+            payload: vyre_compiler::Digest([1; 32]),
             outputs,
         })
     }
@@ -243,11 +243,11 @@ impl ScriptedExecutor {
 }
 
 #[cfg(test)]
-impl vyre_megakernel::SemanticExecutor for ScriptedExecutor {
+impl vyre_compiler::SemanticExecutor for ScriptedExecutor {
     fn execute(
         &self,
-        request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-    ) -> Result<vyre_megakernel::SemanticExecutionOutput, vyre_megakernel::SemanticExecutionError>
+        request: &vyre_compiler::SemanticExecutionRequest<'_>,
+    ) -> Result<vyre_compiler::SemanticExecutionOutput, vyre_compiler::SemanticExecutionError>
     {
         let stage = request.logical().regions()[0].name.as_str();
         let scripted = self
@@ -258,7 +258,7 @@ impl vyre_megakernel::SemanticExecutor for ScriptedExecutor {
                 panic!("Fix: state the bytes this executor answers `{stage}` with.")
             });
         let node = &request.logical().graph().nodes()[0];
-        let written = vyre_megakernel::writable_graph_values(node);
+        let written = vyre_compiler::writable_graph_values(node);
         let mut outputs = std::collections::BTreeMap::new();
         for (index, (value, bytes)) in written.into_iter().zip(scripted.iter()).enumerate() {
             if self.omitted == Some(index) {
@@ -272,24 +272,24 @@ impl vyre_megakernel::SemanticExecutor for ScriptedExecutor {
                 vec![0u8; std::mem::size_of::<u32>()],
             );
         }
-        Ok(vyre_megakernel::SemanticExecutionOutput {
-            artifact: vyre_megakernel::Digest([0; 32]),
-            payload: vyre_megakernel::Digest([1; 32]),
+        Ok(vyre_compiler::SemanticExecutionOutput {
+            artifact: vyre_compiler::Digest([0; 32]),
+            payload: vyre_compiler::Digest([1; 32]),
             outputs,
         })
     }
 }
 
 #[cfg(test)]
-pub(super) fn semantic_test_policy() -> vyre_megakernel::SemanticExecutionPolicy {
-    vyre_megakernel::SemanticExecutionPolicy::new(
-        vyre_megakernel::ExternalFacts::new(
-            vyre_megakernel::Digest([2; 32]),
+pub(super) fn semantic_test_policy() -> vyre_compiler::SemanticExecutionPolicy {
+    vyre_compiler::SemanticExecutionPolicy::new(
+        vyre_compiler::ExternalFacts::new(
+            vyre_compiler::Digest([2; 32]),
             std::collections::BTreeMap::new(),
         ),
-        vyre_megakernel::DeviceFacts::unknown(),
-        vyre_megakernel::CompileObjective::minimize_latency()
-            .with_bound(vyre_megakernel::ObjectiveMetric::ArtifactBytes, 1_000_000),
-        vyre_megakernel::SearchBudget::new(8, 64, 0, 0, 1_000),
+        vyre_compiler::DeviceFacts::unknown(),
+        vyre_compiler::CompileObjective::minimize_latency()
+            .with_bound(vyre_compiler::ObjectiveMetric::ArtifactBytes, 1_000_000),
+        vyre_compiler::SearchBudget::new(8, 64, 0, 0, 1_000),
     )
 }

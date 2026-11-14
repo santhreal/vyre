@@ -24,7 +24,7 @@
 
 use thiserror::Error;
 use vyre_foundation::diagnostics::{CauseKind, Diagnostic};
-use vyre_lower::KernelDescriptor;
+use vyre_compiler::lower::KernelDescriptor;
 
 /// Target identity every diagnostic this emitter raises carries.
 const TARGET: &str = "spirv";
@@ -104,7 +104,7 @@ pub fn emit(desc: &KernelDescriptor) -> Result<Vec<u32>, EmitError> {
 /// diagnostic when the supplied target cannot admit the descriptor.
 pub fn emit_with_capabilities(
     desc: &KernelDescriptor,
-    target: &vyre_lower::EmissionTargetCapabilities,
+    target: &vyre_compiler::lower::EmissionTargetCapabilities,
 ) -> Result<Vec<u32>, EmitError> {
     let module = crate::naga::emit_with_capabilities(desc, target).map_err(EmitError::NagaEmit)?;
     emit_from_naga_module(&module)

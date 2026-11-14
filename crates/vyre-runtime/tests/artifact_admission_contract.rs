@@ -15,7 +15,7 @@ use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, GraphInput, GraphOutput, Program, ProgramGraph, ShapeDim,
     ValueContract, ValueLifetime,
 };
-use vyre_megakernel::{
+use vyre_compiler::{
     Artifact, ArtifactEnvelope, ArtifactNodeId, ArtifactValueId, CompileObjective, CompileRequest,
     DeviceFacts, Digest, ExternalFacts, ObjectiveMetric, SearchBudget, TargetCompileError,
     TargetCompiler, TargetPayload, TargetPayloadFormat, TargetProfile, TargetResourceAccess,
@@ -585,7 +585,7 @@ impl ArtifactMaterializer for TestMaterializer {
         let retained: BTreeSet<ArtifactValueId> = artifact
             .resources()
             .iter()
-            .filter(|resource| resource.lifetime == vyre_megakernel::ResourceLifetime::Retained)
+            .filter(|resource| resource.lifetime == vyre_compiler::ResourceLifetime::Retained)
             .map(|resource| resource.value)
             .collect();
         Ok(FixtureInstance::submitting(

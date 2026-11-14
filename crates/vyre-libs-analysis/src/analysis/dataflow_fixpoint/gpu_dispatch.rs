@@ -10,7 +10,7 @@ use vyre_libs_builder::plumbing::host::dispatch_buffers::{
 };
 use vyre_libs_builder::plumbing::host::scratch::reserve_vec_capacity;
 use vyre_libs_graph::graph::scc_decompose::dense_reachability_bitsets;
-use vyre_megakernel::{
+use vyre_compiler::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
 
@@ -627,7 +627,7 @@ mod tests {
         semiring_gemm_via, semiring_gemm_via_into,
     };
     use vyre_libs_builder::plumbing::host::dispatch_buffers::u32_slice_to_le_bytes;
-    use vyre_megakernel::{SemanticExecutionError, SemanticExecutor};
+    use vyre_compiler::{SemanticExecutionError, SemanticExecutor};
     use vyre_test_support::test_parity_oracles::StaticOutputs;
 
     struct SequenceDispatcher {
@@ -639,8 +639,8 @@ mod tests {
     impl SemanticExecutor for SequenceDispatcher {
         fn execute(
             &self,
-            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            request: &vyre_compiler::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError> {
             let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let ordered = (|| -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 let idx = self.cursor.load(Ordering::Relaxed);
@@ -896,8 +896,8 @@ mod tests {
         impl SemanticExecutor for LogicalExecutor {
             fn execute(
                 &self,
-                request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-            ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError>
+                request: &vyre_compiler::SemanticExecutionRequest<'_>,
+            ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError>
             {
                 let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
                 let ordered = if inputs.len() == 3 && inputs[2].len() == 8 {

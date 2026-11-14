@@ -1,11 +1,11 @@
 use std::collections::BTreeMap;
+use vyre_compiler::{
+    ArtifactNodeId, ArtifactValueId, Digest, ExternalFacts, TargetResourceAccess,
+    TargetResourceMemory,
+};
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, GraphInput, GraphOutput, Node, Program, ProgramGraph,
     ValueLifetime,
-};
-use vyre_megakernel::{
-    ArtifactNodeId, ArtifactValueId, Digest, ExternalFacts, TargetResourceAccess,
-    TargetResourceMemory,
 };
 
 use crate::materialize::materialize_test_fixtures::{

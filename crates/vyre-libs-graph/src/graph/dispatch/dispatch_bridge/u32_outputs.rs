@@ -1,7 +1,7 @@
 //! Dispatch helpers that decode named u32 output buffers.
 //!
 //! Every readback names the Program buffer it reads.
-//! `vyre_megakernel::execute_single_program` returns one buffer per written
+//! `vyre_compiler::execute_single_program` returns one buffer per written
 //! declaration and pairs each with its name, so selecting by name reads what
 //! the program declares. A wrapper that instead matched the result list by
 //! position, or checked its length against a number of its own, would be
@@ -16,7 +16,7 @@ use vyre_foundation::ir::Program;
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_u32_output_exact, HOST_WRAPPER_NODE,
 };
-use vyre_megakernel::{
+use vyre_compiler::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
     SingleProgramExecutionOutput,
 };
@@ -125,7 +125,7 @@ fn named_output<'a>(
 mod tests {
     use std::collections::BTreeMap;
 
-    use vyre_megakernel::{
+    use vyre_compiler::{
         Digest, SearchBudget, SemanticExecutionOutput, SemanticExecutionRequest,
     };
 

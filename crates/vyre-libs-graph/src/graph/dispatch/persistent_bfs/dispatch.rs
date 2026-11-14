@@ -14,7 +14,7 @@ use crate::graph::persistent_bfs::{
     plan_persistent_bfs_dispatch, validate_persistent_bfs_changed_flag,
     validate_persistent_bfs_converged_flag,
 };
-use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Dispatcher-backed persistent BFS expansion. Returns the saturated frontier,
 /// the sticky changed-flag, and the device converged word.

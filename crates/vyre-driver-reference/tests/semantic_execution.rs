@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use vyre_driver_reference::ReferenceSemanticExecutor;
 use vyre_foundation::logical::LogicalProgramGraph;
-use vyre_megakernel::{
+use vyre_compiler::{
     DeviceFacts, Digest, SearchBudget, SemanticExecutionError, SemanticExecutor,
 };
 use vyre_test_support::semantic_requests::{

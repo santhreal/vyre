@@ -4,24 +4,24 @@
 //! fix introduced, confirming the pre-fix behaviour is gone.
 
 use vyre_foundation::ir::{AtomicOp, BinOp, DataType, MemoryOrdering};
-use vyre_lower::descriptor_builder::{
+use vyre_compiler::lower::descriptor_builder::{
     binop, body, column_walk_tile, descriptor, effect, global_rw, lit, load_global, op,
     store_global, strided_tile_program,
 };
-use vyre_lower::{KernelDescriptor, KernelOpKind, LiteralValue, WORKGROUP_SLOT_BASE};
+use vyre_compiler::lower::{KernelDescriptor, KernelOpKind, LiteralValue, WORKGROUP_SLOT_BASE};
 
 /// Verify then emit, reporting `what` if either step rejects the descriptor.
 fn emit(desc: &KernelDescriptor, what: &str) -> String {
-    let verified = vyre_lower::verify_descriptor(desc).expect("descriptor verification");
+    let verified = vyre_compiler::lower::verify_descriptor(desc).expect("descriptor verification");
     vyre_emit::ptx::emit(&verified)
         .unwrap_or_else(|e| panic!("{what} must emit without error: {e}"))
 }
 
-fn thread_id(result: u32) -> vyre_lower::KernelOp {
+fn thread_id(result: u32) -> vyre_compiler::lower::KernelOp {
     op(KernelOpKind::LocalInvocationId, [0], result)
 }
 
-fn cast(target: DataType, source: u32, result: u32) -> vyre_lower::KernelOp {
+fn cast(target: DataType, source: u32, result: u32) -> vyre_compiler::lower::KernelOp {
     op(KernelOpKind::Cast { target }, [source], result)
 }
 
@@ -266,7 +266,7 @@ fn a_tile_that_is_not_a_whole_number_of_rows_is_not_padded() {
 #[test]
 fn a_real_lowered_conflicting_program_emits_permuted_ptx() {
     let program = strided_tile_program();
-    let descriptor = vyre_lower::lower(&program).expect("program lowers to descriptor");
+    let descriptor = vyre_compiler::lower::lower(&program).expect("program lowers to descriptor");
     let ptx = emit(&descriptor, "real lowered conflicting program");
 
     assert!(

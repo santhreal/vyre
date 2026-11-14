@@ -17,7 +17,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use vyre_foundation::ir::{ProgramGraph, ShapeDim, ValueLifetime};
 use vyre_foundation::operation::OperationRegistry;
 use vyre_foundation::validate::BackendCapabilities;
-use vyre_megakernel::{
+use vyre_compiler::{
     compile, Artifact, CompileObjective, CompileRequest, DeviceFacts, Digest, ExecutionMode,
     ExecutionTopology, ExternalFacts, ObjectiveMetric, SearchBudget,
 };

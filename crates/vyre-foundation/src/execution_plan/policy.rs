@@ -1,6 +1,6 @@
 //! Neutral launch legality and resident-ring sizing facts.
 //!
-//! Selecting a schedule belongs to `vyre-megakernel`. What is left here answers
+//! Selecting a schedule belongs to `vyre-compiler`. What is left here answers
 //! legality and ring arithmetic: whether a fused launch stays inside the axis
 //! budget, how many lanes a worker workgroup takes, and how a slot count pads
 //! into whole workgroups. None of it ranks a candidate against a device.

@@ -9,7 +9,7 @@ use crate::graph::dispatch::dispatch_bridge::{
 use crate::graph::dominator_frontier::{
     plan_dominator_frontier_launch, DominatorFrontierLaunchPlan,
 };
-use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Dispatcher-backed dominance-frontier query.
 ///

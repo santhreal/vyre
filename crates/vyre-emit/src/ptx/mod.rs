@@ -1,9 +1,9 @@
 //! PTX text emitter for vyre `KernelDescriptor`.
 //!
-//! Consumes a substrate-neutral `vyre_lower::KernelDescriptor` and
+//! Consumes a substrate-neutral `vyre_compiler::lower::KernelDescriptor` and
 //! produces NVRTC-compatible PTX assembly text. The emitter owns only
 //! PTX construction; descriptor shaping and substrate-neutral
-//! analyses stay in `vyre-lower`.
+//! analyses stay in `vyre-compiler`.
 //!
 //! ## Op coverage
 //!
@@ -57,14 +57,14 @@ mod index_facts;
 mod reg;
 mod target;
 
-use vyre_lower::KernelDescriptor;
+use vyre_compiler::lower::KernelDescriptor;
 
 pub use error::EmitError;
 pub use target::{ComputeCapability, PtxEmitOptions};
 
 /// Module-scope symbol holding the trap record for one loaded module.
 ///
-/// [`vyre_lower::TRAP_SIDECAR_WORDS`] u32 words: word 0 is the claim flag (CAS 0
+/// [`vyre_compiler::lower::TRAP_SIDECAR_WORDS`] u32 words: word 0 is the claim flag (CAS 0
 /// to 1, so exactly one lane writes the rest), word 1 the address operand the
 /// trapping op carried, word 2 the trap tag code, word 3 the flattened global
 /// invocation id. Same layout the secondary text emitter writes, so a host

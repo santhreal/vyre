@@ -656,6 +656,16 @@ feature = "device-tests"
 publication_class = "conformance-tooling"
 
 [[package_features]]
+package = "vyre-compiler"
+feature = "default"
+publication_class = "internal-engine"
+
+[[package_features]]
+package = "vyre-compiler"
+feature = "test-fixtures"
+publication_class = "internal-engine"
+
+[[package_features]]
 package = "vyre-conform"
 feature = "default"
 publication_class = "conformance-tooling"
@@ -1516,24 +1526,9 @@ feature = "visual"
 publication_class = "extension-sdk"
 
 [[package_features]]
-package = "vyre-lower"
-feature = "default"
-publication_class = "internal-engine"
-
-[[package_features]]
-package = "vyre-lower"
-feature = "test-fixtures"
-publication_class = "internal-engine"
-
-[[package_features]]
 package = "vyre-macros"
 feature = "default"
 publication_class = "extension-sdk"
-
-[[package_features]]
-package = "vyre-megakernel"
-feature = "default"
-publication_class = "internal-engine"
 
 [[package_features]]
 package = "vyre-model-compiler"

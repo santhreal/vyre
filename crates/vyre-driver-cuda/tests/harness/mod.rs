@@ -10,7 +10,7 @@ use vyre::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
 use vyre_runtime::DispatchConfig;
 pub(crate) use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::MemoryOrdering;
-use vyre_megakernel::{
+use vyre_compiler::{
     CompileObjective, Digest, ExternalFacts, ObjectiveMetric, SearchBudget,
     SemanticExecutionPolicy, SemanticExecutor,
 };
@@ -182,7 +182,7 @@ pub(crate) fn reference_outputs(
 pub(crate) struct AdmittedCudaArtifact {
     /// Collective-lowered program, present when lowering rewrote it.
     pub(crate) program: Option<Program>,
-    pub(crate) envelope: vyre_megakernel::ArtifactEnvelope,
+    pub(crate) envelope: vyre_compiler::ArtifactEnvelope,
     pub(crate) materializer: Box<dyn vyre_runtime::ArtifactMaterializer>,
     pub(crate) instance: Box<dyn vyre_runtime::ArtifactInstance>,
 }
@@ -216,16 +216,16 @@ pub(crate) fn materialized_cuda_artifact(
         .unwrap_or_else(|error| {
             panic!("Fix: CUDA generated case `{case_name}` graph failed: {error}")
         });
-    let request = vyre_megakernel::CompileRequest::new(
+    let request = vyre_compiler::CompileRequest::new(
         graph,
-        vyre_megakernel::ExternalFacts::new(
-            vyre_megakernel::Digest([0; 32]),
+        vyre_compiler::ExternalFacts::new(
+            vyre_compiler::Digest([0; 32]),
             std::collections::BTreeMap::new(),
         ),
         compile_facts,
-        vyre_megakernel::SearchBudget::new(128, 128, 0, 0, 128),
-        vyre_megakernel::CompileObjective::minimize_latency().with_bound(
-            vyre_megakernel::ObjectiveMetric::ArtifactBytes,
+        vyre_compiler::SearchBudget::new(128, 128, 0, 0, 128),
+        vyre_compiler::CompileObjective::minimize_latency().with_bound(
+            vyre_compiler::ObjectiveMetric::ArtifactBytes,
             PARITY_ARTIFACT_BYTES,
         ),
     )
@@ -233,14 +233,14 @@ pub(crate) fn materialized_cuda_artifact(
     .unwrap_or_else(|error| {
         panic!("Fix: CUDA generated case `{case_name}` compile request failed: {error}")
     });
-    let artifact = vyre_megakernel::compile(&request).unwrap_or_else(|error| {
+    let artifact = vyre_compiler::compile(&request).unwrap_or_else(|error| {
         panic!("Fix: CUDA generated case `{case_name}` compiler failed: {error}")
     });
     let compiler = registration.target_compiler().unwrap_or_else(|error| {
         panic!("Fix: CUDA generated case `{case_name}` target compiler failed: {error}")
     });
     let envelope =
-        vyre_megakernel::attach_target(artifact, compiler.as_ref()).unwrap_or_else(|error| {
+        vyre_compiler::attach_target(artifact, compiler.as_ref()).unwrap_or_else(|error| {
             panic!("Fix: CUDA generated case `{case_name}` target attachment failed: {error}")
         });
     let materializer = registration.materializer().unwrap_or_else(|error| {

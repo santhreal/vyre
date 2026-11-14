@@ -10,7 +10,7 @@
 //! Naming is one owned `String` per segment and is not on the per-dispatch
 //! path: it runs once per descriptor, when a pipeline is built.
 
-use vyre_lower::KernelDescriptor;
+use vyre_compiler::lower::KernelDescriptor;
 
 use crate::naga::error::EmitError;
 use crate::naga::GRID_SEGMENT_ENTRY_PREFIX;
@@ -36,7 +36,7 @@ pub(crate) fn segment_entry_name(index: usize) -> String {
 /// Returns [`EmitError`] when the descriptor's fence placement admits no
 /// launch boundary.
 pub fn grid_segment_entry_points(desc: &KernelDescriptor) -> Result<Vec<String>, EmitError> {
-    let count = vyre_lower::dispatch_segments(desc)
+    let count = vyre_compiler::lower::dispatch_segments(desc)
         .map_err(|source| EmitError::InvalidDescriptor(source.to_string()))?
         .len();
     Ok((0..count).map(segment_entry_name).collect())

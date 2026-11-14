@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 use std::fmt::Write;
-use vyre_lower::{BindingVisibility, KernelBody, KernelDescriptor};
+use vyre_compiler::lower::{BindingVisibility, KernelBody, KernelDescriptor};
 
 /// Controls for human-readable descriptor rendering.
 pub struct DescriptorDumpOptions {
@@ -118,7 +118,7 @@ pub fn dump_descriptor(desc: &KernelDescriptor, options: &DescriptorDumpOptions)
             // If the op kind has child bodies, we need to iterate over them.
             // Wait, child_bodies is a flat array in KernelBody. The op just references them by index?
             // Let's assume ops reference child body indices in `op.operands` or something?
-            // No, the dump says: "body[0,0,12,0]" for structured_if_then ops=[10, 0] -> actually vyre_lower has child bodies. Let me check KernelOp / KernelBody.
+            // No, the dump says: "body[0,0,12,0]" for structured_if_then ops=[10, 0] -> actually vyre_compiler::lower has child bodies. Let me check KernelOp / KernelBody.
             ops_shown += 1;
         }
 

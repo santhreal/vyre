@@ -5,10 +5,10 @@ use vyre_foundation::lower::LoweringError;
 
 pub(crate) fn validate_and_analyze(
     program: &Program,
-) -> Result<vyre_lower::KernelDescriptor, LoweringError> {
-    let lowered = vyre_lower::lower_baseline(program).map_err(|error| {
+) -> Result<vyre_compiler::lower::KernelDescriptor, LoweringError> {
+    let lowered = vyre_compiler::lower::lower_baseline(program).map_err(|error| {
         LoweringError::invalid(format!(
-            "physical lowering failed before wgpu emission: {error}. Fix: add the missing neutral mapping to vyre-lower instead of concrete-driver lowering."
+            "physical lowering failed before wgpu emission: {error}. Fix: add the missing neutral mapping to vyre-compiler instead of concrete-driver lowering."
         ))
     })?;
     Ok(lowered.into_descriptor())
@@ -37,7 +37,7 @@ mod tests {
 
         assert_eq!(descriptor.dispatch.workgroup_size, [64, 1, 1]);
         assert_eq!(descriptor.bindings.slots.len(), 1);
-        assert!(vyre_lower::verify(&descriptor).is_ok());
+        assert!(vyre_compiler::lower::verify(&descriptor).is_ok());
     }
 
     #[test]

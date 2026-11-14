@@ -4,7 +4,7 @@ use thiserror::Error;
 use vyre_foundation::diagnostics::{
     CauseKind, CompilerLevel, Diagnostic, DiagnosticStage, RetryClass,
 };
-use vyre_megakernel::{
+use vyre_compiler::{
     ArtifactEnvelope, TargetCompileError, TargetCompiler, ValidatedCompileRequest,
 };
 
@@ -29,7 +29,7 @@ pub enum CompileError {
         stage: &'static str,
         /// Structured canonical artifact error, including its exact field path.
         #[source]
-        source: vyre_megakernel::CompileError,
+        source: vyre_compiler::CompileError,
     },
 }
 
@@ -76,12 +76,12 @@ pub fn compile(
     target: TargetId,
 ) -> Result<ArtifactEnvelope, CompileError> {
     let artifact =
-        vyre_megakernel::compile(request).map_err(|source| CompileError::CanonicalArtifact {
+        vyre_compiler::compile(request).map_err(|source| CompileError::CanonicalArtifact {
             stage: "canonical-compile",
             source,
         })?;
     let compiler = registered_target_compiler(&target)?;
-    vyre_megakernel::attach_target(artifact, compiler.as_ref())
+    vyre_compiler::attach_target(artifact, compiler.as_ref())
         .map_err(CompileError::TargetCompilation)
 }
 

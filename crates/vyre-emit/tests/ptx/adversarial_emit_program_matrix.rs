@@ -1,10 +1,10 @@
 //! Adversarial emit program matrix for `vyre_emit::ptx`.
 //!
-//! Hostile `KernelDescriptor` programs from `vyre_lower::emit_adversarial_corpus`
+//! Hostile `KernelDescriptor` programs from `vyre_compiler::lower::emit_adversarial_corpus`
 //! with structural assertions on lowered PTX text.
 
 use vyre_emit::ptx::EmitError;
-use vyre_lower::emit_adversarial_corpus::{self, EmitAdversarialCase, EmitAdversarialFamily};
+use vyre_compiler::lower::emit_adversarial_corpus::{self, EmitAdversarialCase, EmitAdversarialFamily};
 
 fn assert_ptx_structure(case: &EmitAdversarialCase, ptx: &str) {
     assert!(ptx.contains(".version"), "{}: missing .version", case.id);
@@ -122,7 +122,7 @@ fn assert_ptx_structure(case: &EmitAdversarialCase, ptx: &str) {
 fn hostile_success_corpus_emits_structured_ptx() {
     for case in &emit_adversarial_corpus::success_cases() {
         let ptx = vyre_emit::ptx::emit(
-            &vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
+            &vyre_compiler::lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
         )
         .unwrap_or_else(|err| {
             panic!(
@@ -138,7 +138,7 @@ fn hostile_success_corpus_emits_structured_ptx() {
 fn rejection_corpus_fails_without_panic() {
     for case in emit_adversarial_corpus::rejection_cases() {
         let result = vyre_emit::ptx::emit(
-            &vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
+            &vyre_compiler::lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
         );
         assert!(
             result.is_err(),
@@ -163,7 +163,7 @@ fn rejection_corpus_fails_without_panic() {
 fn dead_identity_chain_verifies_before_ptx_emit() {
     let case = emit_adversarial_corpus::case_by_id("adv_dead_identity").unwrap();
     let descriptor =
-        vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor must pass verification");
+        vyre_compiler::lower::verify_descriptor(&case.descriptor).expect("descriptor must pass verification");
     let ptx = vyre_emit::ptx::emit(&descriptor).expect("verified emit");
     assert!(ptx.contains(".visible .entry"));
 }
@@ -172,7 +172,7 @@ fn dead_identity_chain_verifies_before_ptx_emit() {
 fn vec_load_fusion_emits_no_scalar_load_fallback() {
     let case = emit_adversarial_corpus::case_by_id("adv_vec_load_fusion").unwrap();
     let ptx = vyre_emit::ptx::emit(
-        &vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
+        &vyre_compiler::lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
     )
     .unwrap();
     assert!(
@@ -191,7 +191,7 @@ fn vec_load_fusion_emits_no_scalar_load_fallback() {
 fn shared_global_tile_touches_both_address_spaces() {
     let case = emit_adversarial_corpus::case_by_id("adv_shared_global_tile").unwrap();
     let ptx = vyre_emit::ptx::emit(
-        &vyre_lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
+        &vyre_compiler::lower::verify_descriptor(&case.descriptor).expect("descriptor verification"),
     )
     .unwrap();
     assert!(ptx.contains("ld.global"), "must load global\n{ptx}");
@@ -206,7 +206,7 @@ fn shared_global_tile_touches_both_address_spaces() {
 #[test]
 fn success_corpus_ptx_contains_required_directives() {
     for case in &emit_adversarial_corpus::success_cases() {
-        let descriptor = vyre_lower::verify_descriptor(&case.descriptor)
+        let descriptor = vyre_compiler::lower::verify_descriptor(&case.descriptor)
             .expect("corpus success case must pass descriptor verification");
         let ptx = vyre_emit::ptx::emit(&descriptor).expect("corpus success case must emit PTX");
         assert!(

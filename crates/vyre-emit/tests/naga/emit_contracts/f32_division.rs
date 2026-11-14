@@ -23,12 +23,12 @@
 
 use super::*;
 use naga::{BinaryOperator, Expression, Literal, MathFunction};
-use vyre_lower::descriptor_builder::binop_over_loads;
+use vyre_compiler::lower::descriptor_builder::binop_over_loads;
 use vyre_test_support::spec_variant_tables::{builtin_bin_ops, builtin_un_ops};
 
 /// One loaded f32, `unop` applied, stored back as f32.
 fn unop_over_load(unop: UnOp) -> KernelDescriptor {
-    vyre_lower::descriptor_builder::unop_over_load("f32_unop", DataType::F32, unop)
+    vyre_compiler::lower::descriptor_builder::unop_over_load("f32_unop", DataType::F32, unop)
 }
 
 /// How many expressions of each shape the refinement is counted by.

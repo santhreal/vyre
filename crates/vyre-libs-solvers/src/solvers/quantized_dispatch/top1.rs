@@ -5,7 +5,7 @@
 //! row never reads back the full score matrix.
 
 use super::*;
-use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Compute top-1 scores and row indices for packed signed INT4 batched matmul through the backend.
 ///

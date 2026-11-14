@@ -19,10 +19,10 @@ use std::path::Path;
 use naga::{Literal, Statement};
 use vyre_emit::naga::{emit, grid_segment_entry_points, EmitError, GRID_SEGMENT_ENTRY_PREFIX};
 use vyre_foundation::ir::{DataType, MemoryOrdering};
-use vyre_lower::descriptor_builder::{
+use vyre_compiler::lower::descriptor_builder::{
     body, descriptor, effect, for_loop, global_rw, if_then, lit, store_global,
 };
-use vyre_lower::{
+use vyre_compiler::lower::{
     dispatch_segments, DispatchSplitError, KernelDescriptor, KernelOpKind, LiteralValue,
     NestedBodyControl,
 };
@@ -30,7 +30,7 @@ use vyre_test_support::monorepo::vyre_workspace_root;
 
 use crate::naga::naga_probe::count_statements;
 
-fn fence() -> vyre_lower::KernelOp {
+fn fence() -> vyre_compiler::lower::KernelOp {
     effect(
         KernelOpKind::Barrier {
             ordering: MemoryOrdering::GridSync,
@@ -260,12 +260,12 @@ fn every_nested_body_control() -> Vec<NestedBodyControl> {
         .map(|control| format!("{control:?}"))
         .collect();
     let declared = parse_enum_variants(
-        &vyre_workspace_root().join("crates/vyre-lower/src/op_facts.rs"),
+        &vyre_workspace_root().join("crates/vyre-compiler/src/op_facts.rs"),
         "NestedBodyControl",
     );
     assert_eq!(
         named, declared,
-        "Fix: every NestedBodyControl variant declared in vyre-lower must have a fence placement here."
+        "Fix: every NestedBodyControl variant declared in vyre-compiler must have a fence placement here."
     );
     tested
 }

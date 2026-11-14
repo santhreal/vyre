@@ -9,7 +9,7 @@ const TARGET: &str = "ptx";
 pub enum EmitError {
     /// Descriptor operation is unsupported by the PTX emitter.
     #[error("unsupported KernelOp kind in PTX emit: {0:?}")]
-    UnsupportedOp(vyre_lower::KernelOp),
+    UnsupportedOp(vyre_compiler::lower::KernelOp),
 
     /// PTX module assembly failed.
     #[error("PTX module construction failed: {0}")]

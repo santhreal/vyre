@@ -60,7 +60,7 @@ pub fn recover_artifact_session(
 /// recovery disagrees with `expected_artifact`.
 pub fn recover_session_with_expected_identity(
     session: &ArtifactSession,
-    expected_artifact: &vyre_megakernel::Digest,
+    expected_artifact: &vyre_compiler::Digest,
 ) -> Result<DeviceIdentity, ArtifactSessionError> {
     let current_artifact = session.artifact()?;
     if &current_artifact != expected_artifact {

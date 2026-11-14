@@ -1,7 +1,7 @@
 use super::*;
 
 /// Both load-fusion fixtures read one buffer and write another.
-fn fusion_slots() -> [vyre_lower::BindingSlot; 2] {
+fn fusion_slots() -> [vyre_compiler::lower::BindingSlot; 2] {
     [
         global_ro(0, DataType::U32, "input"),
         global_wo(1, DataType::U32, "output"),

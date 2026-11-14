@@ -23,7 +23,7 @@
 //! Those paths are exercised by the live-device suites, not here.
 //!
 //! The corpus, the section format, and the comparison live in
-//! `vyre_lower::artifact_golden`. This file supplies only the programs.
+//! `vyre_compiler::lower::artifact_golden`. This file supplies only the programs.
 //!
 //! Emission is host-side, so this file carries no device feature gate. Gating
 //! it behind `device-tests` is what let the corpus drift: the only host that
@@ -33,7 +33,7 @@ use std::path::PathBuf;
 
 use vyre_runtime::DispatchConfig;
 use vyre_foundation::ir::{BufferAccess, BufferDecl, DataType, Expr, Node, Program};
-use vyre_lower::artifact_golden;
+use vyre_compiler::lower::artifact_golden;
 
 fn golden_path() -> PathBuf {
     vyre_test_support::monorepo::vyre_workspace_root()

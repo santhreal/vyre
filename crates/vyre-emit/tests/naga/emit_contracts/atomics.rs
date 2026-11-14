@@ -1,6 +1,6 @@
 //! Test: atomics.
 use super::*;
-use vyre_lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op};
+use vyre_compiler::lower::descriptor_builder::{body, descriptor, effect, global_rw, lit, op};
 
 #[test]
 fn atomic_add_emits_statement() {

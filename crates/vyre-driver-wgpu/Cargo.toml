@@ -27,8 +27,7 @@ parity-testing = []
 vyre-spec = { workspace = true }
 vyre-runtime = { workspace = true }
 vyre-foundation = { workspace = true }
-vyre-megakernel = { workspace = true }
-vyre-lower.workspace = true
+vyre-compiler = { workspace = true }
 vyre-emit = { workspace = true, features = ["naga"] }
 naga = { workspace = true, features = ["wgsl-out", "spv-out"] }
 wgpu.workspace = true
@@ -51,7 +50,7 @@ bincode = { workspace = true }
 [dev-dependencies]
 # `artifact_golden` (the emitted-WGSL byte-stability harness) is test-only and
 # lives behind this feature, like `descriptor_builder`.
-vyre-lower = { workspace = true, features = ["test-fixtures"] }
+vyre-compiler = { workspace = true, features = ["test-fixtures"] }
 vyre-runtime = { workspace = true, features = ["test-fixtures"] }
 # The self-hosted optimizer device suites drive pass-engine scheduling directly.
 vyre-pass-engine.workspace = true

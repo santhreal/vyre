@@ -40,12 +40,6 @@ impl ResidentWorkQueue {
         protocol::debug_log_byte_len(record_capacity)
     }
 
-    /// Default debug-log record capacity owned by the runtime protocol.
-    #[must_use]
-    pub fn debug_record_capacity() -> u32 {
-        protocol::debug::RECORD_CAPACITY
-    }
-
     /// Encode a control-buffer payload.
     ///
     /// # Errors

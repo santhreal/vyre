@@ -6,7 +6,7 @@ use std::fmt::Write as _;
 use naga::{BinaryOperator, Expression, Literal, LocalVariable, ScalarKind, Span, Statement};
 use smallvec::SmallVec;
 use vyre_foundation::ir::{DataType, UnOp};
-use vyre_lower::{GridIndexSpace, KernelBody, KernelOp, KernelOpKind, LiteralValue};
+use vyre_compiler::lower::{GridIndexSpace, KernelBody, KernelOp, KernelOpKind, LiteralValue};
 
 use super::super::op_lookup::{
     barrier_flags, naga_literal, unary_math_function, unary_operator, unpack_shift_mask,

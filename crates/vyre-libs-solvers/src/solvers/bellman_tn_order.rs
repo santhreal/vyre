@@ -18,7 +18,7 @@ use vyre_libs_math::math::bellman_shortest_path::{
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     decode_u32_output_exact, ensure_input_slots, write_u32_slice_le_bytes,
 };
-use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Canonical self-substrate op ID for the Bellman TN order.
 pub const OP_ID: &str = "vyre-libs::self_substrate::bellman_tn_order";
@@ -301,8 +301,8 @@ mod tests {
     impl SemanticExecutor for BellmanDispatcher {
         fn execute(
             &self,
-            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            request: &vyre_compiler::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError> {
             let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {
                 assert_eq!(inputs.len(), 6);
@@ -390,8 +390,8 @@ mod tests {
         impl SemanticExecutor for CapturingDispatcher {
             fn execute(
                 &self,
-                request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-            ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError>
+                request: &vyre_compiler::SemanticExecutionRequest<'_>,
+            ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError>
             {
                 let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
                 let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {

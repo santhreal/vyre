@@ -15,7 +15,7 @@
 //! Source:
 
 use vyre_foundation::ir::{BinOp, DataType};
-use vyre_lower::{
+use vyre_compiler::lower::{
     BindingLayout, BindingSlot, BindingVisibility, Dispatch, KernelBody, KernelDescriptor,
     KernelOp, KernelOpKind, LiteralValue, MemoryClass,
 };
@@ -297,8 +297,8 @@ fn descriptor_generator_produces_valid_id_wiring() {
 fn descriptor_verification_handles_random_descriptors_without_panic() {
     for seed in 500..550u64 {
         let desc = gen_descriptor(seed, 15);
-        let verified = vyre_lower::verify_descriptor(&desc)
+        let verified = vyre_compiler::lower::verify_descriptor(&desc)
             .unwrap_or_else(|error| panic!("descriptor seed {seed:#x} failed: {error:?}"));
-        assert_eq!(vyre_lower::verify(&verified), Ok(()));
+        assert_eq!(vyre_compiler::lower::verify(&verified), Ok(()));
     }
 }

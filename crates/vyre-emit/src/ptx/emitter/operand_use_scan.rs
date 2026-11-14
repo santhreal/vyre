@@ -5,8 +5,8 @@
 //! Only operand positions classified as SSA references count, so a binding
 //! slot or literal-pool index that happens to equal the id is not a use.
 
-use vyre_lower::operand_class::{classify_operand, OperandClass};
-use vyre_lower::KernelBody;
+use vyre_compiler::lower::operand_class::{classify_operand, OperandClass};
+use vyre_compiler::lower::KernelBody;
 
 pub(super) fn body_descendants_read_operand(body: &KernelBody, result_id: u32) -> bool {
     body.child_bodies

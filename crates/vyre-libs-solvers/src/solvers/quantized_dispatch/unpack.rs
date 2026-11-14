@@ -1,7 +1,7 @@
 //! Device dispatch that expands packed INT4 lanes back to i32.
 
 use super::*;
-use vyre_megakernel::{
+use vyre_compiler::{
     execute_single_program, SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor,
 };
 

@@ -8,7 +8,7 @@
 //! asserted as arithmetic on the ceiling rather than a ranked choice.
 //!
 //! What these cases do not catch: whether a selector consumes the reported
-//! facts well. That is `vyre-megakernel`'s contract, measured there.
+//! facts well. That is `vyre-compiler`'s contract, measured there.
 
 use super::*;
 use crate::binding::{Binding, BindingRole};

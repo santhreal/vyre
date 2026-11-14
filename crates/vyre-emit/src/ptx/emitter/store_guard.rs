@@ -7,7 +7,7 @@
 
 use std::fmt::Write as _;
 
-use vyre_lower::{KernelOp, KernelOpKind, MemoryClass};
+use vyre_compiler::lower::{KernelOp, KernelOpKind, MemoryClass};
 
 use super::operand_decode::read_store_operands;
 use super::BodyCtx;

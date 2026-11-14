@@ -1,6 +1,6 @@
 use vyre_runtime::target_dialect::{EmittedDialectModule, TargetDialect};
 use vyre_runtime::BackendError;
-use vyre_megakernel::{TargetCompileError, TargetCompiler, TargetProfile};
+use vyre_compiler::{TargetCompileError, TargetCompiler, TargetProfile};
 
 use crate::CUDA_BACKEND_ID;
 
@@ -21,7 +21,7 @@ const CUDA_DIALECT: TargetDialect = TargetDialect {
 };
 
 fn emit_ptx_module(
-    selected: &vyre_megakernel::SelectedLowering,
+    selected: &vyre_compiler::SelectedLowering,
     profile: &TargetProfile,
 ) -> Result<EmittedDialectModule, TargetCompileError> {
     let source = vyre_emit::ptx::emit_with_options(

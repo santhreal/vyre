@@ -7,7 +7,7 @@ use crate::graph::dispatch::dispatch_bridge::{
     dispatch_single_u32_output_from_prepared_into, fingerprint_u32_slice,
     refresh_keyed_dispatch_inputs, DispatchInput, U32SliceFingerprint,
 };
-use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Caller-owned GPU dispatch scratch for union-find emission.
 #[derive(Debug, Default)]

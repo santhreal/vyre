@@ -29,9 +29,9 @@ use harness::no_op_program;
 use vyre_runtime::DispatchConfig;
 use vyre_driver_cuda::CudaBackend;
 use vyre_foundation::ir::{BinOp, BufferDecl, DataType, Expr, Node, Program};
-use vyre_lower::analyses::derive_shared_access_profiles;
-use vyre_lower::descriptor_builder::{binop, body, descriptor, lit, op, shared_rw};
-use vyre_lower::{KernelOpKind, LiteralValue};
+use vyre_compiler::lower::analyses::derive_shared_access_profiles;
+use vyre_compiler::lower::descriptor_builder::{binop, body, descriptor, lit, op, shared_rw};
+use vyre_compiler::lower::{KernelOpKind, LiteralValue};
 
 fn assert_noop_output(outputs: &[Vec<u8>], phase: &str) {
     let expected = 0u32.to_le_bytes();

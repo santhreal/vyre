@@ -40,8 +40,7 @@ default = []
 debug = [
     "dep:vyre",
     "dep:vyre-foundation",
-    "dep:vyre-lower",
-    "dep:vyre-megakernel",
+    "dep:vyre-compiler",
     "dep:vyre-emit",
     "dep:vyre-libs",
     "dep:vyre-test-support",
@@ -65,8 +64,7 @@ serde_json.workspace = true
 # Optional compiler-linking diagnostics (`--features debug`, `vyre-dbg`, `debug_tests`).
 vyre = { workspace = true, optional = true }
 vyre-foundation = { workspace = true, optional = true }
-vyre-lower = { workspace = true, features = ["test-fixtures"], optional = true }
-vyre-megakernel = { workspace = true, optional = true }
+vyre-compiler = { workspace = true, features = ["test-fixtures"], optional = true }
 vyre-emit = { workspace = true, features = ["naga"], optional = true }
 vyre-libs = { workspace = true, features = ["python-parser"], optional = true }
 vyre-test-support = { workspace = true, features = ["ir-fixtures", "semantic-requests"], optional = true }

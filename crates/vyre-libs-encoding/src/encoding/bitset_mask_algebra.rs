@@ -15,7 +15,7 @@ use vyre_libs_bitset::bitset::{
 use vyre_libs_builder::plumbing::host::dispatch_buffers::{
     ensure_input_slots, write_u32_slice_le_bytes, write_zero_bytes,
 };
-use vyre_megakernel::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
+use vyre_compiler::{SemanticExecutionError, SemanticExecutionPolicy, SemanticExecutor};
 
 /// Caller-owned dispatch scratch for bitset mask algebra.
 #[derive(Debug, Default)]
@@ -452,8 +452,8 @@ mod tests {
     impl SemanticExecutor for MaskDispatcher {
         fn execute(
             &self,
-            request: &vyre_megakernel::SemanticExecutionRequest<'_>,
-        ) -> Result<vyre_megakernel::SemanticExecutionOutput, SemanticExecutionError> {
+            request: &vyre_compiler::SemanticExecutionRequest<'_>,
+        ) -> Result<vyre_compiler::SemanticExecutionOutput, SemanticExecutionError> {
             let program = &request.logical().graph().nodes()[0].program;
             let inputs = vyre_test_support::test_parity_oracles::canonical_inputs(request)?;
             let compute_ordered = || -> Result<Vec<Vec<u8>>, SemanticExecutionError> {

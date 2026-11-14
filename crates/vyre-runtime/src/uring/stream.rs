@@ -41,11 +41,6 @@ impl<'a> AsyncUringStream<'a> {
         }
     }
 
-    /// Rebind the target mapped buffer for future submissions.
-    pub fn replace_buffer(&mut self, gpu_buffer: GpuMappedBuffer<'a>) {
-        self.gpu_buffer = gpu_buffer;
-    }
-
     /// Submit a scattered read of `len` bytes at file offset `offset`
     /// into the slot at `chunk_idx * len` within the GPU buffer.
     ///
@@ -478,76 +473,6 @@ impl<'a> AsyncUringStream<'a> {
         sqe.len = len;
         sqe.buf_index = buf_index;
         sqe.user_data = user_data;
-
-        self.ring_state.commit_sqe();
-        increment_queue_counter(&mut self.inflight, "inflight SQE count")?;
-        increment_queue_counter(&mut self.pending_submissions, "pending submission count")?;
-
-        Ok(())
-    }
-
-    /// Submit a read using a registered-file-table index instead of a
-    /// live fd. Use with
-    /// [`super::ring::IoUringState::register_files`]  -  avoids the
-    /// per-SQE file refcount bump.
-    ///
-    /// # Errors
-    ///
-    /// Same surface as [`AsyncUringStream::submit_read_to_gpu`].
-    ///
-    /// # Safety
-    ///
-    /// `file_index` must name a still-registered fd.
-    /// `iovs_storage` must outlive the completion. All other
-    /// conditions match `submit_read_to_gpu`.
-    pub fn submit_read_to_gpu_fixed_file(
-        &mut self,
-        file_index: i32,
-        offset: u64,
-        len: u32,
-        chunk_idx: usize,
-        iovs_storage: &mut [Iovec],
-    ) -> Result<(), PipelineError> {
-        if iovs_storage.is_empty() {
-            return Err(empty_iovec_storage());
-        }
-        let target_offset = checked_chunk_target_offset(chunk_idx, len)?;
-        let end = checked_target_end(target_offset, len)?;
-        let gpu_len = usize_to_u64(self.gpu_buffer.len(), "mapped GPU buffer length")?;
-        if end > gpu_len {
-            return Err(PipelineError::RegionBounds {
-                region: "GpuMappedBuffer mapped allocation",
-                offset: target_offset,
-                len: u64::from(len),
-                region_len: gpu_len,
-                unit: "bytes",
-                fix: "enlarge the buffer or reduce the read size",
-            });
-        }
-
-        let submission_entries = self.ring_state.submission_entries();
-        let Some(sqe) = self.ring_state.get_sqe() else {
-            return Err(submission_queue_full(submission_entries));
-        };
-
-        // SAFETY: same invariants as submit_read_to_gpu, plus the
-        // caller committed that file_index is a registered fd.
-        let target_addr = self
-            .gpu_buffer
-            .as_ptr()
-            .wrapping_add(u64_to_usize(target_offset, "target offset")?);
-        iovs_storage[0] = Iovec {
-            iov_base: target_addr.cast::<core::ffi::c_void>(),
-            iov_len: u32_to_usize(len, "read length")?,
-        };
-
-        sqe.opcode = IORING_OP_READV;
-        sqe.flags = super::ring::IOSQE_FIXED_FILE;
-        sqe.fd = file_index;
-        sqe.user_data_or_off = offset;
-        sqe.addr = pointer_addr_u64(iovs_storage.as_ptr(), "fixed-file readv iovec pointer")?;
-        sqe.len = 1;
-        sqe.user_data = usize_to_u64(chunk_idx, "chunk index")?;
 
         self.ring_state.commit_sqe();
         increment_queue_counter(&mut self.inflight, "inflight SQE count")?;

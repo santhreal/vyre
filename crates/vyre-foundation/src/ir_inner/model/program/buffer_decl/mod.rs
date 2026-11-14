@@ -390,7 +390,7 @@ impl BufferDecl {
     /// backend code, rather than a runtime-sized binding length.
     ///
     /// This mirrors, arm for arm, the `MemoryClass::Shared` and
-    /// `MemoryClass::Scratch` cases of `vyre_lower::lower::memory_class`, which
+    /// `MemoryClass::Scratch` cases of `vyre_compiler::lower::lower::memory_class`, which
     /// is the single Program-to-descriptor boundary every emitter reads. Those
     /// two classes are the ones whose `element_count` becomes a fixed-length
     /// array in emitted code; every other class emits a runtime-sized array

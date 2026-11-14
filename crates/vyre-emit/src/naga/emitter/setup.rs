@@ -16,7 +16,7 @@ use naga::{
 };
 use vyre_foundation::fp_parity::FloatLoweringMode;
 use vyre_foundation::ir::DataType;
-use vyre_lower::{
+use vyre_compiler::lower::{
     BindingSlot, BindingVisibility, GridIndexSpace, KernelBody, KernelDescriptor, KernelOpKind,
     MemoryClass, TRAP_SIDECAR_NAME,
 };
@@ -26,7 +26,7 @@ use crate::naga::EmitError;
 
 /// Backend-owned WGSL identifier for the trap sidecar global. The WGSL name is
 /// internal to the shader, the host binds the sidecar by descriptor slot name
-/// (`vyre_lower::TRAP_SIDECAR_NAME` = `__vyre_descriptor_trap_sidecar`) plus the
+/// (`vyre_compiler::lower::TRAP_SIDECAR_NAME` = `__vyre_descriptor_trap_sidecar`) plus the
 /// numeric `@group/@binding`, never by the WGSL identifier, so the wgpu Naga
 /// backend names its own sidecar global. `trap_nodes_lower_to_backend_sidecar`
 /// pins this contract.
@@ -515,31 +515,31 @@ fn descriptor_trap_sidecar_slot(desc: &KernelDescriptor) -> Result<Option<u32>, 
         .find(|binding| binding.name == TRAP_SIDECAR_NAME)
         .ok_or_else(|| {
             EmitError::InvalidDescriptor(format!(
-                "Trap op requires descriptor binding `{TRAP_SIDECAR_NAME}`. Fix: lower through vyre-lower so the trap sidecar binding is inserted."
+                "Trap op requires descriptor binding `{TRAP_SIDECAR_NAME}`. Fix: lower through vyre-compiler so the trap sidecar binding is inserted."
             ))
         })?;
     if slot.element_type != DataType::U32
-        || slot.element_count.unwrap_or(0) < vyre_lower::TRAP_SIDECAR_WORDS
+        || slot.element_count.unwrap_or(0) < vyre_compiler::lower::TRAP_SIDECAR_WORDS
         || !matches!(slot.visibility, BindingVisibility::ReadWrite)
     {
         return Err(EmitError::InvalidBinding {
             slot: slot.slot,
             reason: format!(
                 "trap sidecar `{TRAP_SIDECAR_NAME}` must be a read-write u32 buffer with at least {} words",
-                vyre_lower::TRAP_SIDECAR_WORDS
+                vyre_compiler::lower::TRAP_SIDECAR_WORDS
             ),
         });
     }
     Ok(Some(slot.slot))
 }
 
-/// Index `vyre_lower::descriptor_trap_tags` by tag for the emitter, which
+/// Index `vyre_compiler::lower::descriptor_trap_tags` by tag for the emitter, which
 /// resolves a code from the tag it is lowering. The numbering itself belongs to
-/// vyre-lower so a code decodes to the same tag on every backend and host.
+/// vyre-compiler so a code decodes to the same tag on every backend and host.
 fn descriptor_trap_tag_codes(
     body: &KernelBody,
-) -> Result<FxHashMap<vyre_lower::Name, u32>, EmitError> {
-    let table = vyre_lower::descriptor_trap_tags(body).map_err(|source| {
+) -> Result<FxHashMap<vyre_compiler::lower::Name, u32>, EmitError> {
+    let table = vyre_compiler::lower::descriptor_trap_tags(body).map_err(|source| {
         EmitError::InvalidDescriptor(format!("trap tag codes unavailable: {source}"))
     })?;
     Ok(table
@@ -571,7 +571,7 @@ pub(crate) fn emit_uncached(
     // cooperative launch, so the fused body emits as one compute entry point per
     // dispatch segment, submitted in order. A fence-free descriptor yields a
     // single segment and the same single `main` as before.
-    let segments = vyre_lower::dispatch_segments(desc)
+    let segments = vyre_compiler::lower::dispatch_segments(desc)
         .map_err(|source| EmitError::InvalidDescriptor(source.to_string()))?;
     for (index, segment) in segments.iter().enumerate() {
         let name = crate::naga::grid_segments::segment_entry_name(index);
@@ -646,7 +646,7 @@ mod tests {
             [1, 1, 1],
             vec![Node::store("out", Expr::u32(0), Expr::buf_len("input"))],
         );
-        let descriptor = vyre_lower::lower_physical(&program)
+        let descriptor = vyre_compiler::lower::lower_physical(&program)
             .map(|lowered| lowered.into_descriptor())
             .expect("Fix: counted storage buf_len program must lower");
         let module = emit_uncached(&descriptor, FloatLoweringMode::default())
