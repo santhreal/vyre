@@ -57,7 +57,8 @@ pub struct Decision {
 
 /// Where the ledger is, resolved from the checkout the test binary runs in.
 pub fn ledger_path() -> PathBuf {
-    structure_gate::workspace_root().join("crates/vyre-driver/float-lowering-decisions.toml")
+    vyre_test_support::monorepo::vyre_workspace_root()
+        .join("crates/vyre-driver/float-lowering-decisions.toml")
 }
 
 /// The ledger as one row per backend id.

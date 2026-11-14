@@ -569,46 +569,38 @@ fn enforcement_cases() -> Vec<EnforcementCase> {
     ]
 }
 
-/// The checked-in public-API snapshot of this crate, as text.
-///
-/// The `public-api` gate in `tools/xtask/src/gates/public_api.rs` regenerates the
-/// snapshot from rustdoc under `--write` and holds it byte-equal to the crate's
-/// real surface otherwise, so it is the one place a new capability
-/// field or a new advertised parameter is guaranteed to appear.
-fn snapshot_text() -> String {
-    vyre_test_support::public_api::snapshot_text(env!("CARGO_PKG_NAME"))
+/// Public `bool` field names declared on `struct_decl` in `src/program_caps.rs`.
+fn program_caps_bool_fields(struct_decl: &str) -> BTreeSet<String> {
+    let path = vyre_test_support::monorepo::vyre_crate_directory(env!("CARGO_PKG_NAME"))
+        .join("src/program_caps.rs");
+    let source = std::fs::read_to_string(&path)
+        .unwrap_or_else(|err| panic!("Fix: cannot read {}: {err}", path.display()));
+    let body = vyre_test_support::braced_body(&source, struct_decl)
+        .unwrap_or_else(|| panic!("Fix: {} no longer declares `{struct_decl}`", path.display()));
+    let fields: BTreeSet<String> = body
+        .lines()
+        .map(str::trim)
+        .filter_map(|line| line.strip_prefix("pub "))
+        .filter_map(|rest| rest.strip_suffix(": bool,"))
+        .map(str::trim)
+        .map(str::to_string)
+        .collect();
+    assert!(
+        !fields.is_empty(),
+        "Fix: `{struct_decl}` in {} declares no public `bool` fields.",
+        path.display()
+    );
+    fields
 }
 
-/// Boolean field names of `RequiredCapabilities`, from the snapshot.
+/// Boolean field names of `RequiredCapabilities`, parsed from `src/program_caps.rs`.
 fn snapshot_boolean_capability_fields() -> BTreeSet<String> {
-    let prefix = "pub vyre_foundation::program_caps::RequiredCapabilities::";
-    let fields: BTreeSet<String> = snapshot_text()
-        .lines()
-        .filter_map(|line| line.strip_prefix(prefix))
-        .filter_map(|rest| rest.strip_suffix(": bool"))
-        .map(str::to_string)
-        .collect();
-    assert!(
-        !fields.is_empty(),
-        "Fix: the public-API snapshot lists no boolean `RequiredCapabilities` fields. Refresh it with scripts/check_public_api_snapshot.sh --refresh vyre-foundation."
-    );
-    fields
+    program_caps_bool_fields("pub struct RequiredCapabilities {")
 }
 
-/// Boolean field names of `BackendSupport`, from the snapshot.
+/// Boolean field names of `BackendSupport`, parsed from `src/program_caps.rs`.
 fn snapshot_advertised_fields() -> BTreeSet<String> {
-    let prefix = "pub vyre_foundation::program_caps::BackendSupport::";
-    let fields: BTreeSet<String> = snapshot_text()
-        .lines()
-        .filter_map(|line| line.strip_prefix(prefix))
-        .filter_map(|rest| rest.strip_suffix(": bool"))
-        .map(str::to_string)
-        .collect();
-    assert!(
-        !fields.is_empty(),
-        "Fix: the public-API snapshot lists no boolean `BackendSupport` fields. Refresh it with scripts/check_public_api_snapshot.sh --refresh vyre-foundation."
-    );
-    fields
+    program_caps_bool_fields("pub struct BackendSupport {")
 }
 
 #[test]
