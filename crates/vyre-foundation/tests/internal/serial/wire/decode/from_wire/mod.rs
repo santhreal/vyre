@@ -74,11 +74,7 @@ fn leb_encode_usize(mut value: usize) -> Vec<u8> {
 fn node_payload_len_at_limit_is_accepted() {
     // MAX_OPAQUE_PAYLOAD_LEN itself must not be rejected by leb_len.
     let encoded = leb_encode_usize(MAX_OPAQUE_PAYLOAD_LEN);
-    let mut reader = Reader {
-        bytes: &encoded,
-        pos: 0,
-        depth: 0,
-    };
+    let mut reader = Reader::new(&encoded);
     let result = reader.leb_len(MAX_OPAQUE_PAYLOAD_LEN, "node payload length");
     assert!(
         result.is_ok(),
@@ -97,11 +93,7 @@ fn node_payload_len_exceeds_limit_rejected() {
     // with no indication of which field was wrong).
     let over_limit = MAX_OPAQUE_PAYLOAD_LEN + 1;
     let encoded = leb_encode_usize(over_limit);
-    let mut reader = Reader {
-        bytes: &encoded,
-        pos: 0,
-        depth: 0,
-    };
+    let mut reader = Reader::new(&encoded);
     let err = reader
         .leb_len(MAX_OPAQUE_PAYLOAD_LEN, "node payload length")
         .expect_err(

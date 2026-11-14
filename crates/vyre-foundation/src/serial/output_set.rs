@@ -251,7 +251,7 @@ mod tests {
             buffers: buffers
                 .iter()
                 .map(|b| crate::serial::wire::decode::from_wire::DecodedBuffer {
-                    name: b.name().to_string(),
+                    name: b.name(),
                     binding: b.binding(),
                     access: b.access(),
                     kind: b.kind(),
@@ -272,11 +272,7 @@ mod tests {
             ..Default::default()
         };
 
-        let mut reader = crate::serial::wire::Reader {
-            bytes: &encoded,
-            pos: 0,
-            depth: 0,
-        };
+        let mut reader = crate::serial::wire::Reader::new(&encoded);
         let decoded = OutputSet::decode_from(&mut reader, &metadata).unwrap();
         assert_eq!(original, decoded);
     }

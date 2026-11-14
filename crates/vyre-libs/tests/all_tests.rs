@@ -464,7 +464,7 @@ pub mod sum_product_depth_order_is_a_contract;
 pub mod sum_product_signed_parity;
 
 /// Integration tests from `tests/taint_pollution_grid_sync_planner_cut.rs`.
-#[cfg(feature = "security")]
+#[cfg(feature = "reduce")]
 #[path = "taint_pollution_grid_sync_planner_cut.rs"]
 pub mod taint_pollution_grid_sync_planner_cut;
 
