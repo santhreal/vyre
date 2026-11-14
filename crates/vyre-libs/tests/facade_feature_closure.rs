@@ -156,3 +156,11 @@ fn every_feature_entry_names_something_that_exists() {
         "Fix: these feature entries name a local feature that is not declared: {dangling:?}."
     );
 }
+
+#[test]
+fn active_feature_set_registers_library_operations() {
+    assert!(
+        vyre_libs::link_anchor() > 0,
+        "Fix: active vyre-libs features must register library operations in the catalog."
+    );
+}

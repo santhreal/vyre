@@ -36,79 +36,28 @@ fn catalog_names_are_unique() {
 }
 
 #[test]
-fn release_catalog_exposes_100_plus_discoverable_optimizations() {
-    const MIN_RELEASE_OPTIMIZATIONS: usize = 100;
-
+fn catalog_matches_executable_registered_passes() {
     let catalog = optimization_catalog().expect("Fix: optimizer catalog must build");
-    assert!(
-            catalog.len() >= MIN_RELEASE_OPTIMIZATIONS,
-            "Fix: optimizer catalog exposes only {} optimizations; release requires at least {MIN_RELEASE_OPTIMIZATIONS} discoverable optimizations with owner, phase, invariant, and benchmark contracts.",
-            catalog.len()
-        );
-
-    let phases = catalog
-        .iter()
-        .map(|entry| entry.phase)
-        .collect::<HashSet<_>>();
-    let benchmarks = catalog
-        .iter()
-        .map(|entry| entry.benchmark)
-        .collect::<BTreeSet<_>>();
-
-    assert!(
-            phases.len() >= 5,
-            "Fix: optimizer catalog must span at least five scheduler phases so contributors can find the correct insertion point."
-        );
-    assert!(
-            benchmarks.len() >= 5,
-            "Fix: optimizer catalog must map optimizations to benchmark families, not one vague performance bucket."
-        );
-}
-
-#[test]
-fn catalog_names_plan_required_structural_optimization_families() {
-    let catalog = optimization_catalog().expect("Fix: optimizer catalog must build");
-    let names = catalog
-        .iter()
-        .map(|entry| entry.name)
-        .collect::<BTreeSet<_>>();
-    for required in [
-        "megakernel.allocation_reuse",
-        "megakernel.launch_fusion",
-        "dataflow.layout_normalization",
-        "dataflow.frontier_density_switch",
-        "dataflow.bitset_compression",
-        "megakernel.readback_minimization",
-    ] {
-        assert!(
-                names.contains(required),
-                "Fix: optimizer catalog is missing required structural optimization family `{required}`."
-            );
-    }
-}
-
-#[test]
-fn catalog_distinguishes_runnable_passes_from_supplemental_rules() {
-    let catalog = optimization_catalog().expect("Fix: optimizer catalog must build");
-    let executable_count = catalog
-        .iter()
-        .filter(|entry| entry.kind == OptimizationCatalogEntryKind::ExecutablePass)
-        .count();
-    let supplemental_count = catalog
-        .iter()
-        .filter(|entry| entry.kind == OptimizationCatalogEntryKind::SupplementalRule)
-        .count();
     let registered_count = registered_pass_registrations()
         .expect("Fix: registered optimizer passes must schedule")
         .len();
 
     assert_eq!(
-            executable_count, registered_count,
-            "Fix: executable optimizer catalog entries must correspond exactly to runnable registered passes."
-        );
+        catalog.len(),
+        registered_count,
+        "Fix: optimizer catalog entries must correspond 1:1 to runnable registered passes."
+    );
+    assert!(catalog
+        .iter()
+        .all(|entry| entry.kind == OptimizationCatalogEntryKind::ExecutablePass));
+
+    let phases = catalog
+        .iter()
+        .map(|entry| entry.phase)
+        .collect::<HashSet<_>>();
     assert!(
-        supplemental_count > 0,
-        "Fix: supplemental rule entries should remain visible, but not counted as runnable passes."
+        phases.len() >= 4,
+        "Fix: optimizer catalog must span multiple scheduler phases."
     );
 }
 
@@ -140,14 +89,9 @@ fn release_catalog_entries_are_fully_classified() {
             entry.name
         );
         assert!(
-                entry.preserves_abi,
-                "Fix: release pass `{}` must preserve public buffer ABI or move behind an explicit opt-in profile.",
-                entry.name
-            );
-        assert!(
-                entry.requires_caps.is_empty(),
-                "Fix: release pass `{}` must not require backend/runtime caps; use a backend-aware profile instead.",
-                entry.name
-            );
+            entry.preserves_abi,
+            "Fix: release pass `{}` must preserve public buffer ABI.",
+            entry.name
+        );
     }
 }

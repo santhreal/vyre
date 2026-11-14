@@ -88,6 +88,20 @@ pub(crate) struct Reader<'a> {
     /// every `node()` and `expr()` call and compared against
     /// [`MAX_DECODE_DEPTH`] before any nested decode proceeds.
     pub depth: u32,
+    /// Zero-copy slice-to-`Ident` intern map shared across a `Program` decode.
+    pub intern: rustc_hash::FxHashMap<&'a str, crate::ir::Ident>,
+}
+
+impl<'a> Reader<'a> {
+    #[inline]
+    pub(crate) fn new(bytes: &'a [u8]) -> Self {
+        Self {
+            bytes,
+            pos: 0,
+            depth: 0,
+            intern: rustc_hash::FxHashMap::default(),
+        }
+    }
 }
 
 impl Program {

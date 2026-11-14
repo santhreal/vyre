@@ -579,12 +579,12 @@ const RECORDED_NODE_VISITORS: &[(&str, &str)] = &[
     ),
     (
         "AsyncResumeRejector",
-        "vyre-emit-naga: rejects two variants and ignores the rest. Wants \
+        "vyre_emit::naga: rejects two variants and ignores the rest. Wants \
          try_for_each_node; not yet routed.",
     ),
     (
         "TrapTagCollector",
-        "vyre-emit-naga: collects one variant's tag and ignores the rest. \
+        "vyre_emit::naga: collects one variant's tag and ignores the rest. \
          Wants try_for_each_node; not yet routed.",
     ),
 ];

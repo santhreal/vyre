@@ -1451,8 +1451,6 @@ the build break). Total suite state: 1158 passed, 96 failed (85 = SELFOPT-1, 11 
     compiled_pipeline_contracts::compiled_pipeline_repeated_timed_single_dispatch_reports_materialized_zero_device_work
     (cuda_graph_dispatch_parity/*.rs) -- timed cudaGraph materialized hits must report
     zero device work but report None.
-  - cuda_release_surface_contracts.rs: cuda_release_path_tracks_resident_borrowed_fallback_telemetry_gate,
-    cuda_release_gate_evidence_matches_executable_gate (release telemetry gate).
   - cuda_vyre_libs_scan_prefix_sum_recursive_block_totals (scan prefix-sum block totals).
   - contract_cases/ptx_codegen_smoke__ptx_emits_bitwise_ops.rs: ptx_emits_integer_comparisons,
     ptx_lowers_workgroup_sum_region_to_subgroup_reduction (PTX emission shape).
@@ -1466,8 +1464,6 @@ Triage each cluster separately (do NOT lump):
    backend/cuda_graph_replay.rs -- a timed replay of a materialized graph must report
    device_ns Some(0) (cached, no launch) not None. Likely a telemetry plumbing gap on
    the cached path.
-2. release-gate: cuda_release_surface_contracts asserts the release evidence matches
-   the executable gate; reconcile the gate after recent backend changes.
 3. scan_prefix_sum recursive block totals: differential vs the CPU oracle for the
    multi-block recursive path.
 4. ptx_codegen_smoke__ptx_emits_bitwise_ops: PTX emission shape for integer comparisons + workgroup-sum

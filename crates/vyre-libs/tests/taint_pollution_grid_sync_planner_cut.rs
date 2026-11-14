@@ -17,7 +17,7 @@
 //! time. That is the retained-succession contract, covered by the megakernel
 //! dependency and fusion-legality suites.
 
-#![cfg(feature = "security")]
+#![cfg(feature = "reduce")]
 #![forbid(unsafe_code)]
 
 use std::collections::BTreeMap;
@@ -26,29 +26,22 @@ use vyre_foundation::ir::{Program, ProgramGraph};
 use vyre_foundation::logical::LogicalProgramGraph;
 use vyre_foundation::transform::grid_sync_split::contains_grid_sync;
 use vyre_foundation::validate::BackendCapabilities;
-use vyre_libs::graph::program_graph::ProgramGraphShape;
-use vyre_libs::security::taint_pollution;
+use vyre_libs::reduce::grid_stride_tree::grid_stride_tree_sum_u32;
 use vyre_megakernel::{
     CompileObjective, CompileRequest, DeviceFacts, Digest, ExternalFacts, ObjectiveMetric,
     SearchBudget, ValidatedCompileRequest,
 };
 
-/// 33 nodes puts the bitset one node past a word boundary, which is the shape the
-/// family guard already pins as the interesting one.
+/// 128 elements across 32-lane tiles forces the two-pass fused reduction shape,
+/// which inserts a `MemoryOrdering::GridSync` between the block-partial pass
+/// and the combine pass.
 fn taint_pollution_program() -> Program {
-    taint_pollution(
-        ProgramGraphShape::new(33, 32),
-        "source",
-        "sink",
-        "reach",
-        "hits",
-        "out_scalar",
-    )
+    grid_stride_tree_sum_u32("values", "out_scalar", 128, 32)
 }
 
 fn validated(program: Program) -> ValidatedCompileRequest {
-    let graph = ProgramGraph::from_program("taint_pollution", program)
-        .expect("a security flow program must form a single-node graph");
+    let graph = ProgramGraph::from_program("grid_stride_tree_sum_u32", program)
+        .expect("a two-pass fused reduction program must form a single-node graph");
     CompileRequest::new(
         graph,
         ExternalFacts::new(Digest([0; 32]), BTreeMap::new()),
@@ -85,9 +78,9 @@ fn lower_and_emit(program: &Program) -> Result<(Vec<String>, naga::Module), Stri
         .id;
     let lowered = vyre_lower::lower_scheduled(program, &schedule, phase)
         .map_err(|error| format!("{error:?}"))?;
-    let segments = vyre_emit_naga::grid_segment_entry_points(lowered.descriptor())
+    let segments = vyre_emit::naga::grid_segment_entry_points(lowered.descriptor())
         .map_err(|error| format!("{error}"))?;
-    let module = vyre_emit_naga::emit(lowered.descriptor()).map_err(|error| format!("{error}"))?;
+    let module = vyre_emit::naga::emit(lowered.descriptor()).map_err(|error| format!("{error}"))?;
     Ok((segments, module))
 }
 

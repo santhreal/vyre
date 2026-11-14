@@ -8,8 +8,8 @@ use std::collections::BTreeSet;
 
 use vyre_spec::{DataType, QuantizationScale, QuantizationZeroPoint};
 use vyre_spec::{
-    ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionRuleConditionId,
-    ExtensionTernaryOpId, ExtensionUnOpId,
+    ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionTernaryOpId,
+    ExtensionUnOpId,
 };
 
 use crate::data_type_edge_matrix_cases;
@@ -225,14 +225,12 @@ fn generated_extension_id_matrix_covers_every_extension_family() {
         let un = ExtensionUnOpId::from_name(&name);
         let atomic = ExtensionAtomicOpId::from_name(&name);
         let ternary = ExtensionTernaryOpId::from_name(&name);
-        let condition = ExtensionRuleConditionId::from_name(&name);
 
         assert_eq!(dtype, ExtensionDataTypeId::from_name(&name));
         assert_eq!(bin, ExtensionBinOpId::from_name(&name));
         assert_eq!(un, ExtensionUnOpId::from_name(&name));
         assert_eq!(atomic, ExtensionAtomicOpId::from_name(&name));
         assert_eq!(ternary, ExtensionTernaryOpId::from_name(&name));
-        assert_eq!(condition, ExtensionRuleConditionId::from_name(&name));
 
         assert!(
             dtype.is_extension(),
@@ -254,10 +252,6 @@ fn generated_extension_id_matrix_covers_every_extension_family() {
             ternary.is_extension(),
             "Fix: ternary id for `{name}` must set the high bit."
         );
-        assert!(
-            condition.is_extension(),
-            "Fix: rule-condition id for `{name}` must set the high bit."
-        );
 
         assert_eq!(
             dtype.as_u32(),
@@ -267,7 +261,6 @@ fn generated_extension_id_matrix_covers_every_extension_family() {
         assert_eq!(dtype.as_u32(), un.as_u32());
         assert_eq!(dtype.as_u32(), atomic.as_u32());
         assert_eq!(dtype.as_u32(), ternary.as_u32());
-        assert_eq!(dtype.as_u32(), condition.as_u32());
 
         distinct.insert(dtype.as_u32());
         checked += 1;

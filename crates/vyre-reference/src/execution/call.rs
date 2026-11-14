@@ -8,7 +8,7 @@
 //! expression, and hands that in as a closure.
 
 use rustc_hash::FxHashMap;
-use vyre_foundation::cpu_op::CpuFn;
+use vyre_spec::CpuFn;
 use vyre_foundation::dialect_lookup::{Signature, TypedParam};
 use vyre_foundation::ir::{DataType, Expr};
 use vyre_foundation::operation::{OperationRegistry, SemanticOperation};

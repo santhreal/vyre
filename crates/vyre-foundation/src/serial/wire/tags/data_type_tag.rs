@@ -345,11 +345,7 @@ mod tests {
             let mut encoded = Vec::new();
             put_data_type(&mut encoded, ty)
                 .unwrap_or_else(|e| panic!("encode {ty:?} failed: {e:?}"));
-            let mut reader = Reader {
-                bytes: &encoded,
-                pos: 0,
-                depth: 0,
-            };
+            let mut reader = Reader::new(&encoded);
             let decoded = reader
                 .data_type()
                 .unwrap_or_else(|e| panic!("decode {ty:?} failed: {e}"));
@@ -377,11 +373,7 @@ mod tests {
         };
         let mut encoded = Vec::new();
         put_data_type(&mut encoded, &ty).expect("encode max-rank tensor");
-        let mut reader = Reader {
-            bytes: &encoded,
-            pos: 0,
-            depth: 0,
-        };
+        let mut reader = Reader::new(&encoded);
         let decoded = reader.data_type().expect("max-rank tensor must decode");
         assert_eq!(decoded, ty, "rank == MAX_TENSOR_RANK must round-trip");
     }
@@ -406,11 +398,7 @@ mod tests {
         encoded.truncate(cut);
         encoded.extend_from_slice(&(MAX_TENSOR_RANK as u32 + 1).to_le_bytes());
 
-        let mut reader = Reader {
-            bytes: &encoded,
-            pos: 0,
-            depth: 0,
-        };
+        let mut reader = Reader::new(&encoded);
         let err = reader
             .data_type()
             .expect_err("over-limit tensor rank must be rejected, not read dim-by-dim");
@@ -432,11 +420,7 @@ mod tests {
         encoded.truncate(cut);
         encoded.extend_from_slice(&(MAX_MESH_AXES as u32 + 1).to_le_bytes());
 
-        let mut reader = Reader {
-            bytes: &encoded,
-            pos: 0,
-            depth: 0,
-        };
+        let mut reader = Reader::new(&encoded);
         let err = reader
             .data_type()
             .expect_err("over-limit device-mesh axis count must be rejected");

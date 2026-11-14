@@ -6,8 +6,8 @@
 
 use vyre_spec::{BackendAvailabilityPredicate, Category, CommGroup};
 use vyre_spec::{
-    ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionRuleConditionId,
-    ExtensionTernaryOpId, ExtensionUnOpId,
+    ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionTernaryOpId,
+    ExtensionUnOpId,
 };
 
 #[test]
@@ -19,7 +19,6 @@ fn every_extension_id_family_uses_the_reserved_high_bit_range() {
         ExtensionUnOpId::from_name(stable_name).as_u32(),
         ExtensionAtomicOpId::from_name(stable_name).as_u32(),
         ExtensionTernaryOpId::from_name(stable_name).as_u32(),
-        ExtensionRuleConditionId::from_name(stable_name).as_u32(),
     ];
 
     for raw in ids {

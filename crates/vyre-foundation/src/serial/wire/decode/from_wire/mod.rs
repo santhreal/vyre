@@ -108,24 +108,23 @@ pub fn from_wire(bytes: &[u8]) -> Result<Program, String> {
                 .to_string(),
         );
     }
-    let mut expected = [0_u8; 32];
-    expected.copy_from_slice(&bytes[8..40]);
+    let expected: &[u8; 32] = bytes[8..40]
+        .try_into()
+        .expect("header slice 8..40 has exact length 32");
     let body = &bytes[HEADER_LEN..];
     let actual = blake3::hash(body);
-    if actual.as_bytes() != &expected {
+    if actual.as_bytes() != expected {
         return Err(format!(
             "IntegrityMismatch: expected {}, actual {}. Fix: reject the truncated or tampered Program bytes and re-fetch the payload.",
-            hex32(&expected),
+            hex32(expected),
             actual.to_hex()
         ));
     }
 
-    let mut reader = Reader {
-        bytes: body,
-        pos: 0,
-        depth: 0,
-    };
-    let (entry_op_id, workgroup_size, mut metadata) = read_nodes(&mut reader, version)?;
+    let mut reader = Reader::new(body);
+    let mut buffer_arcs: Vec<Arc<str>> = Vec::new();
+    let (entry_op_id, workgroup_size, mut metadata) =
+        read_nodes(&mut reader, version, &mut buffer_arcs)?;
     read_memory_regions(&mut reader, &mut metadata)?;
     let output_set = read_output_set(&mut reader, &metadata)?;
     if reader.pos != reader.bytes.len() {
@@ -142,9 +141,9 @@ pub fn from_wire(bytes: &[u8]) -> Result<Program, String> {
         metadata.buffers.len(),
         "decoded Program buffer table",
     )?;
-    for buffer in metadata.buffers {
+    for (buffer, name_arc) in metadata.buffers.into_iter().zip(buffer_arcs) {
         buffers.push(BufferDecl {
-            name: Arc::from(buffer.name),
+            name: name_arc,
             binding: buffer.binding,
             access: buffer.access,
             kind: buffer.kind,
@@ -172,14 +171,14 @@ pub fn from_wire(bytes: &[u8]) -> Result<Program, String> {
 }
 
 #[derive(Default)]
-pub(crate) struct DecodedMetadata {
+pub(crate) struct DecodedMetadata<'a> {
     pub(crate) entry: Vec<crate::ir::Node>,
-    pub(crate) buffers: Vec<DecodedBuffer>,
+    pub(crate) buffers: Vec<DecodedBuffer<'a>>,
     pub(crate) non_composable_with_self: bool,
 }
 
-pub(crate) struct DecodedBuffer {
-    pub(crate) name: String,
+pub(crate) struct DecodedBuffer<'a> {
+    pub(crate) name: &'a str,
     pub(crate) binding: u32,
     pub(crate) access: BufferAccess,
     pub(crate) kind: MemoryKind,
@@ -196,42 +195,56 @@ pub(crate) struct DecodedBuffer {
 
 fn read_output_set(
     reader: &mut Reader<'_>,
-    metadata: &DecodedMetadata,
+    metadata: &DecodedMetadata<'_>,
 ) -> Result<crate::serial::output_set::OutputSet, String> {
     crate::serial::output_set::OutputSet::decode_from(reader, metadata)
 }
 
-fn read_nodes(
-    reader: &mut Reader<'_>,
+fn read_nodes<'a>(
+    reader: &mut Reader<'a>,
     version: u16,
-) -> Result<(Option<String>, [u32; 3], DecodedMetadata), String> {
+    buffer_arcs: &mut Vec<Arc<str>>,
+) -> Result<(Option<String>, [u32; 3], DecodedMetadata<'a>), String> {
     let count = reader.leb_len(MAX_NODES, "node count")?;
     if count == 0 {
         return Err("TruncatedPayload: missing metadata node. Fix: serialize Program with Program::to_wire().".to_string());
     }
-    let (op_id, payload, operands) = read_node_record(reader, 0)?;
+    let (op_id, payload, has_operands) = read_node_record(reader, 0)?;
     if op_id != METADATA_OP_ID {
         return Err(format!(
             "UnknownOp: op_id `{op_id}`. Fix: the first VYRE node must be `{METADATA_OP_ID}` metadata from Program::to_wire()."
         ));
     }
-    if !operands.is_empty() {
+    if has_operands {
         return Err("InvalidDiscriminant: metadata node has operands. Fix: reserialize with Program::to_wire().".to_string());
     }
     let (entry_op_id, workgroup_size, mut metadata) = read_metadata(payload, version)?;
+    reserve_decoded_vec_capacity(buffer_arcs, metadata.buffers.len(), "decoded buffer names")?;
+    let mut payload_reader = Reader::new(&[]);
+    payload_reader.intern.reserve(metadata.buffers.len());
+    for buf in &metadata.buffers {
+        let arc: Arc<str> = if let Some(existing) = payload_reader.intern.get(buf.name) {
+            existing.shared_text()
+        } else {
+            let created: Arc<str> = Arc::from(buf.name);
+            payload_reader
+                .intern
+                .insert(buf.name, crate::ir::Ident::new(Arc::clone(&created)));
+            created
+        };
+        buffer_arcs.push(arc);
+    }
     reserve_decoded_vec_capacity(&mut metadata.entry, count - 1, "decoded entry nodes")?;
     for node_index in 1..count {
-        let (op_id, payload, operands) = read_node_record(reader, node_index)?;
-        if !operands.is_empty() {
+        let (op_id, payload, has_operands) = read_node_record(reader, node_index)?;
+        if has_operands {
             return Err(format!(
                 "InvalidDiscriminant: node {node_index} carries operand ids but legacy payload nodes are self-contained. Fix: reserialize with this Vyre version."
             ));
         }
-        let mut payload_reader = Reader {
-            bytes: payload,
-            pos: 0,
-            depth: 0,
-        };
+        payload_reader.bytes = payload;
+        payload_reader.pos = 0;
+        payload_reader.depth = 0;
         let node = payload_reader.node()?;
         if payload_reader.pos != payload_reader.bytes.len() {
             return Err(format!(
@@ -249,26 +262,14 @@ fn read_nodes(
     Ok((entry_op_id, workgroup_size, metadata))
 }
 
-// VYRE_IR_HOTSPOTS CRIT (from_wire.rs:220): the previous signature
-// copied the payload slice into a Vec<u8> for every node record.
-// Returning a sub-slice view bound to the reader's input lifetime
-// removes one allocation per node  -  N-node wire decodes now skip
-// N heap allocations on the payload path entirely.
 fn read_node_record<'a>(
     reader: &mut Reader<'a>,
     node_index: usize,
-) -> Result<(String, &'a [u8], Vec<u32>), String> {
-    let op_id = reader.leb_string()?;
-    // Bound node payload length to MAX_OPAQUE_PAYLOAD_LEN so an oversized
-    // length field produces an actionable "exceeds limit" error at the gate,
-    // not a confusing "truncated" error from the body read that follows.
-    // The encoder already enforces this limit on write (put_node.rs:211), so
-    // any blob claiming more is either corrupt or crafted.
+) -> Result<(&'a str, &'a [u8], bool), String> {
+    let op_id = reader.leb_str()?;
     let payload_len = reader.leb_len(MAX_OPAQUE_PAYLOAD_LEN, "node payload length")?;
     let payload = reader.take(payload_len)?;
     let operand_count = reader.leb_len(MAX_NODES, "operand count")?;
-    let mut operands = Vec::new();
-    reserve_decoded_vec_capacity(&mut operands, operand_count, "decoded node operands")?;
     for _ in 0..operand_count {
         let operand = reader.leb_u32()?;
         if usize::try_from(operand).map_or(true, |operand| operand >= node_index) {
@@ -276,20 +277,15 @@ fn read_node_record<'a>(
                 "TruncatedPayload: operand id {operand} is not a prior node for node {node_index}. Fix: topologically order operands and reject forward/self references."
             ));
         }
-        operands.push(operand);
     }
-    Ok((op_id, payload, operands))
+    Ok((op_id, payload, operand_count != 0))
 }
 
-fn read_metadata(
-    payload: &[u8],
+fn read_metadata<'a>(
+    payload: &'a [u8],
     version: u16,
-) -> Result<(Option<String>, [u32; 3], DecodedMetadata), String> {
-    let mut reader = Reader {
-        bytes: payload,
-        pos: 0,
-        depth: 0,
-    };
+) -> Result<(Option<String>, [u32; 3], DecodedMetadata<'a>), String> {
+    let mut reader = Reader::new(payload);
     if reader.take(9)? != b"VYRE-META" {
         return Err("InvalidDiscriminant: metadata payload marker is invalid. Fix: serialize Program with Program::to_wire().".to_string());
     }
@@ -317,7 +313,7 @@ fn read_metadata(
     let mut buffers = Vec::new();
     reserve_decoded_vec_capacity(&mut buffers, buffer_count, "decoded metadata buffers")?;
     for _ in 0..buffer_count {
-        let name = reader.string()?;
+        let name = reader.str()?;
         let binding = reader.u32()?;
         let count = reader.u32()?;
         let is_output = reader.u8()? != 0;
@@ -430,14 +426,14 @@ fn hex32(bytes: &[u8; 32]) -> String {
     out
 }
 
-pub(crate) trait LebReader {
+pub(crate) trait LebReader<'a> {
     fn leb_u64(&mut self) -> Result<u64, String>;
     fn leb_u32(&mut self) -> Result<u32, String>;
     fn leb_len(&mut self, max: usize, label: &str) -> Result<usize, String>;
-    fn leb_string(&mut self) -> Result<String, String>;
+    fn leb_str(&mut self) -> Result<&'a str, String>;
 }
 
-impl LebReader for Reader<'_> {
+impl<'a> LebReader<'a> for Reader<'a> {
     fn leb_u64(&mut self) -> Result<u64, String> {
         let mut result = 0_u64;
         for shift in (0..70).step_by(7) {
@@ -475,15 +471,10 @@ impl LebReader for Reader<'_> {
         Ok(value)
     }
 
-    fn leb_string(&mut self) -> Result<String, String> {
-        // Bounded string decode (from_wire.rs:567-571): previous
-        // code did `bytes.to_vec()` then `String::from_utf8(vec)`.
-        // `std::str::from_utf8` validates the borrowed slice, then
-        // we own-copy once via `to_owned()`. Same cost as before for
-        // the happy path (one copy) but no intermediate Vec.
+    fn leb_str(&mut self) -> Result<&'a str, String> {
         let len = self.leb_len(crate::serial::wire::MAX_STRING_LEN, "string length")?;
         let bytes = self.take(len)?;
-        std::str::from_utf8(bytes).map(str::to_owned).map_err(|err| {
+        std::str::from_utf8(bytes).map_err(|err| {
             format!("TruncatedPayload: invalid UTF-8 in string ({err}). Fix: serialize valid UTF-8 operation identifiers.")
         })
     }

@@ -9,7 +9,6 @@ license.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "Pure-Rust CPU reference interpreter for vyre IR; byte-identical oracle for backend conformance"
-readme = "README.md"
 keywords = ["gpu", "ir", "reference", "interpreter", "vyre"]
 categories = ["algorithms", "api-bindings"]
 documentation = "https://docs.rs/vyre-reference"
@@ -25,7 +24,6 @@ blake3.workspace = true
 rustc-hash.workspace = true
 smallvec.workspace = true
 libm.workspace = true
-regex.workspace = true
 
 [dev-dependencies]
 # `ir-fixtures` carries the shared tile-program builder the tile contracts

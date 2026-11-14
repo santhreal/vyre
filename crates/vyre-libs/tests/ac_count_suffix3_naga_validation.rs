@@ -36,7 +36,7 @@ fn ac_count_suffix3_prefilter_naga_validates() {
     let lowered = vyre_lower::lower_scheduled(&program, &schedule, phase)
         .expect("suffix3 AC count must lower through a selected schedule");
     let module =
-        vyre_emit_naga::emit(lowered.descriptor()).expect("suffix3 AC count must emit to Naga");
+        vyre_emit::naga::emit(lowered.descriptor()).expect("suffix3 AC count must emit to Naga");
     let validation = naga::valid::Validator::new(
         naga::valid::ValidationFlags::all(),
         naga::valid::Capabilities::all(),

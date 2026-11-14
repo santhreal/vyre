@@ -183,6 +183,43 @@ fn fill_le_words_into<T: LeWireWord>(src: &[u8], count: usize, out: &mut Vec<T>)
     }
 }
 
+/// Borrow a `&[u32]` as little-endian bytes without copying on little-endian
+/// hosts.
+#[must_use]
+#[inline]
+pub fn borrow_u32_le_bytes(words: &[u32]) -> std::borrow::Cow<'_, [u8]> {
+    #[cfg(target_endian = "little")]
+    {
+        std::borrow::Cow::Borrowed(bytemuck::cast_slice(words))
+    }
+    #[cfg(target_endian = "big")]
+    {
+        std::borrow::Cow::Owned(pack_u32_slice(words))
+    }
+}
+
+/// View a little-endian byte slice as `&[u32]` without copying when 4-byte
+/// aligned on a little-endian host, falling back to an owned decode when
+/// unaligned or big-endian.
+pub fn view_u32_le_words<'a>(
+    bytes: &'a [u8],
+    label: &str,
+) -> Result<std::borrow::Cow<'a, [u32]>, String> {
+    if bytes.len() % 4 != 0 {
+        return Err(format!(
+            "{label}: u32 byte stream length {} is not a multiple of 4. Fix: align buffer byte length to 4-byte words.",
+            bytes.len()
+        ));
+    }
+    #[cfg(target_endian = "little")]
+    if let Ok(words) = bytemuck::try_cast_slice::<u8, u32>(bytes) {
+        return Ok(std::borrow::Cow::Borrowed(words));
+    }
+    let mut out = Vec::new();
+    unpack_u32_slice_into(bytes, bytes.len() / 4, label, &mut out)?;
+    Ok(std::borrow::Cow::Owned(out))
+}
+
 /// Pack a `&[u32]` into little-endian bytes for `DataType::U32` storage buffers.
 #[must_use]
 pub fn pack_u32_slice(words: &[u32]) -> Vec<u8> {
@@ -237,9 +274,7 @@ pub fn pack_u32_slice_min_words_into(
     })?;
     reserve_exact_len(out, target_bytes, "u32 byte pack output")?;
     pack_u32_slice_into(words, out);
-    for _ in words.len()..min_words_usize {
-        out.extend_from_slice(&[0u8, 0, 0, 0]);
-    }
+    out.resize(target_bytes, 0);
     Ok(())
 }
 
@@ -310,9 +345,7 @@ pub fn pack_bytes_as_u32_slice_min_words_into(
     })?;
     reserve_exact_len(out, byte_len, "byte-lane pack output")?;
     pack_bytes_as_u32_slice_into(bytes, out);
-    for _ in bytes.len()..min_words {
-        out.extend_from_slice(&[0u8, 0, 0, 0]);
-    }
+    out.resize(byte_len, 0);
     Ok(word_count)
 }
 

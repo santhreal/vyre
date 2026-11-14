@@ -152,12 +152,6 @@ pub struct ExtensionTernaryOpId(pub u32);
 
 impl_extension_id!(ExtensionTernaryOpId);
 
-/// Stable u32 id for an extension rule condition.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
-pub struct ExtensionRuleConditionId(pub u32);
-
-impl_extension_id!(ExtensionRuleConditionId);
-
 /// Globally unique namespace identifying an extension domain or package.
 #[derive(
     Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,

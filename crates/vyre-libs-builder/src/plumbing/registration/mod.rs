@@ -8,4 +8,3 @@
 
 pub mod contracts;
 pub mod operation_catalog;
-pub mod signatures;

@@ -340,7 +340,7 @@ mod closure {
     #[test]
     fn every_published_delegating_form_is_compared_here() {
         let workspace_root = vyre_test_support::monorepo::vyre_workspace_root();
-        let domain_crates: Vec<PathBuf> = structure_gate::workspace_members(&workspace_root)
+        let domain_crates: Vec<PathBuf> = vyre_test_support::monorepo::vyre_workspace_members(&workspace_root)
             .into_iter()
             .filter(|member| {
                 let name = member.rsplit('/').next().unwrap_or(member.as_str());

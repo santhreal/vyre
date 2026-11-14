@@ -7,11 +7,7 @@ fn data_type_depth_guard_rejects_nested_vec_chain() {
     // Without a depth guard this drives unbounded native recursion; the guard
     // must reject before the stack overflows.
     let bytes = vec![0x14_u8; MAX_DECODE_DEPTH as usize + 4];
-    let mut reader = Reader {
-        bytes: &bytes,
-        pos: 0,
-        depth: 0,
-    };
+    let mut reader = Reader::new(&bytes);
     let err = reader
         .data_type()
         .expect_err("Fix: nested DataType::Vec chain must hit the decode depth guard");
@@ -32,11 +28,7 @@ fn reserve_wire_vec_caps_pre_reservation_at_remaining_bytes() {
     // elements; the reservation must cap at the remaining bytes rather than
     // eagerly allocating 1M entries.
     let bytes = [0_u8; 8];
-    let reader = Reader {
-        bytes: &bytes,
-        pos: 0,
-        depth: 0,
-    };
+    let reader = Reader::new(&bytes);
     let mut v: Vec<u32> = Vec::new();
     reader
         .reserve_wire_vec(&mut v, 1_000_000, "node count")

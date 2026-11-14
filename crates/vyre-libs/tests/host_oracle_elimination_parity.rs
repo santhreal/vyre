@@ -113,10 +113,7 @@ fn affected_operations_are_explicitly_verified() {
     for op in registry.iter() {
         let is_target = op.id == "vyre-libs::llm::logit_adjust"
             || op.id == "vyre-libs::llm::nucleus_select"
-            || op.id == "vyre-libs::llm::sample_token"
-            || op.id == "vyre-libs::security::flows_to_to_sink"
-            || op.id == "vyre-libs::security::taint_pollution"
-            || op.id == "vyre-libs::security::flows_to_with_sanitizer";
+            || op.id == "vyre-libs::llm::sample_token";
 
         if !is_target {
             continue;

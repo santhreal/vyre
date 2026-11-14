@@ -1,7 +1,7 @@
 //! Failure-oriented adversarial tests for label primitives.
 //!
 //! Focus: hostile boundaries, overflow, invalid offsets, property invariants.
-#![cfg(feature = "label")]
+#![cfg(feature = "bitset")]
 
 use vyre_reference::composition_witness::resolve_family_witness as reference_resolve_family;
 

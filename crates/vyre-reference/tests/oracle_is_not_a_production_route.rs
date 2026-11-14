@@ -43,10 +43,10 @@ const PRODUCTION_ROUTING_CRATES: &[&str] = &[
     "vyre-runtime",
     "vyre-aot",
     "vyre-lower",
-    "vyre-emit-naga",
-    "vyre-emit-ptx",
-    "vyre-emit-spirv",
-    "vyre-emit-metal",
+    "vyre_emit::naga",
+    "vyre_emit::ptx",
+    "vyre_emit::spirv",
+    "vyre_emit::metal",
     "vyre-registry-link",
 ];
 

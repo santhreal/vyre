@@ -39,7 +39,7 @@ const OWNER_CRATE: &str = "vyre-primitives";
 
 fn domain_crates() -> Vec<String> {
     let root = vyre_workspace_root();
-    structure_gate::workspace_members(&root)
+    vyre_test_support::monorepo::vyre_workspace_members(&root)
         .into_iter()
         .filter(|member| {
             let name = member.rsplit('/').next().unwrap_or(member.as_str());
@@ -170,7 +170,7 @@ fn file_backed_modules(text: &str) -> Vec<&str> {
 /// without touching this file.
 fn workspace_source_files() -> Vec<(String, String)> {
     let root = vyre_workspace_root();
-    let members = structure_gate::workspace_members(&root);
+    let members = vyre_test_support::monorepo::vyre_workspace_members(&root);
     assert!(
         members.len() >= 5,
         "Fix: the workspace manifest parse found {} members; the `[workspace] members` layout changed and the scan would cover almost nothing.",
@@ -215,14 +215,13 @@ fn collect_rs_paths(dir: &Path, out: &mut Vec<PathBuf>) {
 /// The walk is latency-bound: two thousand sources are 20 MiB, and on a
 /// network-mounted checkout each one is a separate round trip to the server. Read
 /// serially this took over a minute for a gate that then spends milliseconds
-/// judging the text. The lane count comes from `structure_gate::read_lanes` and
+/// judging the text. Up to 64 concurrent reader lanes
 /// exceeds the host's core count on purpose, because a blocked read occupies no
 /// core and the useful width is requests in flight. The caller sorts, so lane
 /// order does not reach the result.
 fn read_all(paths: &[PathBuf], root: &Path) -> Vec<(String, String)> {
-    let per_lane = paths
-        .len()
-        .div_ceil(structure_gate::read_lanes(paths.len()));
+    let lanes = paths.len().clamp(1, 64);
+    let per_lane = paths.len().div_ceil(lanes);
     if per_lane == 0 {
         return Vec::new();
     }

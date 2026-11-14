@@ -315,11 +315,7 @@ pub fn put_scan_database_header(
 /// Returns a `Fix:` diagnostic when the header is truncated, has the wrong
 /// magic/version, has unknown enum tags, or contains trailing bytes.
 pub fn decode_scan_database_header(bytes: &[u8]) -> Result<ScanDatabaseHeader, String> {
-    let mut reader = Reader {
-        bytes,
-        pos: 0,
-        depth: 0,
-    };
+    let mut reader = Reader::new(bytes);
     let magic = reader.take(SCAN_DATABASE_HEADER_MAGIC.len())?;
     if magic != SCAN_DATABASE_HEADER_MAGIC {
         return Err(

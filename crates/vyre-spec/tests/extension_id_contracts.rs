@@ -8,8 +8,8 @@
 use std::collections::BTreeSet;
 
 use vyre_spec::{
-    ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionRuleConditionId,
-    ExtensionTernaryOpId, ExtensionUnOpId,
+    ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionTernaryOpId,
+    ExtensionUnOpId,
 };
 
 #[test]
@@ -34,10 +34,6 @@ fn extension_id_families_are_deterministic_for_stable_names() {
         ExtensionTernaryOpId::from_name("dialect.ternary"),
         ExtensionTernaryOpId::from_name("dialect.ternary")
     );
-    assert_eq!(
-        ExtensionRuleConditionId::from_name("dialect.rule"),
-        ExtensionRuleConditionId::from_name("dialect.rule")
-    );
 }
 
 #[test]
@@ -47,7 +43,6 @@ fn every_extension_id_family_exposes_high_bit_range_check() {
     assert!(ExtensionUnOpId::from_name("dialect.unop").is_extension());
     assert!(ExtensionAtomicOpId::from_name("dialect.atomic").is_extension());
     assert!(ExtensionTernaryOpId::from_name("dialect.ternary").is_extension());
-    assert!(ExtensionRuleConditionId::from_name("dialect.rule").is_extension());
 }
 
 #[test]
@@ -69,16 +64,13 @@ fn sampled_extension_names_do_not_collapse_to_a_single_id() {
 
     let mut data_type_ids = BTreeSet::new();
     let mut binop_ids = BTreeSet::new();
-    let mut rule_ids = BTreeSet::new();
     for name in &names {
         data_type_ids.insert(ExtensionDataTypeId::from_name(name).as_u32());
         binop_ids.insert(ExtensionBinOpId::from_name(name).as_u32());
-        rule_ids.insert(ExtensionRuleConditionId::from_name(name).as_u32());
     }
 
     assert_eq!(data_type_ids.len(), names.len());
     assert_eq!(binop_ids.len(), names.len());
-    assert_eq!(rule_ids.len(), names.len());
 }
 
 #[test]
@@ -89,7 +81,6 @@ fn serde_round_trip_preserves_raw_extension_ids() {
     let unop = ExtensionUnOpId::from_name("serde.unop");
     let atomic = ExtensionAtomicOpId::from_name("serde.atomic");
     let ternary = ExtensionTernaryOpId::from_name("serde.ternary");
-    let rule = ExtensionRuleConditionId::from_name("serde.rule");
 
     assert_eq!(
         serde_json::from_str::<ExtensionDataTypeId>(
@@ -125,12 +116,5 @@ fn serde_round_trip_preserves_raw_extension_ids() {
         )
         .expect("extension ternary id must deserialize"),
         ternary
-    );
-    assert_eq!(
-        serde_json::from_str::<ExtensionRuleConditionId>(
-            &serde_json::to_string(&rule).expect("extension rule id must serialize")
-        )
-        .expect("extension rule id must deserialize"),
-        rule
     );
 }

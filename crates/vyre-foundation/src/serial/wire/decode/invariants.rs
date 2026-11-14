@@ -24,7 +24,7 @@ pub(crate) fn validate_output_range_order(start: u64, end: u64) -> Result<(), St
 }
 
 pub(crate) fn validate_output_range_fits(
-    buffer: &DecodedBuffer,
+    buffer: &DecodedBuffer<'_>,
     element: &DataType,
     count_value: u32,
 ) -> Result<(), String> {

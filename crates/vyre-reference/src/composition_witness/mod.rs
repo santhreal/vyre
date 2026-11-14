@@ -200,13 +200,12 @@ pub use reasoning::{
     adjoint_pair_witness, adjustment_set_ordering_is_safe_witness,
     adjustment_set_pass_descendants_witness, compile_dnnf_witness, compose_passes_witness,
     compose_passes_witness_into, dnnf_is_satisfiable_witness, dnnf_is_tautology_witness,
-    dnnf_model_count_witness, evaluate_condition_witness, evaluate_formula_witness,
-    identity_functor_witness, identity_functor_witness_into, kan_extension_at_witness,
-    kan_extension_table_witness, natural_transformation_count_witness, passes_commute_on_witness,
-    yoneda_embedding_witness, zx_color_change_witness, zx_identity_removal_witness,
-    zx_simplified_diagram_witness, zx_spider_fusion_witness, AdjointPair, DnnfDag, DnnfGate,
-    FiniteCategory, FiniteFunctor, KanDirection, RuleConditionWitness,
-    RuleEvaluationContextWitness, RuleFormulaWitness, ZxColor, ZxDiagram, ZxSpider,
+    dnnf_model_count_witness, identity_functor_witness, identity_functor_witness_into,
+    kan_extension_at_witness, kan_extension_table_witness, natural_transformation_count_witness,
+    passes_commute_on_witness, yoneda_embedding_witness, zx_color_change_witness,
+    zx_identity_removal_witness, zx_simplified_diagram_witness, zx_spider_fusion_witness,
+    AdjointPair, DnnfDag, DnnfGate, FiniteCategory, FiniteFunctor, KanDirection, ZxColor,
+    ZxDiagram, ZxSpider,
 };
 
 // Re-export math, linear algebra, and filter witnesses

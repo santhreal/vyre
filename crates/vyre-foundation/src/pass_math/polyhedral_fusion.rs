@@ -109,6 +109,25 @@ mod tests {
         assert_eq!(fused[0 * 3 + 1], 0);
         assert_eq!(fused[0 * 3 + 2], 0);
         assert_eq!(fused[1 * 3 + 2], 0);
+        assert_eq!(fusion_score(&adj, 3, 3), 0);
+    }
+
+    #[test]
+    fn a_single_edge_orders_only_its_endpoints() {
+        #[rustfmt::skip]
+        let adj = vec![
+            0, 1, 0,
+            0, 0, 0,
+            0, 0, 0,
+        ];
+        #[rustfmt::skip]
+        let expected = vec![
+            0, 0, 1,
+            0, 0, 1,
+            1, 1, 0,
+        ];
+        assert_eq!(fusable_pairs(&adj, 3, 3), expected);
+        assert_eq!(fusion_score(&adj, 3, 3), 4);
     }
 
     #[test]
@@ -145,6 +164,17 @@ mod tests {
         assert_eq!(out.as_ptr(), ptr);
 
         fusable_pairs_into(&[0, 1, 0], 2, 3, &mut out);
+        assert!(out.is_empty());
+    }
+
+    #[test]
+    fn invalid_shape_clears_every_scratch_buffer() {
+        let mut closure = vec![99];
+        let mut next = vec![100];
+        let mut out = vec![101];
+        fusable_pairs_with_scratch_into(&[0, 1, 0], 2, 3, &mut closure, &mut next, &mut out);
+        assert!(closure.is_empty());
+        assert!(next.is_empty());
         assert!(out.is_empty());
     }
 

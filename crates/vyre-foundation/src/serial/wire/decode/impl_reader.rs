@@ -90,15 +90,15 @@ impl Reader<'_> {
     fn node_inner(&mut self) -> Result<Node, String> {
         match self.u8()? {
             0 => Ok(Node::Let {
-                name: self.string()?.into(),
+                name: self.ident()?,
                 value: self.expr()?,
             }),
             1 => Ok(Node::Assign {
-                name: self.string()?.into(),
+                name: self.ident()?,
                 value: self.expr()?,
             }),
             2 => Ok(Node::Store {
-                buffer: self.string()?.into(),
+                buffer: self.ident()?,
                 index: self.expr()?,
                 value: self.expr()?,
             }),
@@ -108,7 +108,7 @@ impl Reader<'_> {
                 otherwise: self.nodes()?,
             }),
             4 => Ok(Node::Loop {
-                var: self.string()?.into(),
+                var: self.ident()?,
                 from: self.expr()?,
                 to: self.expr()?,
                 body: self.nodes()?,
@@ -122,57 +122,57 @@ impl Reader<'_> {
                 ordering: crate::memory_model::MemoryOrdering::from_wire_tag(self.u8()?)?,
             }),
             8 => Ok(Node::IndirectDispatch {
-                count_buffer: self.string()?.into(),
+                count_buffer: self.ident()?,
                 count_offset: self.u64()?,
             }),
             9 => {
-                let source: crate::ir::Ident = self.string()?.into();
-                let destination: crate::ir::Ident = self.string()?.into();
+                let source = self.ident()?;
+                let destination = self.ident()?;
                 let offset = self.expr()?;
                 let size = self.expr()?;
-                let tag: crate::ir::Ident = self.string()?.into();
+                let tag = self.ident()?;
                 Ok(Node::async_load_gpu_driven(source, destination, offset, size, tag))
             }
             10 => Ok(Node::AsyncWait {
-                tag: self.string()?.into(),
+                tag: self.ident()?,
             }),
             12 => {
-                let source: crate::ir::Ident = self.string()?.into();
-                let destination: crate::ir::Ident = self.string()?.into();
+                let source = self.ident()?;
+                let destination = self.ident()?;
                 let offset = self.expr()?;
                 let size = self.expr()?;
-                let tag: crate::ir::Ident = self.string()?.into();
+                let tag = self.ident()?;
                 Ok(Node::async_store(source, destination, offset, size, tag))
             }
-            13 => Ok(Node::trap(self.expr()?, self.string()?)),
-            14 => Ok(Node::resume(self.string()?)),
+            13 => Ok(Node::trap(self.expr()?, self.ident()?)),
+            14 => Ok(Node::resume(self.ident()?)),
             15 => Ok(Node::AllReduce {
-                buffer: self.string()?.into(),
+                buffer: self.ident()?,
                 op: vyre_spec::CollectiveOp::from_wire_tag(self.u8()?)?,
                 group: CommGroup(self.u32()?),
             }),
             16 => Ok(Node::AllGather {
-                input: self.string()?.into(),
-                output: self.string()?.into(),
+                input: self.ident()?,
+                output: self.ident()?,
                 group: CommGroup(self.u32()?),
             }),
             17 => Ok(Node::ReduceScatter {
-                input: self.string()?.into(),
-                output: self.string()?.into(),
+                input: self.ident()?,
+                output: self.ident()?,
                 op: vyre_spec::CollectiveOp::from_wire_tag(self.u8()?)?,
                 group: CommGroup(self.u32()?),
             }),
             18 => Ok(Node::Broadcast {
-                buffer: self.string()?.into(),
+                buffer: self.ident()?,
                 root: self.u32()?,
                 group: CommGroup(self.u32()?),
             }),
             11 => {
-                let generator: crate::ir::Ident = self.string()?.into();
+                let generator = self.ident()?;
                 let presence = self.u8()?;
                 let source_region = match presence {
                     0 => None,
-                    1 => Some(crate::ir::Ident::from(self.string()?)),
+                    1 => Some(self.ident()?),
                     other => {
                         return Err(format!(
                             "Fix: Region source_region presence byte must be 0 or 1, got {other}"
@@ -187,9 +187,9 @@ impl Reader<'_> {
                 })
             }
             19 => {
-                let tile = self.string()?.into();
+                let tile = self.ident()?;
                 let tile_type = self.tile()?;
-                let buffer = self.string()?.into();
+                let buffer = self.ident()?;
                 let origin_len = self.bounded_len(MAX_TENSOR_RANK, "tile origin count")?;
                 let mut origin = Vec::with_capacity(origin_len);
                 for _ in 0..origin_len {
@@ -205,13 +205,13 @@ impl Reader<'_> {
                 })
             }
             20 => {
-                let buffer = self.string()?.into();
+                let buffer = self.ident()?;
                 let origin_len = self.bounded_len(MAX_TENSOR_RANK, "tile origin count")?;
                 let mut origin = Vec::with_capacity(origin_len);
                 for _ in 0..origin_len {
                     origin.push(self.expr()?);
                 }
-                let tile = self.string()?.into();
+                let tile = self.ident()?;
                 Ok(Node::TileStore {
                     buffer,
                     origin,
@@ -219,39 +219,39 @@ impl Reader<'_> {
                 })
             }
             21 => {
-                let acc = self.string()?.into();
-                let a = self.string()?.into();
-                let b = self.string()?.into();
+                let acc = self.ident()?;
+                let a = self.ident()?;
+                let b = self.ident()?;
                 Ok(Node::TileMatmul { acc, a, b })
             }
             22 => {
-                let out = self.string()?.into();
-                let tile = self.string()?.into();
+                let out = self.ident()?;
+                let tile = self.ident()?;
                 let op = crate::ir::SubgroupReduceOp::from_wire_tag(self.u8()?)?;
                 let axis = self.u32()?;
                 Ok(Node::TileReduce { out, tile, op, axis })
             }
             23 => {
-                let out = self.string()?.into();
+                let out = self.ident()?;
                 let inputs_len = self.bounded_len(MAX_ARGS, "tile elementwise inputs")?;
                 let mut inputs = Vec::with_capacity(inputs_len);
                 for _ in 0..inputs_len {
-                    inputs.push(self.string()?.into());
+                    inputs.push(self.ident()?);
                 }
                 let body = self.nodes()?;
                 Ok(Node::TileElementwise { out, inputs, body })
             }
             24 => {
-                let name = self.string()?.into();
+                let name = self.ident()?;
                 let tile = self.tile()?;
                 Ok(Node::TileDecl { name, tile })
             }
             0x80 => {
-                let kind = self.string()?;
+                let kind = self.str()?;
                 let payload_len =
                     self.bounded_len(MAX_OPAQUE_PAYLOAD_LEN, "opaque node payload")?;
-                let payload = self.bytes(payload_len)?;
-                crate::extension::decode_opaque_node(&kind, &payload)
+                let payload = self.take(payload_len)?;
+                crate::extension::decode_opaque_node(kind, payload)
             }
             tag => Err(format!(
                 "Fix: unknown IR node tag {tag}; use a Program serializer compatible with this vyre version."
@@ -513,13 +513,13 @@ impl Reader<'_> {
             1 => Ok(Expr::LitI32(self.i32()?)),
             2 => Ok(Expr::LitBool(self.u8()? != 0)),
             15 => Ok(Expr::LitF32(f32::from_bits(self.u32()?))),
-            3 => Ok(Expr::Var(self.string()?.into())),
+            3 => Ok(Expr::Var(self.ident()?)),
             4 => Ok(Expr::Load {
-                buffer: self.string()?.into(),
+                buffer: self.ident()?,
                 index: Box::new(self.expr()?),
             }),
             5 => Ok(Expr::BufLen {
-                buffer: self.string()?.into(),
+                buffer: self.ident()?,
             }),
             6 => Ok(Expr::InvocationId { axis: self.u8()? }),
             7 => Ok(Expr::WorkgroupId { axis: self.u8()? }),
@@ -557,7 +557,7 @@ impl Reader<'_> {
                 })
             }
             11 => {
-                let op_id = self.string()?.into();
+                let op_id = self.ident()?;
                 let count = self.bounded_len(MAX_ARGS, "call argument count")?;
                 let mut args = Vec::new();
                 self.reserve_wire_vec(&mut args, count, "call argument count")?;
@@ -586,7 +586,7 @@ impl Reader<'_> {
                 let ordering = crate::memory_model::MemoryOrdering::from_wire_tag(self.u8()?)?;
                 Ok(Expr::Atomic {
                     op,
-                    buffer: self.string()?.into(),
+                    buffer: self.ident()?,
                     index: Box::new(self.expr()?),
                     expected: if self.u8()? == 0 {
                         None
@@ -616,14 +616,14 @@ impl Reader<'_> {
             20 => Ok(Expr::SubgroupLocalId),
             21 => Ok(Expr::SubgroupSize),
             22 => Ok(Expr::BufferRef {
-                buffer: self.string()?.into(),
+                buffer: self.ident()?,
             }),
             0x80 => {
-                let kind = self.string()?;
+                let kind = self.str()?;
                 let payload_len =
                     self.bounded_len(MAX_OPAQUE_PAYLOAD_LEN, "opaque expression payload")?;
-                let payload = self.bytes(payload_len)?;
-                crate::extension::decode_opaque_expr(&kind, &payload)
+                let payload = self.take(payload_len)?;
+                crate::extension::decode_opaque_expr(kind, payload)
             }
             tag => Err(format!(
                 "Fix: unknown IR expression tag {tag}; use a Program serializer compatible with this vyre version."

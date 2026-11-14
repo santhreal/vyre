@@ -104,15 +104,16 @@ fn the_resident_layout_is_declared_in_exactly_one_crate() {
     // One read of the member corpus, not one per declaration. The loop used to
     // sit outside the walk, so four declarations meant four walks of every
     // member `src/` tree and four reads of every file in it.
-    let sources: Vec<(PathBuf, String)> = structure_gate::workspace_members(&root)
-        .iter()
-        .flat_map(|member| rust_sources(&root.join(member).join("src")))
-        .filter_map(|source| {
-            std::fs::read_to_string(&source)
-                .ok()
-                .map(|text| (source, text))
-        })
-        .collect();
+    let sources: Vec<(PathBuf, String)> =
+        vyre_test_support::monorepo::vyre_workspace_members(&root)
+            .iter()
+            .flat_map(|member| rust_sources(&root.join(member).join("src")))
+            .filter_map(|source| {
+                std::fs::read_to_string(&source)
+                    .ok()
+                    .map(|text| (source, text))
+            })
+            .collect();
     for declaration in OWNED_DECLARATIONS {
         let sites: Vec<PathBuf> = sources
             .iter()
@@ -168,7 +169,7 @@ fn banned_vocabulary() -> BTreeSet<String> {
         .iter()
         .map(|term| (*term).to_string())
         .collect();
-    for member in structure_gate::workspace_members(&root) {
+    for member in vyre_test_support::monorepo::vyre_workspace_members(&root) {
         let name = member.rsplit('/').next().unwrap_or(&member);
         for prefix in ["vyre-driver-", "vyre-emit-"] {
             if let Some(target) = name.strip_prefix(prefix) {

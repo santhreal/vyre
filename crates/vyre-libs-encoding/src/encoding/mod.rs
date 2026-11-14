@@ -1,14 +1,10 @@
 //! Bitset, provenance, matroid and fingerprint encoding compositions.
 
-#[cfg(test)]
-pub(crate) mod bitset_compression;
 pub mod bitset_mask_algebra;
 pub mod bitset_summary;
 pub mod bitset_transform_pipeline;
 pub mod matching_diagnostic_compaction;
 pub mod matroid_exact_megakernel;
-#[cfg(test)]
-pub(crate) mod matroid_megakernel_scheduler;
 #[cfg(feature = "nn-paging")]
 pub mod nn_attention_paging;
 pub mod parsing_dispatch_pipeline;

@@ -5,7 +5,7 @@
 //! dispatch's buffer table, so neither endpoint has to resolve. When the
 //! destination does resolve, the target compilers lower the transfer to a
 //! counted store loop through that buffer's binding
-//! (`crates/vyre-emit-naga/src/emitter/async_op.rs`), so a read-only destination is a
+//! (`crates/vyre-emit/src/naga/emitter/async_op.rs`), so a read-only destination is a
 //! write to a read-only binding and the backend is the first thing that says
 //! so.
 //!

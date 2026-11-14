@@ -648,9 +648,6 @@ pub mod serial_envelope_corruption;
 #[path = "shape_predicate_evaluation.rs"]
 pub mod shape_predicate_evaluation;
 
-/// Integration tests from `tests/source_tree_digest.rs`.
-#[path = "source_tree_digest.rs"]
-pub mod source_tree_digest;
 
 /// Integration tests from `tests/store_to_load_forward_value_invalidation.rs`.
 #[path = "store_to_load_forward_value_invalidation.rs"]

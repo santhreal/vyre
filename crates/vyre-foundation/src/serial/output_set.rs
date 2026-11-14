@@ -92,7 +92,7 @@ impl OutputSet {
     /// Decode and validate an output set from the canonical wire stream.
     pub(crate) fn decode_from(
         reader: &mut crate::serial::wire::Reader<'_>,
-        metadata: &crate::serial::wire::decode::from_wire::DecodedMetadata,
+        metadata: &crate::serial::wire::decode::from_wire::DecodedMetadata<'_>,
     ) -> Result<Self, String> {
         use crate::serial::wire::decode::from_wire::LebReader;
 
@@ -160,7 +160,7 @@ impl OutputSet {
 
 fn matches_canonical_output_indices(
     indices: &[u32],
-    metadata: &crate::serial::wire::decode::from_wire::DecodedMetadata,
+    metadata: &crate::serial::wire::decode::from_wire::DecodedMetadata<'_>,
 ) -> Result<bool, String> {
     let mut actual = indices.iter().copied();
     for (index, buffer) in metadata.buffers.iter().enumerate() {
@@ -180,7 +180,7 @@ fn matches_canonical_output_indices(
 }
 
 fn canonical_output_indices(
-    metadata: &crate::serial::wire::decode::from_wire::DecodedMetadata,
+    metadata: &crate::serial::wire::decode::from_wire::DecodedMetadata<'_>,
 ) -> Result<Vec<u32>, String> {
     let mut expected = Vec::with_capacity(metadata.buffers.len());
     for (index, buffer) in metadata.buffers.iter().enumerate() {

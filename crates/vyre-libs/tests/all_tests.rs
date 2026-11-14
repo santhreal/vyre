@@ -42,7 +42,7 @@ pub mod ac_count_suffix3_naga_validation;
 pub mod adversarial_fixpoint;
 
 /// Integration tests from `tests/adversarial_label.rs`.
-#[cfg(feature = "label")]
+#[cfg(feature = "bitset")]
 #[path = "adversarial_label.rs"]
 pub mod adversarial_label;
 
@@ -423,11 +423,6 @@ pub mod registry_oob_clean;
 /// Integration tests from `tests/scan_cpu_api_boundary.rs`.
 #[path = "scan_cpu_api_boundary.rs"]
 pub mod scan_cpu_api_boundary;
-
-/// Integration tests from `tests/security_flows_to_alias_only_parity.rs`.
-#[cfg(feature = "security")]
-#[path = "security_flows_to_alias_only_parity.rs"]
-pub mod security_flows_to_alias_only_parity;
 
 /// Integration tests from `tests/select_arm_range_catalog.rs`.
 #[path = "select_arm_range_catalog.rs"]

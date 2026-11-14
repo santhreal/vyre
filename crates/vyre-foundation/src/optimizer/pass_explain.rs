@@ -368,10 +368,10 @@ mod tests {
         let catalog = optimization_catalog().expect("Fix: optimizer catalog must build");
         let entry = catalog
             .iter()
-            .find(|entry| entry.name == "megakernel.allocation_reuse")
-            .expect("Fix: release catalog must contain megakernel allocation reuse");
+            .find(|entry| entry.name == "const_fold")
+            .expect("Fix: release catalog must contain const_fold");
         let explanation = PassExplanation::from_metric(
-            &metric("megakernel.allocation_reuse", PassRunDecision::Changed),
+            &metric("const_fold", PassRunDecision::Changed),
             Some(entry),
         );
 
@@ -380,7 +380,7 @@ mod tests {
             explanation.pass_order_origin,
             PassOrderOrigin::LiveOptimizerCatalog
         );
-        assert_eq!(explanation.owner, Some("vyre-runtime-rules"));
+        assert_eq!(explanation.owner, Some("vyre-foundation-optimizer"));
         assert_eq!(explanation.invariant, Some(entry.invariant));
         assert_eq!(
             explanation.benchmark,
@@ -448,7 +448,7 @@ mod tests {
         let report = OptimizerRunReport {
             program: Program::empty(),
             passes: vec![metric(
-                "megakernel.allocation_reuse",
+                "const_fold",
                 PassRunDecision::Changed,
             )],
         };

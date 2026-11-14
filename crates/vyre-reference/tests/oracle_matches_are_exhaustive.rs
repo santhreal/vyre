@@ -9,8 +9,7 @@
 //!
 //! Inside the crate, a match over a type this crate can see the whole of is
 //! made exhaustive and the compiler owns it. Every `DataType` match in
-//! `value.rs` and `oob.rs`, and `RuleConditionWitness`'s `PartialEq`, are now
-//! written that way.
+//! `value.rs` and `oob.rs` is written that way.
 //!
 //! Across the crate boundary the compiler cannot help. `BinOp`, `UnOp`,
 //! `AtomicOp`, `Node` and `Expr` are `#[non_exhaustive]`, so rustc REQUIRES a

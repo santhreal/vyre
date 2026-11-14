@@ -54,25 +54,32 @@ impl<'a> Reader<'a> {
         Ok(value)
     }
 
+    /// Borrow a length-bounded UTF-8 string slice directly from the wire buffer.
     #[inline]
-    pub(crate) fn string(&mut self) -> Result<String, String> {
+    pub(crate) fn str(&mut self) -> Result<&'a str, String> {
         let len = self.bounded_len(MAX_STRING_LEN, "string length")?;
         let bytes = self.take(len)?;
-        // VYRE_IR_HOTSPOTS CRIT (impl_reader.rs:92): previous code did
-        // `bytes.to_vec()` then `String::from_utf8(vec)`, allocating an
-        // intermediate `Vec<u8>` for every string decode. Using
-        // `std::str::from_utf8` validates the borrowed slice directly;
-        // `str::to_owned` copies once into the final `String`.
-        std::str::from_utf8(bytes).map(str::to_owned).map_err(|err| {
+        std::str::from_utf8(bytes).map_err(|err| {
             format!("invalid UTF-8 in IR wire-format string: {err}. Fix: serialize valid Rust String values.")
         })
     }
 
-    /// Take `len` raw bytes from the reader, used by opaque extension
-    /// payload decoding.
+    /// Decode and intern an [`crate::ir::Ident`] from a borrowed wire string slice
+    /// without allocating an intermediate `String` or duplicating repeated names.
     #[inline]
-    pub(crate) fn bytes(&mut self, len: usize) -> Result<Vec<u8>, String> {
-        Ok(self.take(len)?.to_vec())
+    pub(crate) fn ident(&mut self) -> Result<crate::ir::Ident, String> {
+        let raw = self.str()?;
+        if let Some(existing) = self.intern.get(raw) {
+            return Ok(existing.clone());
+        }
+        let ident = crate::ir::Ident::from(raw);
+        self.intern.insert(raw, ident.clone());
+        Ok(ident)
+    }
+
+    #[inline]
+    pub(crate) fn string(&mut self) -> Result<String, String> {
+        self.str().map(str::to_owned)
     }
 
     /// Fallibly reserve capacity for a `count`-element wire vector, capping the

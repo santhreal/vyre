@@ -263,6 +263,7 @@ pub mod zero;
 /// Stochastic computing primitive  -  bitstream multiplication
 /// via AND. Power-efficient inference substrate.
 pub mod stochastic_compute;
+pub mod value_filter;
 
 /// Words needed to hold a bitset over `n` elements.
 ///

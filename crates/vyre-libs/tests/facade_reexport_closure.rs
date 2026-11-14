@@ -58,7 +58,7 @@ fn published_modules(source: &str) -> Vec<String> {
 /// Every `vyre-libs-<domain>` member of the workspace, as (crate name, path).
 fn partition_crates(workspace_root: &Path) -> Vec<(String, std::path::PathBuf)> {
     let mut crates: Vec<(String, std::path::PathBuf)> =
-        structure_gate::workspace_members(workspace_root)
+        vyre_test_support::monorepo::vyre_workspace_members(workspace_root)
             .into_iter()
             .filter_map(|member| {
                 let name = member.rsplit('/').next().unwrap_or(member.as_str());

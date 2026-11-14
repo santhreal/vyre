@@ -57,7 +57,6 @@ macro_rules! counters {
 }
 
 counters! {
-    matroid_megakernel_scheduler_calls,
     multigrid_matroid_solver_calls,
     sheaf_heterophilic_dispatch_calls,
     sheaf_spectral_clustering_calls,
@@ -82,7 +81,6 @@ counters! {
     mori_zwanzig_region_coarsen_calls,
     persistent_homology_loop_signature_calls,
     planar_rewrite_pass_scheduler_calls,
-    polyhedral_fusion_calls,
     sinkhorn_dispatch_clustering_calls,
     sinkhorn_full_clustering_calls,
     spectral_schedule_calls,
@@ -91,7 +89,6 @@ counters! {
     tensor_train_chain_fusion_calls,
     knowledge_compile_pass_precondition_calls,
     adjustment_set_pass_dependency_calls,
-    dataflow_fixpoint_calls,
     toposort_calls,
     graph_dispatch_calls,
     functorial_pass_composition_calls,
@@ -115,7 +112,6 @@ mod tests {
         let snap = snapshot_counters();
         assert!(!snap.is_empty());
         let names: Vec<&str> = snap.iter().map(|(n, _)| *n).collect();
-        assert!(names.contains(&"matroid_megakernel_scheduler_calls"));
         assert!(names.contains(&"vsa_fingerprint_calls"));
         assert!(names.contains(&"scallop_provenance_calls"));
         assert!(names.contains(&"toposort_calls"));
@@ -124,9 +120,9 @@ mod tests {
 
     #[test]
     fn bump_increments_counter() {
-        let before = matroid_megakernel_scheduler_calls.load(Ordering::Relaxed);
-        bump(&matroid_megakernel_scheduler_calls);
-        let after = matroid_megakernel_scheduler_calls.load(Ordering::Relaxed);
+        let before = scallop_provenance_calls.load(Ordering::Relaxed);
+        bump(&scallop_provenance_calls);
+        let after = scallop_provenance_calls.load(Ordering::Relaxed);
         assert_eq!(after, before + 1);
     }
 

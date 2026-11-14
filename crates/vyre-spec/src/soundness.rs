@@ -278,13 +278,13 @@ mod tests {
         let error = validate_dynamic_pipeline(
             PrecisionContract::ZeroFalsePositive,
             &[DynamicPrimitiveSoundness::new(
-                "vyre-libs::security::flows_to",
+                "vyre-libs::graph::csr_forward_traverse",
                 Soundness::MayOver,
             )],
         )
         .expect_err("unfiltered MayOver must not satisfy zero false positive contracts");
 
-        assert_eq!(error.op_id, "vyre-libs::security::flows_to");
+        assert_eq!(error.op_id, "vyre-libs::graph::csr_forward_traverse");
         assert_eq!(error.soundness, Soundness::MayOver);
         assert_eq!(error.contract, PrecisionContract::ZeroFalsePositive);
         assert!(error.fix.contains("explicit sanitizer filter"));
@@ -295,7 +295,7 @@ mod tests {
         let soundness = validate_dynamic_pipeline(
             PrecisionContract::ZeroFalsePositive,
             &[DynamicPrimitiveSoundness::new(
-                "vyre-libs::security::flows_to_with_sanitizer",
+                "vyre-libs::graph::csr_bidirectional",
                 Soundness::MayOver,
             )
             .with_sanitizer_filter()],

@@ -1,6 +1,5 @@
 //! Open-IR extension surface  -  traits and inventory registration for
-//! third-party Expr / Node / DataType / BinOp / UnOp / AtomicOp /
-//! RuleCondition variants.
+//! third-party Expr / Node / DataType / BinOp / UnOp / AtomicOp variants.
 //!
 //! vyre-spec defines the per-kind extension ids and trait contracts
 //! (`ExtensionDataType`, `ExtensionBinOp`, `ExtensionUnOp`,
@@ -25,7 +24,7 @@ use std::sync::LazyLock;
 use rustc_hash::FxHashMap;
 use vyre_spec::{
     ExtensionAtomicOp, ExtensionAtomicOpId, ExtensionBinOp, ExtensionBinOpId, ExtensionDataType,
-    ExtensionDataTypeId, ExtensionIdentity, ExtensionRuleConditionId, ExtensionSchema,
+    ExtensionDataTypeId, ExtensionIdentity, ExtensionSchema,
     ExtensionSchemaDigest, ExtensionUnOp, ExtensionUnOpId,
 };
 
@@ -239,27 +238,6 @@ impl ExtensionCatalogBundle {
     }
 }
 
-/// Opaque rule condition extension  -  lets third-party rule-engine crates
-/// compose bespoke predicates without editing the facade or foundation model.
-pub trait RuleConditionExt: Debug + Send + Sync + 'static {
-    /// Stable extension id.
-    fn extension_id(&self) -> ExtensionRuleConditionId;
-    /// Canonical fingerprint for cache invalidation.
-    fn stable_fingerprint(&self) -> [u8; 32];
-    /// Buffer declarations the rule builder must add when this condition
-    /// appears in a program.
-    fn required_buffers(&self) -> Vec<crate::ir::BufferDecl> {
-        Vec::new()
-    }
-    /// Serialize the extension payload into stable bytes for wire round-trip.
-    fn wire_payload(&self) -> Vec<u8> {
-        Vec::new()
-    }
-    /// Evaluate against an opaque rule context (crate-specific payload).
-    fn evaluate_opaque(&self, _ctx: &dyn std::any::Any) -> bool {
-        false
-    }
-}
 
 // ---------------------------------------------------------------------
 // Registration types (one per extendable IR kind).

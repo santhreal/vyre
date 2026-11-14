@@ -30,7 +30,7 @@ use vyre_reference::composition_witness::{
     differentiable_autotune_pick_config_witness_into, do_intervention_delete_incoming_witness_into,
     dominator_frontier_witness, dominator_frontier_witness_into, dominator_idoms_witness,
     dominator_sets_idoms_witness, dominator_tree_witness, dp_clip_per_sample_witness,
-    dp_clip_per_sample_witness_into, evaluate_condition_witness, evaluate_formula_witness,
+    dp_clip_per_sample_witness_into,
     exploded_ifds_csr_witness, fisher_rao_distance_witness, fnv1a32_witness, fnv1a64_witness,
     fractional_derivative_witness, frontier_absorb_witness, frontier_domain_popcount_witness,
     frontier_popcount_witness, frontier_step_sharded_witness, frontier_to_queue_witness,
@@ -93,7 +93,6 @@ use vyre_reference::composition_witness::{
     vector_graph_traverse_from_seed_witness, vector_top_k_witness,
     vietoris_rips_edge_filter_witness, vietoris_rips_edges_witness, vsa_fingerprint_witness,
     AmgSolveScratchWitness, ExplodedIfdsScratchWitness, NewtonSchulzScratchWitness,
-    RuleConditionWitness, RuleEvaluationContextWitness, RuleFormulaWitness,
 };
 use vyre_reference::value::Value;
 use vyre_spec::Semiring;
@@ -920,92 +919,6 @@ fn union_find_and_functor_and_sheaf_contracts() {
     assert!(!backdoor_descendants_check_witness(&[1, 0], &[0, 1]));
 }
 
-struct TestRuleCtx;
-impl RuleEvaluationContextWitness for TestRuleCtx {
-    fn pattern_count(&self, pattern_id: u32) -> u32 {
-        if pattern_id == 7 {
-            5
-        } else {
-            0
-        }
-    }
-    fn file_size(&self) -> u64 {
-        1024
-    }
-    fn field_value(&self, name: &str) -> Option<&str> {
-        if name == "path" {
-            Some("src/lib.rs")
-        } else {
-            None
-        }
-    }
-}
-
-#[test]
-fn rule_formula_and_condition_witness_contracts() {
-    let ctx = TestRuleCtx;
-    assert!(evaluate_condition_witness(
-        &RuleConditionWitness::LiteralTrue,
-        &ctx
-    ));
-    assert!(!evaluate_condition_witness(
-        &RuleConditionWitness::LiteralFalse,
-        &ctx
-    ));
-    assert!(evaluate_condition_witness(
-        &RuleConditionWitness::PatternExists { pattern_id: 7 },
-        &ctx
-    ));
-    assert!(!evaluate_condition_witness(
-        &RuleConditionWitness::PatternExists { pattern_id: 8 },
-        &ctx
-    ));
-    assert!(evaluate_condition_witness(
-        &RuleConditionWitness::PatternCountGt {
-            pattern_id: 7,
-            threshold: 4
-        },
-        &ctx
-    ));
-    assert!(!evaluate_condition_witness(
-        &RuleConditionWitness::PatternCountGt {
-            pattern_id: 7,
-            threshold: 5
-        },
-        &ctx
-    ));
-    assert!(evaluate_condition_witness(
-        &RuleConditionWitness::FileSizeLt(2048),
-        &ctx
-    ));
-    assert!(!evaluate_condition_witness(
-        &RuleConditionWitness::FileSizeLt(1024),
-        &ctx
-    ));
-    assert!(evaluate_condition_witness(
-        &RuleConditionWitness::SubstringMatch {
-            haystack: "path".into(),
-            needle: "lib".into()
-        },
-        &ctx
-    ));
-
-    let f = RuleFormulaWitness::And(
-        Box::new(RuleFormulaWitness::Condition(
-            RuleConditionWitness::PatternCountGte {
-                pattern_id: 7,
-                threshold: 3,
-            },
-        )),
-        Box::new(RuleFormulaWitness::Condition(
-            RuleConditionWitness::FileSizeLt(2048),
-        )),
-    );
-    assert!(evaluate_formula_witness(&f, &ctx));
-
-    let f_false = RuleFormulaWitness::Not(Box::new(f));
-    assert!(!evaluate_formula_witness(&f_false, &ctx));
-}
 
 #[test]
 fn ddnnf_evaluate_contract() {

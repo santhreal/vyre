@@ -9,7 +9,6 @@ authors.workspace = true
 repository.workspace = true
 homepage.workspace = true
 description = "Curated consumer facade for the vyre-libs composition family"
-readme = "README.md"
 keywords = ["gpu", "ml", "linear-algebra", "cryptography", "vyre"]
 categories = ["algorithms", "science"]
 documentation = "https://docs.rs/vyre-libs"
@@ -80,11 +79,7 @@ full = [
     "parsing-kernels",
     "go-parser",
     "python-parser",
-    "security",
-    "predicate",
-    "label",
     "visual",
-    "rule",
     "vfs",
     "device",
     "solvers",
@@ -162,13 +157,7 @@ parsing-kernels = ["text", "pattern-kernels", "dep:vyre-libs-parsing", "vyre-lib
 go-parser = ["reduce", "dep:vyre-libs-parsing", "vyre-libs-parsing?/go-parser"]
 python-parser = ["parsing-kernels", "dep:vyre-libs-parsing", "vyre-libs-parsing?/python-parser"]
 
-security = ["label", "predicate", "dep:vyre-libs-security", "vyre-libs-security?/security"]
-predicate = ["graph", "bitset", "label", "dep:vyre-libs-security", "vyre-libs-security?/predicate"]
-label = ["bitset", "dep:vyre-libs-security", "vyre-libs-security?/label"]
-
 visual = ["math-kernels", "dep:vyre-libs-visual", "vyre-libs-visual?/visual"]
-
-rule = ["builder", "dep:vyre-libs-rule", "vyre-libs-rule?/rule"]
 
 vfs = ["dep:vyre-libs-device", "vyre-libs-device?/vfs"]
 device = ["dep:vyre-libs-device", "vyre-libs-device?/device"]
@@ -203,9 +192,7 @@ vyre-libs-hash = { workspace = true, optional = true }
 vyre-libs-text = { workspace = true, optional = true }
 vyre-libs-decode = { workspace = true, optional = true }
 vyre-libs-parsing = { workspace = true, optional = true }
-vyre-libs-security = { workspace = true, optional = true }
 vyre-libs-visual = { workspace = true, optional = true }
-vyre-libs-rule = { workspace = true, optional = true }
 vyre-libs-device = { workspace = true, optional = true }
 vyre-libs-solvers = { workspace = true, optional = true }
 vyre-libs-encoding = { workspace = true, optional = true }
@@ -216,7 +203,7 @@ vyre-libs-scheduling = { workspace = true, optional = true }
 [dev-dependencies]
 vyre = { workspace = true }
 vyre-primitives = { workspace = true, features = ["hardware"], default-features = false }
-vyre-emit-naga = { workspace = true }
+vyre-emit = { workspace = true, features = ["naga"] }
 vyre-lower = { workspace = true }
 vyre-driver = { workspace = true }
 vyre-reference = { workspace = true }
@@ -230,7 +217,6 @@ vyre-test-support = { workspace = true, features = [
     "parity-oracles",
     "ir-fixtures",
 ] }
-structure-gate = { path = "../../tools/structure-gate" }
 
 [package.metadata.vyre]
 publication_class = "stable-consumer-sdk"

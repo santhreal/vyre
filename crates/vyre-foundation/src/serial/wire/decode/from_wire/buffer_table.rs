@@ -117,7 +117,7 @@ pub(super) fn read_i64(reader: &mut Reader<'_>) -> Result<i64, String> {
 
 pub(super) fn read_memory_regions(
     reader: &mut Reader<'_>,
-    metadata: &mut DecodedMetadata,
+    metadata: &mut DecodedMetadata<'_>,
 ) -> Result<(), String> {
     let count = reader.leb_len(MAX_BUFFERS, "memory-region count")?;
     if count != metadata.buffers.len() {
@@ -148,11 +148,7 @@ pub(super) fn read_memory_regions(
         // keeps decoding zero-copy.
         let shape_len = reader.leb_len(64, "shape payload length")?;
         let shape_payload = reader.take(shape_len)?;
-        let mut shape_reader = Reader {
-            bytes: shape_payload,
-            pos: 0,
-            depth: 0,
-        };
+        let mut shape_reader = Reader::new(shape_payload);
         let count_value = u32::try_from(shape_reader.leb_u64()?).map_err(|err| {
             format!("TruncatedPayload: dense shape count cannot fit u32 ({err}). Fix: split the memory region.")
         })?;
@@ -199,11 +195,7 @@ pub(super) fn read_memory_regions(
         // sub-slice pattern as the shape payload above.
         let hints_len = reader.leb_len(64, "hints payload length")?;
         let hints_payload = reader.take(hints_len)?;
-        let mut hints_reader = Reader {
-            bytes: hints_payload,
-            pos: 0,
-            depth: 0,
-        };
+        let mut hints_reader = Reader::new(hints_payload);
         let hints = read_hints(&mut hints_reader)?;
         if hints_reader.pos != hints_reader.bytes.len() {
             return Err("TruncatedPayload: hints payload has trailing bytes. Fix: reject non-canonical Program bytes.".to_string());

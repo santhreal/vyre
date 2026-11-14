@@ -38,7 +38,7 @@
 //!   against. A validator that admits an illegal program therefore reaches
 //!   both sides, and that is the one shared judgement left on this path.
 //! - The operation registry behind `Expr::Call`, through
-//!   `operation::OperationRegistry` and `cpu_op::CpuFn`. The bytes come from
+//!   `operation::OperationRegistry` and `vyre_spec::CpuFn`. The bytes come from
 //!   the registered CPU reference of the callee, which is a hand-written
 //!   scalar implementation rather than a lowering of the call, so the call ABI
 //!   is shared and the arithmetic is not.

@@ -46,12 +46,8 @@ pub fn link_anchor() -> usize {
     vyre_libs_decode::link_anchor();
     #[cfg(any(feature = "parsing", feature = "parsing-kernels"))]
     vyre_libs_parsing::link_anchor();
-    #[cfg(feature = "security")]
-    vyre_libs_security::link_anchor();
     #[cfg(feature = "visual")]
     vyre_libs_visual::link_anchor();
-    #[cfg(feature = "rule")]
-    vyre_libs_rule::link_anchor();
     #[cfg(any(feature = "device", feature = "vfs"))]
     vyre_libs_device::link_anchor();
     #[cfg(feature = "solvers")]
@@ -103,17 +99,8 @@ pub use vyre_libs_text::text;
 #[cfg(any(feature = "parsing", feature = "parsing-kernels"))]
 pub use vyre_libs_parsing::parsing;
 
-#[cfg(feature = "label")]
-pub use vyre_libs_security::label;
-#[cfg(feature = "predicate")]
-pub use vyre_libs_security::predicate;
-#[cfg(feature = "security")]
-pub use vyre_libs_security::security;
-
 #[cfg(feature = "vfs")]
 pub use vyre_libs_device::vfs;
-#[cfg(feature = "rule")]
-pub use vyre_libs_rule::rule;
 #[cfg(feature = "visual")]
 pub use vyre_libs_visual::visual;
 

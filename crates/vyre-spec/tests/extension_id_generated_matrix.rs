@@ -5,8 +5,8 @@
 //! behavior, and serde scalar shape across every extension family.
 
 use vyre_spec::{
-    ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionRuleConditionId,
-    ExtensionTernaryOpId, ExtensionUnOpId,
+    ExtensionAtomicOpId, ExtensionBinOpId, ExtensionDataTypeId, ExtensionTernaryOpId,
+    ExtensionUnOpId,
 };
 
 const GENERATED_CASES: usize = 8192;
@@ -23,17 +23,12 @@ fn generated_extension_names_match_documented_digest_for_every_family() {
         assert_eq!(ExtensionUnOpId::from_name(&name).as_u32(), expected);
         assert_eq!(ExtensionAtomicOpId::from_name(&name).as_u32(), expected);
         assert_eq!(ExtensionTernaryOpId::from_name(&name).as_u32(), expected);
-        assert_eq!(
-            ExtensionRuleConditionId::from_name(&name).as_u32(),
-            expected
-        );
 
         assert!(ExtensionDataTypeId::from_name(&name).is_extension());
         assert!(ExtensionBinOpId::from_name(&name).is_extension());
         assert!(ExtensionUnOpId::from_name(&name).is_extension());
         assert!(ExtensionAtomicOpId::from_name(&name).is_extension());
         assert!(ExtensionTernaryOpId::from_name(&name).is_extension());
-        assert!(ExtensionRuleConditionId::from_name(&name).is_extension());
     }
 }
 
@@ -48,28 +43,24 @@ fn generated_raw_extension_ids_preserve_range_semantics_and_serde_shape() {
         let unop = ExtensionUnOpId(raw);
         let atomic = ExtensionAtomicOpId(raw);
         let ternary = ExtensionTernaryOpId(raw);
-        let rule = ExtensionRuleConditionId(raw);
 
         assert_eq!(data_type.as_u32(), raw);
         assert_eq!(binop.as_u32(), raw);
         assert_eq!(unop.as_u32(), raw);
         assert_eq!(atomic.as_u32(), raw);
         assert_eq!(ternary.as_u32(), raw);
-        assert_eq!(rule.as_u32(), raw);
 
         assert_eq!(data_type.is_extension(), expected_extension);
         assert_eq!(binop.is_extension(), expected_extension);
         assert_eq!(unop.is_extension(), expected_extension);
         assert_eq!(atomic.is_extension(), expected_extension);
         assert_eq!(ternary.is_extension(), expected_extension);
-        assert_eq!(rule.is_extension(), expected_extension);
 
         assert_json_scalar_round_trip(raw, data_type);
         assert_json_scalar_round_trip(raw, binop);
         assert_json_scalar_round_trip(raw, unop);
         assert_json_scalar_round_trip(raw, atomic);
         assert_json_scalar_round_trip(raw, ternary);
-        assert_json_scalar_round_trip(raw, rule);
     }
 }
 
@@ -106,7 +97,6 @@ fn named_extension_id_vectors_are_frozen() {
         assert_eq!(ExtensionUnOpId::from_name(name).as_u32(), expected);
         assert_eq!(ExtensionAtomicOpId::from_name(name).as_u32(), expected);
         assert_eq!(ExtensionTernaryOpId::from_name(name).as_u32(), expected);
-        assert_eq!(ExtensionRuleConditionId::from_name(name).as_u32(), expected);
     }
 }
 

@@ -525,7 +525,7 @@ fn tracked_sources(root: &Path) -> Vec<String> {
 /// in each of them, so a compiled-in path can name a different tree than the one
 /// under test.
 fn checkout_root() -> PathBuf {
-    structure_gate::workspace_root()
+    vyre_test_support::monorepo::vyre_workspace_root()
 }
 
 /// The repository-relative directory of every [`ORACLE_CRATES`] package, read
@@ -534,7 +534,7 @@ fn oracle_directories(root: &Path) -> Vec<PathBuf> {
     ORACLE_CRATES
         .iter()
         .map(|package| {
-            let directory = structure_gate::member_directory(root, package);
+            let directory = vyre_test_support::monorepo::vyre_crate_directory(package);
             directory
                 .strip_prefix(root)
                 .map_or_else(|_| directory.clone(), Path::to_path_buf)

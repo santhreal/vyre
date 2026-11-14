@@ -160,8 +160,9 @@ impl WireWriter {
     /// fit in the envelope's `u32` length prefix.
     pub fn write_words(&mut self, words: &[u32]) -> Result<(), EnvelopeError> {
         let len = section_len(words.len())?;
+        self.out.reserve(4 + words.len() * 4);
         self.out.extend_from_slice(&len.to_le_bytes());
-        for w in words {
+        for &w in words {
             self.out.extend_from_slice(&w.to_le_bytes());
         }
         Ok(())
@@ -249,6 +250,34 @@ impl<'a> WireReader<'a> {
         Ok(slice)
     }
 
+    /// Borrow the raw little-endian byte slice of a length-prefixed `u32` word
+    /// array without copying or allocating.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`EnvelopeError::Truncated`] when the length prefix or encoded
+    /// words exceed the remaining input.
+    pub fn read_words_bytes(&mut self) -> Result<&'a [u8], EnvelopeError> {
+        let n_words = self.read_u32()? as usize;
+        let bytes_needed = n_words.checked_mul(4).ok_or(EnvelopeError::Truncated {
+            needed: usize::MAX,
+            got: self.src.len(),
+        })?;
+        let end = self.cursor.checked_add(bytes_needed).ok_or(EnvelopeError::Truncated {
+            needed: usize::MAX,
+            got: self.src.len(),
+        })?;
+        if self.src.len() < end {
+            return Err(EnvelopeError::Truncated {
+                needed: end,
+                got: self.src.len(),
+            });
+        }
+        let slice = &self.src[self.cursor..end];
+        self.cursor = end;
+        Ok(slice)
+    }
+
     /// Read a length-prefixed `u32` word array.
     ///
     /// # Errors
@@ -256,28 +285,12 @@ impl<'a> WireReader<'a> {
     /// Returns [`EnvelopeError::Truncated`] when the length prefix or encoded
     /// words exceed the remaining input.
     pub fn read_words(&mut self) -> Result<Vec<u32>, EnvelopeError> {
-        let n_words = self.read_u32()? as usize;
-        let bytes_needed = n_words * 4;
-        if self.src.len() < self.cursor + bytes_needed {
-            return Err(EnvelopeError::Truncated {
-                needed: self.cursor + bytes_needed,
-                got: self.src.len(),
-            });
-        }
-        let mut v = Vec::with_capacity(n_words);
-        for _ in 0..n_words {
-            let w = u32::from_le_bytes([
-                self.src[self.cursor],
-                self.src[self.cursor + 1],
-                self.src[self.cursor + 2],
-                self.src[self.cursor + 3],
-            ]);
-            v.push(w);
-            self.cursor += 4;
-        }
-        Ok(v)
+        let raw = self.read_words_bytes()?;
+        Ok(raw
+            .chunks_exact(4)
+            .map(|chunk| u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
+            .collect())
     }
-
     /// Read a single little-endian `u32` (no length prefix).
     ///
     /// # Errors

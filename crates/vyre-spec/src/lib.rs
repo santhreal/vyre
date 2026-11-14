@@ -226,7 +226,7 @@ pub use extension::{
     ExtensionAtomicOp, ExtensionAtomicOpId, ExtensionBinOp, ExtensionBinOpId, ExtensionDataType,
     ExtensionDataTypeId, ExtensionField, ExtensionFieldType, ExtensionIdentity, ExtensionNamespace,
     ExtensionNumericalContract, ExtensionOperand, ExtensionOperandKind, ExtensionProofFieldKind,
-    ExtensionProofFields, ExtensionResourceBounds, ExtensionRuleConditionId, ExtensionSchema,
+    ExtensionProofFields, ExtensionResourceBounds, ExtensionSchema,
     ExtensionSchemaDigest, ExtensionSemVer, ExtensionShapeRule, ExtensionTernaryOp,
     ExtensionTernaryOpId, ExtensionUnOp, ExtensionUnOpId,
 };

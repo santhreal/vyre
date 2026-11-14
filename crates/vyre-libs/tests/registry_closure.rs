@@ -54,15 +54,15 @@ const BUILDER_FLOOR: usize = 450;
 #[test]
 fn every_program_builder_is_tested_registered_or_explicitly_waived() {
     let workspace_root = vyre_test_support::monorepo::vyre_workspace_root();
-    let domain_crates: Vec<std::path::PathBuf> = structure_gate::workspace_members(&workspace_root)
-        .into_iter()
-        .filter(|member| {
-            let name = member.rsplit('/').next().unwrap_or(member.as_str());
-            name == "vyre-libs" || name.starts_with("vyre-libs-")
-        })
-        .map(|member| workspace_root.join(member))
-        .collect();
-
+    let domain_crates: Vec<std::path::PathBuf> =
+        vyre_test_support::monorepo::vyre_workspace_members(&workspace_root)
+            .into_iter()
+            .filter(|member| {
+                let name = member.rsplit('/').next().unwrap_or(member.as_str());
+                name == "vyre-libs" || name.starts_with("vyre-libs-")
+            })
+            .map(|member| workspace_root.join(member))
+            .collect();
     vyre_test_support::assert_registry_closure_crates(
         &domain_crates,
         COVERAGE_WAIVER,
