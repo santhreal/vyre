@@ -34,53 +34,52 @@ impl Parse for PassArgs {
 
         while !input.is_empty() {
             let key: syn::Ident = input.parse()?;
-            let key_name = arg_parsers::reject_duplicate_key(&mut seen_keys, &key)?;
+            arg_parsers::reject_duplicate_key(&seen_keys, &key)?;
             input.parse::<Token![=]>()?;
-            match key_name.as_str() {
-                "name" => name = Some(input.parse()?),
-                "requires" => {
-                    requires = arg_parsers::parse_litstr_array(
-                        input,
-                        "pass metadata arrays accept only string literals. Fix: use [\"analysis_name\"].",
-                    )?
-                }
-                "invalidates" => {
-                    invalidates = arg_parsers::parse_litstr_array(
-                        input,
-                        "pass metadata arrays accept only string literals. Fix: use [\"analysis_name\"].",
-                    )?
-                }
-                "phase" => phase = Some(input.parse()?),
-                "boundary_class" => boundary_class = Some(input.parse()?),
-                "requires_caps" => {
-                    requires_caps = arg_parsers::parse_litstr_array(
-                        input,
-                        "pass metadata arrays accept only string literals. Fix: use [\"analysis_name\"].",
-                    )?
-                }
-                "adapter_dependent" => {
-                    adapter_dependent = input.parse::<LitBool>()?.value;
-                }
-                "preserves_abi" => preserves_abi = Some(input.parse()?),
-                "cost_model_family" => cost_model_family = Some(input.parse()?),
-                "analyze" => {
-                    let value: LitStr = input.parse()?;
-                    if value.value() == "always" {
-                        analyze_always = true;
-                    } else {
-                        return Err(syn::Error::new_spanned(
-                            value,
-                            "unsupported analyze mode. Fix: use analyze = \"always\" or omit it.",
-                        ));
-                    }
-                }
-                _ => {
-                    return Err(syn::Error::new(
-                        key.span(),
-                        "unsupported vyre_pass argument. Fix: use name, requires, invalidates, phase, boundary_class, requires_caps, preserves_abi, cost_model_family, adapter_dependent, or analyze.",
+            if key == "name" {
+                name = Some(input.parse()?);
+            } else if key == "requires" {
+                requires = arg_parsers::parse_litstr_array(
+                    input,
+                    "pass metadata arrays accept only string literals. Fix: use [\"analysis_name\"].",
+                )?;
+            } else if key == "invalidates" {
+                invalidates = arg_parsers::parse_litstr_array(
+                    input,
+                    "pass metadata arrays accept only string literals. Fix: use [\"analysis_name\"].",
+                )?;
+            } else if key == "phase" {
+                phase = Some(input.parse()?);
+            } else if key == "boundary_class" {
+                boundary_class = Some(input.parse()?);
+            } else if key == "requires_caps" {
+                requires_caps = arg_parsers::parse_litstr_array(
+                    input,
+                    "pass metadata arrays accept only string literals. Fix: use [\"analysis_name\"].",
+                )?;
+            } else if key == "adapter_dependent" {
+                adapter_dependent = input.parse::<LitBool>()?.value;
+            } else if key == "preserves_abi" {
+                preserves_abi = Some(input.parse()?);
+            } else if key == "cost_model_family" {
+                cost_model_family = Some(input.parse()?);
+            } else if key == "analyze" {
+                let value: LitStr = input.parse()?;
+                if value.value() == "always" {
+                    analyze_always = true;
+                } else {
+                    return Err(syn::Error::new_spanned(
+                        value,
+                        "unsupported analyze mode. Fix: use analyze = \"always\" or omit it.",
                     ));
                 }
+            } else {
+                return Err(syn::Error::new(
+                    key.span(),
+                    "unsupported vyre_pass argument. Fix: use name, requires, invalidates, phase, boundary_class, requires_caps, preserves_abi, cost_model_family, adapter_dependent, or analyze.",
+                ));
             }
+            seen_keys.insert(key);
             if input.peek(Token![,]) {
                 input.parse::<Token![,]>()?;
             }
@@ -219,7 +218,7 @@ fn validate_unique_string_literals(field: &str, values: &[LitStr]) -> syn::Resul
     let mut seen = std::collections::BTreeSet::new();
     for value in values {
         let text = value.value();
-        if !seen.insert(text.clone()) {
+        if seen.contains(text.as_str()) {
             return Err(syn::Error::new_spanned(
                 value,
                 format!(
@@ -227,6 +226,7 @@ fn validate_unique_string_literals(field: &str, values: &[LitStr]) -> syn::Resul
                 ),
             ));
         }
+        seen.insert(text);
     }
     Ok(())
 }

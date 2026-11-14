@@ -1,8 +1,8 @@
 //! Sequential mathematical witnesses for CSR frontier steps, closure, and sharding.
 
 use super::csr::{
-    csr_backward_traverse_witness, for_each_active_edge, prepare_copied_buffer,
-    prepare_output_buffer, validate_csr_inputs,
+    csr_backward_traverse_witness, csr_backward_traverse_witness_into, for_each_active_edge,
+    prepare_copied_buffer, prepare_output_buffer, validate_csr_inputs,
 };
 
 /// Sequential in-place CSR forward-closure step with a changed flag writing into caller storage.
@@ -473,20 +473,24 @@ pub fn csr_backward_closure_witness(
     allow_mask: u32,
 ) -> Vec<u32> {
     let mut frontier = seed.to_vec();
+    let mut step = Vec::new();
     loop {
-        let previous = frontier.clone();
-        let step = csr_backward_traverse_witness(
+        csr_backward_traverse_witness_into(
             node_count,
             edge_offsets,
             edge_targets,
             edge_kind_masks,
             &frontier,
             allow_mask,
+            &mut step,
         );
-        for (word, reached) in frontier.iter_mut().zip(step) {
+        let mut changed = false;
+        for (word, &reached) in frontier.iter_mut().zip(&step) {
+            let prior = *word;
             *word |= reached;
+            changed |= *word != prior;
         }
-        if frontier == previous {
+        if !changed {
             return frontier;
         }
     }

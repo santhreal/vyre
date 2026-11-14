@@ -29,19 +29,19 @@ impl BodyCtx<'_> {
         }
         let (binding_slot, index_op_id, value_op_id) = read_store_operands(op)?;
         let binding = self.binding_for_slot(binding_slot)?;
-        let element_type = binding.element_type.clone();
+        let element_type = &binding.element_type;
         let memory_class = binding.memory_class;
-        let elem_ty = PtxType::from_dtype(&element_type)?;
+        let elem_ty = PtxType::from_dtype(element_type)?;
         let value_reg = self.coerce_for_store(self.lookup_operand(value_op_id)?, elem_ty);
         let address =
-            self.emit_memory_address(binding_slot, index_op_id, &element_type, memory_class)?;
+            self.emit_memory_address(binding_slot, index_op_id, element_type, memory_class)?;
         let guard = self.store_guard_for_index(
             binding_slot,
             index_op_id,
             memory_class,
             Some((if negate { "@!" } else { "@" }, pred)),
         )?;
-        self.emit_store_value(binding_slot, guard, address, &element_type, value_reg)?;
+        self.emit_store_value(binding_slot, guard, address, element_type, value_reg)?;
         Ok(true)
     }
 
@@ -65,18 +65,17 @@ impl BodyCtx<'_> {
         binding_slot: u32,
         index_op_id: u32,
         memory_class: MemoryClass,
-        existing: Option<(&str, Reg)>,
-    ) -> Result<Option<(String, Reg)>, EmitError> {
-        let existing = existing.map(|(prefix, pred)| (prefix.to_string(), pred));
+        existing: Option<(&'static str, Reg)>,
+    ) -> Result<Option<(&'static str, Reg)>, EmitError> {
         if !matches!(memory_class, MemoryClass::Global) {
             return Ok(existing);
         }
 
         let in_bounds = self.emit_index_in_bounds_pred(binding_slot, index_op_id)?;
         let Some((prefix, pred)) = existing else {
-            return Ok(Some(("@".to_string(), in_bounds)));
+            return Ok(Some(("@", in_bounds)));
         };
-        let branch_live = match prefix.as_str() {
+        let branch_live = match prefix {
             "@" => pred,
             "@!" => {
                 let not_pred = self.alloc(PtxType::Bool);
@@ -94,6 +93,6 @@ impl BodyCtx<'_> {
             self.text,
             "    and.pred    {combined}, {branch_live}, {in_bounds};"
         );
-        Ok(Some(("@".to_string(), combined)))
+        Ok(Some(("@", combined)))
     }
 }

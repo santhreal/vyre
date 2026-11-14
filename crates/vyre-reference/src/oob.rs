@@ -338,6 +338,11 @@ impl Buffer {
         bytes_guard[begin..begin + available].copy_from_slice(&payload[..available]);
     }
 
+    /// Snapshot this buffer's backing bytes without cloning [`Buffer`] metadata.
+    pub(crate) fn to_bytes_vec(&self) -> Vec<u8> {
+        self.read_bytes().clone()
+    }
+
     /// Consume the buffer and return its bytes.
     ///
     /// # Panics
@@ -375,7 +380,7 @@ pub(crate) fn load(buffer: &Buffer, index: u32) -> Result<Value, ReferenceError>
     let extent = buffer.len();
     let bytes_guard = buffer.read_bytes();
     let stride = buffer.element.min_bytes();
-    let ty = ir_to_conform_type(buffer.element.clone());
+    let ty = ir_to_conform_type_ref(&buffer.element);
     if matches!(buffer.element, IrDataType::Bytes) {
         let offset = index as usize;
         if offset > bytes_guard.len() {
@@ -392,7 +397,7 @@ pub(crate) fn load(buffer: &Buffer, index: u32) -> Result<Value, ReferenceError>
         record_oob(OobAccess::Load, buffer, index, extent)?;
         return absorbed_load(ty);
     };
-    read_element(ty.clone(), &bytes_guard[offset..offset + stride]).map_err(|detail| {
+    read_element(ty, &bytes_guard[offset..offset + stride]).map_err(|detail| {
         ReferenceError::type_mismatch(format!(
             "element {index} of a {:?} buffer does not decode as {ty:?}: {detail}. \
              Fix: declare the buffer with the element type its bytes carry.",
@@ -407,8 +412,8 @@ pub(crate) fn load(buffer: &Buffer, index: u32) -> Result<Value, ReferenceError>
 /// Returns a type mismatch when the element type has no defined zero. A load
 /// answered with an empty payload instead would hand back a width the program
 /// never declared, which is the failure diagnostic mode exists to record.
-fn absorbed_load(ty: DataType) -> Result<Value, ReferenceError> {
-    Value::try_zero_for(ty.clone()).ok_or_else(|| {
+fn absorbed_load(ty: &DataType) -> Result<Value, ReferenceError> {
+    Value::try_zero_for_ref(ty).ok_or_else(|| {
         ReferenceError::type_mismatch(format!(
             "an out-of-bounds load of a {ty:?} element has no defined zero. \
              Fix: declare the buffer with an element type of fixed storage width."
@@ -444,7 +449,7 @@ pub(crate) fn store(buffer: &mut Buffer, index: u32, value: &Value) -> Result<()
         return record_oob(OobAccess::Store, buffer, index, extent);
     };
     write_element(
-        buffer.element.clone(),
+        &buffer.element,
         &mut bytes_guard[offset..offset + stride],
         value,
     )
@@ -515,7 +520,7 @@ fn byte_offset(index: u32, stride: usize) -> Option<usize> {
 /// no number. That case used to write `0.0`, so a store of the wrong value
 /// type produced a zero the program never computed and the oracle certified it.
 fn write_element(
-    element: IrDataType,
+    element: &IrDataType,
     target: &mut [u8],
     value: &Value,
 ) -> Result<(), ReferenceError> {
@@ -530,11 +535,11 @@ fn write_element(
     }
     match element {
         IrDataType::F16 => {
-            let narrowed = float_element(&element, value)?;
+            let narrowed = float_element(element, value)?;
             target.copy_from_slice(&crate::float16::f32_to_f16(narrowed).to_le_bytes());
         }
         IrDataType::BF16 => {
-            let narrowed = float_element(&element, value)?;
+            let narrowed = float_element(element, value)?;
             target.copy_from_slice(&crate::float16::f32_to_bf16(narrowed).to_le_bytes());
         }
         IrDataType::F32 => {
@@ -543,7 +548,7 @@ fn write_element(
             // upper four bytes of `v.to_le_bytes()` (what the default
             // to_bytes_width path does) would mangle the f32 bit pattern.
             let narrowed =
-                crate::execution::typed_ops::canonical_f32(float_element(&element, value)?);
+                crate::execution::typed_ops::canonical_f32(float_element(element, value)?);
             target.copy_from_slice(&narrowed.to_le_bytes());
         }
         IrDataType::U8
@@ -599,7 +604,7 @@ fn float_element(element: &IrDataType, value: &Value) -> Result<f32, ReferenceEr
     }
 }
 
-fn read_element(ty: DataType, bytes: &[u8]) -> Result<Value, String> {
+fn read_element(ty: &DataType, bytes: &[u8]) -> Result<Value, String> {
     match ty {
         DataType::F16 => {
             if bytes.len() < 2 {
@@ -647,7 +652,7 @@ fn read_element(ty: DataType, bytes: &[u8]) -> Result<Value, String> {
         | DataType::SparseBsr { .. }
         | DataType::DeviceMesh { .. }
         | DataType::Quantized { .. }
-        | DataType::Opaque(_)) => Value::from_element_bytes(other, bytes),
+        | DataType::Opaque(_)) => Value::from_element_bytes_ref(other, bytes),
     }
 }
 
@@ -665,9 +670,9 @@ fn write_u32(bytes: &mut [u8], value: u32) {
 /// element type decodes as itself. `Bool` is the one remap: a GPU stores a
 /// boolean as a word, so a `Bool` buffer decodes through the `U32` reader and
 /// the program sees the word it would read on a device.
-fn ir_to_conform_type(ty: IrDataType) -> DataType {
+fn ir_to_conform_type_ref(ty: &IrDataType) -> &DataType {
     if matches!(ty, IrDataType::Bool) {
-        DataType::U32
+        &DataType::U32
     } else {
         ty
     }

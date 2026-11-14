@@ -132,7 +132,7 @@ impl BodyCtx<'_> {
     pub(super) fn emit_store_value(
         &mut self,
         binding_slot: u32,
-        guard: Option<(String, Reg)>,
+        guard: Option<(&'static str, Reg)>,
         address: MemAddress,
         element_type: &DataType,
         value_reg: Reg,
@@ -206,7 +206,7 @@ impl BodyCtx<'_> {
 
     fn emit_raw_store(
         &mut self,
-        guard: Option<(String, Reg)>,
+        guard: Option<(&'static str, Reg)>,
         address: MemAddress,
         ptx_type: &str,
         value_reg: Reg,
@@ -603,7 +603,7 @@ impl BodyCtx<'_> {
         &self,
         slot: u32,
         context: &str,
-    ) -> Result<(DataType, MemoryClass), EmitError> {
+    ) -> Result<MemoryClass, EmitError> {
         let binding = self.binding_for_slot(slot)?;
         if binding.element_type != DataType::U32 {
             return Err(EmitError::InvalidBinding {
@@ -611,6 +611,6 @@ impl BodyCtx<'_> {
                 reason: format!("{context} must be a U32 binding"),
             });
         }
-        Ok((binding.element_type.clone(), binding.memory_class))
+        Ok(binding.memory_class)
     }
 }

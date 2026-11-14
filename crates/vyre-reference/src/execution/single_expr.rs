@@ -59,7 +59,7 @@ impl ReferenceMemory {
     pub fn storage_bytes(&self, name: &str) -> Result<Vec<u8>, ReferenceError> {
         self.storage
             .get(name)
-            .map(|buffer| buffer.clone().into_bytes())
+            .map(Buffer::to_bytes_vec)
             .ok_or_else(|| {
                 ReferenceError::missing_value(format!(
                     "no storage buffer `{name}` is bound in this reference memory. Fix: bind it with `ReferenceMemory::with_storage` before reading it back."

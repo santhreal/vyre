@@ -288,6 +288,12 @@ impl Value {
     /// Try to create a zero value for the given data type.
     #[must_use]
     pub fn try_zero_for(ty: vyre_foundation::ir::DataType) -> Option<Self> {
+        Self::try_zero_for_ref(&ty)
+    }
+
+    /// Borrowed counterpart of [`Self::try_zero_for`] for hot load paths.
+    #[must_use]
+    pub(crate) fn try_zero_for_ref(ty: &vyre_foundation::ir::DataType) -> Option<Self> {
         match ty {
             vyre_foundation::ir::DataType::U32 => Some(Self::U32(0)),
             vyre_foundation::ir::DataType::I32 => Some(Self::I32(0)),
@@ -323,7 +329,7 @@ impl Value {
             | vyre_foundation::ir::DataType::SparseBsr { .. }
             | vyre_foundation::ir::DataType::DeviceMesh { .. }
             | vyre_foundation::ir::DataType::Quantized { .. }
-            | vyre_foundation::ir::DataType::Opaque(_)) => fixed_scalar_storage_width(&other)
+            | vyre_foundation::ir::DataType::Opaque(_)) => fixed_scalar_storage_width(other)
                 .map(|width| Self::Bytes(Arc::from(vec![0; width]))),
         }
     }
@@ -335,6 +341,14 @@ impl Value {
     /// Returns an error if the byte slice is too short for the declared type.
     pub fn from_element_bytes(
         ty: vyre_foundation::ir::DataType,
+        bytes: &[u8],
+    ) -> Result<Self, String> {
+        Self::from_element_bytes_ref(&ty, bytes)
+    }
+
+    /// Borrowed counterpart of [`Self::from_element_bytes`] for hot load paths.
+    pub(crate) fn from_element_bytes_ref(
+        ty: &vyre_foundation::ir::DataType,
         bytes: &[u8],
     ) -> Result<Self, String> {
         match ty {
@@ -397,7 +411,7 @@ impl Value {
             | vyre_foundation::ir::DataType::DeviceMesh { .. }
             | vyre_foundation::ir::DataType::Quantized { .. }
             | vyre_foundation::ir::DataType::Opaque(_)) => {
-                match fixed_scalar_storage_width(&other) {
+                match fixed_scalar_storage_width(other) {
                     Some(width) => {
                         if bytes.len() < width {
                             return Err(format!("{other} requires {width} bytes"));

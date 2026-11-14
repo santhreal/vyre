@@ -25,17 +25,14 @@ pub(crate) fn parse_litstr_array(
 /// Reject repeated top-level macro arguments before a later value can silently
 /// override an earlier value.
 pub(crate) fn reject_duplicate_key(
-    seen: &mut std::collections::BTreeSet<String>,
+    seen: &std::collections::BTreeSet<Ident>,
     key: &Ident,
-) -> syn::Result<String> {
-    let key_name = key.to_string();
-    if !seen.insert(key_name.clone()) {
+) -> syn::Result<()> {
+    if seen.contains(key) {
         return Err(syn::Error::new(
             key.span(),
-            format!(
-                "duplicate macro argument `{key_name}`. Fix: keep exactly one `{key_name}` entry."
-            ),
+            format!("duplicate macro argument `{key}`. Fix: keep exactly one `{key}` entry."),
         ));
     }
-    Ok(key_name)
+    Ok(())
 }

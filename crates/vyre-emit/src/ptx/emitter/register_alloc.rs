@@ -149,7 +149,7 @@ impl<'a> BodyCtx<'a> {
 
     pub(super) fn preload_bindings(&mut self, desc: &KernelDescriptor) -> Result<(), EmitError> {
         self.plan_shared_permutations(desc);
-        let mut shared_symbols: Vec<(String, u32)> = Vec::new();
+        let mut shared_symbols: Vec<(u32, u32)> = Vec::new();
         for binding in &desc.bindings.slots {
             if matches!(binding.memory_class, MemoryClass::Shared) {
                 let element_count =
@@ -179,7 +179,7 @@ impl<'a> BodyCtx<'a> {
                     })?;
                 let symbol = format!("shared_buf_{}", binding.slot);
                 let _ = writeln!(self.text, "    .shared .align 4 .b8 {symbol}[{byte_len}];");
-                shared_symbols.push((symbol.clone(), byte_len));
+                shared_symbols.push((binding.slot, byte_len));
                 self.slot_to_shared_symbol.insert(binding.slot, symbol);
                 continue;
             }
@@ -265,7 +265,7 @@ impl<'a> BodyCtx<'a> {
     /// not emitted and the closing `bar.sync` is reached by the whole block.
     /// Each declaration is padded to a whole word by `preload_bindings`, so
     /// the store loop covers the buffer with `st.shared.u32` alone.
-    fn emit_workgroup_zero_init(&mut self, shared_symbols: &[(String, u32)]) {
+    fn emit_workgroup_zero_init(&mut self, shared_symbols: &[(u32, u32)]) {
         if shared_symbols.is_empty() {
             return;
         }
@@ -281,7 +281,7 @@ impl<'a> BodyCtx<'a> {
         let _ = writeln!(self.text, "    mul.lo.u32    {lanes_xy}, %r1, %r5;");
         let _ = writeln!(self.text, "    mul.lo.u32    {lanes}, {lanes_xy}, %r9;");
         let _ = writeln!(self.text, "    mov.u32    {zero}, 0;");
-        for (symbol, byte_len) in shared_symbols {
+        for &(slot, byte_len) in shared_symbols {
             let words = byte_len / 4;
             let cursor = self.alloc(PtxType::U32);
             let base = self.alloc(PtxType::U32);
@@ -290,6 +290,7 @@ impl<'a> BodyCtx<'a> {
             let done_pred = self.alloc(PtxType::Bool);
             let head = self.alloc_label("zero_shared");
             let done = self.alloc_label("zero_shared_done");
+            let symbol = &self.slot_to_shared_symbol[&slot];
             let _ = writeln!(self.text, "    mov.u32    {cursor}, {flat};");
             let _ = writeln!(self.text, "    mov.u32    {base}, {symbol};");
             let _ = writeln!(self.text, "{head}:");
@@ -308,7 +309,7 @@ impl<'a> BodyCtx<'a> {
         self.text.push_str("    bar.sync 0;\n\n");
     }
 
-    pub(super) fn binding_for_slot(&self, slot: u32) -> Result<&BindingSlot, EmitError> {
+    pub(super) fn binding_for_slot(&self, slot: u32) -> Result<&'a BindingSlot, EmitError> {
         self.slot_to_binding
             .get(&slot)
             .copied()

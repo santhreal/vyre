@@ -189,12 +189,13 @@ impl BodyCtx<'_> {
     ) -> Result<(), EmitError> {
         let first = &body.ops[chain[0]];
         let (binding_slot, index_op_id) = read_two_operands(first, "vector load")?;
-        let element_type = self.binding_for_slot(binding_slot)?.element_type.clone();
-        let memory_class = self.binding_for_slot(binding_slot)?.memory_class;
-        let elem_ty = PtxType::from_dtype(&element_type)?;
-        let vector_ty = vector_memory_type(&element_type, elem_ty);
+        let binding = self.binding_for_slot(binding_slot)?;
+        let element_type = &binding.element_type;
+        let memory_class = binding.memory_class;
+        let elem_ty = PtxType::from_dtype(element_type)?;
+        let vector_ty = vector_memory_type(element_type, elem_ty);
         let final_addr =
-            self.emit_global_address_operand(binding_slot, index_op_id, &element_type)?;
+            self.emit_global_address_operand(binding_slot, index_op_id, element_type)?;
         let load_space = self.load_space_for(binding_slot, memory_class);
         let mut regs: SmallVec<[crate::ptx::reg::Reg; 4]> = SmallVec::new();
         for &_op_idx in chain {
@@ -238,16 +239,16 @@ impl BodyCtx<'_> {
         let first = &body.ops[chain[0]];
         let (binding_slot, index_op_id, _) = read_store_operands(first)?;
         self.reject_store_to_read_only_slot(binding_slot, "a fused vector store")?;
-        let element_type = self.binding_for_slot(binding_slot)?.element_type.clone();
-        let elem_ty = PtxType::from_dtype(&element_type)?;
-        let vector_ty = vector_memory_type(&element_type, elem_ty);
+        let element_type = &self.binding_for_slot(binding_slot)?.element_type;
+        let elem_ty = PtxType::from_dtype(element_type)?;
+        let vector_ty = vector_memory_type(element_type, elem_ty);
         let final_addr =
-            self.emit_global_address_operand(binding_slot, index_op_id, &element_type)?;
+            self.emit_global_address_operand(binding_slot, index_op_id, element_type)?;
         let mut regs: SmallVec<[crate::ptx::reg::Reg; 4]> = SmallVec::new();
         for &op_idx in chain {
             let (_, _, value_op_id) = read_store_operands(&body.ops[op_idx])?;
             let value = self.lookup_operand(value_op_id)?;
-            regs.push(self.canonical_store_reg(value, &element_type, elem_ty));
+            regs.push(self.canonical_store_reg(value, element_type, elem_ty));
         }
         // The chain writes `chain.len()` consecutive elements from one
         // address, so the last of them is the element that decides whether

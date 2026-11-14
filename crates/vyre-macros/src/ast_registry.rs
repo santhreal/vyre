@@ -57,8 +57,8 @@ impl AstManifest {
     fn validate(&self) -> syn::Result<()> {
         let mut enum_names = std::collections::BTreeSet::new();
         for ast_enum in &self.enums {
-            let enum_name = ast_enum.name.to_string();
-            if !enum_names.insert(enum_name.clone()) {
+            if !enum_names.insert(&ast_enum.name) {
+                let enum_name = &ast_enum.name;
                 return Err(syn::Error::new_spanned(
                     &ast_enum.name,
                     format!(
@@ -69,8 +69,9 @@ impl AstManifest {
 
             let mut variant_names = std::collections::BTreeSet::new();
             for variant in &ast_enum.variants {
-                let variant_name = variant.ident.to_string();
-                if !variant_names.insert(variant_name.clone()) {
+                if !variant_names.insert(&variant.ident) {
+                    let enum_name = &ast_enum.name;
+                    let variant_name = &variant.ident;
                     return Err(syn::Error::new_spanned(
                         &variant.ident,
                         format!(
@@ -177,35 +178,43 @@ pub(crate) fn vyre_ast_registry_impl(item: TokenStream) -> TokenStream {
             }
         });
 
+        let enum_name_str = enum_name.to_string();
+        let enum_lower = enum_name_str.to_lowercase();
+        let variant_name_strings = ast_enum
+            .variants
+            .iter()
+            .map(|v| v.ident.to_string())
+            .collect::<Vec<_>>();
+
         // op_id implementation
-        let op_ids = ast_enum.variants.iter().map(|v| {
-            let ident = &v.ident;
-            if ident == "Opaque" {
-                quote! {
-                    #enum_name::Opaque(ext) => ext.extension_kind().to_string()
+        let op_ids = ast_enum
+            .variants
+            .iter()
+            .zip(&variant_name_strings)
+            .map(|(v, ident_str)| {
+                let ident = &v.ident;
+                if ident_str == "Opaque" {
+                    quote! {
+                        #enum_name::Opaque(ext) => ext.extension_kind().to_string()
+                    }
+                } else {
+                    let lower_name = format!("vyre.{enum_lower}.{}", ident_str.to_lowercase());
+                    match &v.data {
+                        VariantData::Unit => quote! {
+                            #enum_name::#ident => #lower_name.to_string()
+                        },
+                        VariantData::Unnamed(_) => quote! {
+                            #enum_name::#ident ( .. ) => #lower_name.to_string()
+                        },
+                        VariantData::Named(_) => quote! {
+                            #enum_name::#ident { .. } => #lower_name.to_string()
+                        },
+                    }
                 }
-            } else {
-                let lower_name = format!(
-                    "vyre.{}.{}",
-                    enum_name.to_string().to_lowercase(),
-                    ident.to_string().to_lowercase()
-                );
-                match &v.data {
-                    VariantData::Unit => quote! {
-                        #enum_name::#ident => #lower_name.to_string()
-                    },
-                    VariantData::Unnamed(_) => quote! {
-                        #enum_name::#ident ( .. ) => #lower_name.to_string()
-                    },
-                    VariantData::Named(_) => quote! {
-                        #enum_name::#ident { .. } => #lower_name.to_string()
-                    },
-                }
-            }
-        });
+            });
 
         let op_id_fn_name = syn::Ident::new(
-            &format!("{}_op_id", enum_name.to_string().to_lowercase()),
+            &format!("{enum_lower}_op_id"),
             proc_macro2::Span::call_site(),
         );
 
@@ -218,29 +227,27 @@ pub(crate) fn vyre_ast_registry_impl(item: TokenStream) -> TokenStream {
         // told about. Emitting the names here makes "did anyone record a
         // decision for every variant" a checkable property instead of a
         // hand-maintained list that goes stale silently.
-        let variant_name_strings = ast_enum
-            .variants
-            .iter()
-            .map(|v| v.ident.to_string())
-            .collect::<Vec<_>>();
         let variant_names_const = syn::Ident::new(
-            &format!("{}_VARIANT_NAMES", enum_name.to_string().to_uppercase()),
+            &format!("{}_VARIANT_NAMES", enum_name_str.to_uppercase()),
             proc_macro2::Span::call_site(),
         );
         let variant_name_fn = syn::Ident::new(
-            &format!("{}_variant_name", enum_name.to_string().to_lowercase()),
+            &format!("{enum_lower}_variant_name"),
             proc_macro2::Span::call_site(),
         );
-        let variant_name_arms = ast_enum.variants.iter().map(|v| {
-            let ident = &v.ident;
-            let name = ident.to_string();
-            match &v.data {
-                VariantData::Unit => quote! { #enum_name::#ident => #name },
-                VariantData::Unnamed(_) => quote! { #enum_name::#ident ( .. ) => #name },
-                VariantData::Named(_) => quote! { #enum_name::#ident { .. } => #name },
-            }
-        });
-
+        let variant_name_arms =
+            ast_enum
+                .variants
+                .iter()
+                .zip(&variant_name_strings)
+                .map(|(v, name)| {
+                    let ident = &v.ident;
+                    match &v.data {
+                        VariantData::Unit => quote! { #enum_name::#ident => #name },
+                        VariantData::Unnamed(_) => quote! { #enum_name::#ident ( .. ) => #name },
+                        VariantData::Named(_) => quote! { #enum_name::#ident { .. } => #name },
+                    }
+                });
         // PartialEq implementations
         let partial_eq_arms = ast_enum.variants.iter().map(|v| {
             let ident = &v.ident;

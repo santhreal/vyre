@@ -337,7 +337,7 @@ pub(crate) fn run_hashmap_reference(
         let elements = element_count(decl, bytes.len())?;
         if is_reference_output(decl) {
             max_output_elements = max_output_elements.max(elements);
-            output_decls.push(decl.clone());
+            output_decls.push(decl);
         } else {
             max_input_elements = max_input_elements.max(elements);
         }
@@ -388,19 +388,21 @@ pub(crate) fn run_hashmap_reference(
     let counts = if let Some([gx, gy, gz]) = explicit_grid {
         [gx.max(1), gy.max(1), gz.max(1)]
     } else {
-        let active: Vec<usize> = [sx, sy, sz]
-            .iter()
-            .enumerate()
-            .filter(|(_, size)| **size > 1)
-            .map(|(i, _)| i)
-            .collect();
-        let n = active.len().max(1);
+        let mut active = [0usize; 3];
+        let mut active_len = 0usize;
+        for (i, size) in [sx, sy, sz].into_iter().enumerate() {
+            if size > 1 {
+                active[active_len] = i;
+                active_len += 1;
+            }
+        }
+        let n = active_len.max(1);
         let mut counts = [1u32, 1, 1];
-        if active.is_empty() {
+        if active_len == 0 {
             counts[0] = total_wg;
         } else {
             let base = (total_wg as f64).powf(1.0 / n as f64).ceil() as u32;
-            for &axis in &active {
+            for &axis in &active[..active_len] {
                 counts[axis] = base.max(1);
             }
         }
@@ -524,7 +526,7 @@ pub(crate) fn run_hashmap_reference(
                     "missing output buffer `{name}` after dispatch. Fix: keep buffer declarations unique."
                 ))
             })?;
-            output_value(buffer, &decl)
+            output_value(buffer, decl)
         })
         .collect()
 }

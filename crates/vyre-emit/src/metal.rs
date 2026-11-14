@@ -267,7 +267,7 @@ pub fn emit_artifact(desc: &KernelDescriptor) -> Result<MetalArtifact, EmitError
     let (msl, entry_point, sizes_buffer_index) =
         emit_from_naga_module_with_resource_indices(&module, ENTRY_POINT, &index_map.by_resource)?;
     let descriptor_blake3 = descriptor_blake3(desc)?;
-    let msl_blake3 = hex_encode(blake3::hash(msl.as_bytes()).as_bytes());
+    let msl_blake3 = blake3::hash(msl.as_bytes()).to_hex().to_string();
     Ok(MetalArtifact {
         schema: METAL_ARTIFACT_SCHEMA,
         target: "native_module".into(),
@@ -495,12 +495,15 @@ fn metal_binding_indices(desc: &KernelDescriptor) -> Result<MetalBindingIndexMap
 fn metal_resource_indices_from_module(
     module: &naga::Module,
 ) -> Result<BTreeMap<(u32, u32), u8>, EmitError> {
-    let mut keys = BTreeMap::new();
+    let mut indices = BTreeMap::new();
     for (_handle, global) in module.global_variables.iter() {
         let Some(binding) = global.binding else {
             continue;
         };
-        if keys.insert((binding.group, binding.binding), ()).is_some() {
+        if indices
+            .insert((binding.group, binding.binding), 0u8)
+            .is_some()
+        {
             return Err(binding_err(
                 binding.group,
                 binding.binding,
@@ -508,9 +511,8 @@ fn metal_resource_indices_from_module(
             ));
         }
     }
-    let mut indices = BTreeMap::new();
-    for (index, key) in keys.keys().copied().enumerate() {
-        let metal_buffer_index = u8::try_from(index).map_err(|error| {
+    for (index, (&key, slot)) in indices.iter_mut().enumerate() {
+        *slot = u8::try_from(index).map_err(|error| {
             binding_err(
                 key.0,
                 key.1,
@@ -519,7 +521,6 @@ fn metal_resource_indices_from_module(
                 ),
             )
         })?;
-        indices.insert(key, metal_buffer_index);
     }
     Ok(indices)
 }
@@ -620,19 +621,10 @@ fn align_u64(value: u64, alignment: u64) -> Result<u64, EmitError> {
 }
 
 fn descriptor_blake3(desc: &KernelDescriptor) -> Result<String, EmitError> {
-    let bytes = bincode::serde::encode_to_vec(desc, bincode::config::standard())
+    let mut hasher = blake3::Hasher::new();
+    bincode::serde::encode_into_std_write(desc, &mut hasher, bincode::config::standard())
         .map_err(|error| EmitError::DescriptorHash(format!("{error}")))?;
-    Ok(hex_encode(blake3::hash(&bytes).as_bytes()))
-}
-
-fn hex_encode(bytes: &[u8]) -> String {
-    const HEX: &[u8; 16] = b"0123456789abcdef";
-    let mut out = String::with_capacity(bytes.len() * 2);
-    for &byte in bytes {
-        out.push(HEX[(byte >> 4) as usize] as char);
-        out.push(HEX[(byte & 0x0f) as usize] as char);
-    }
-    out
+    Ok(hasher.finalize().to_hex().to_string())
 }
 
 vyre_foundation::diagnostic_conversions!(EmitError, diagnostic);

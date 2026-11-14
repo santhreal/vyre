@@ -136,13 +136,14 @@ pub(crate) fn source_tree_digest(
     let mut read = 0u64;
     let mut hasher = blake3::Hasher::new();
     update_length_delimited_field(&mut hasher, b"domain", domain);
+    let mut scratch = Vec::new();
     for (relative, path) in &files {
-        let bytes = read_bounded(path, &mut read)?;
-        update_length_delimited_field(&mut hasher, relative.as_bytes(), &bytes);
+        read_bounded(path, &mut read, &mut scratch)?;
+        update_length_delimited_field(&mut hasher, relative.as_bytes(), &scratch);
     }
     let manifest_path = package_root.join("Cargo.toml");
-    let manifest = read_bounded(&manifest_path, &mut read)?;
-    update_length_delimited_field(&mut hasher, b"Cargo.toml", &manifest);
+    read_bounded(&manifest_path, &mut read, &mut scratch)?;
+    update_length_delimited_field(&mut hasher, b"Cargo.toml", &scratch);
     Ok(hasher.finalize().to_hex().to_string())
 }
 
@@ -196,26 +197,31 @@ fn collect_files(
             path: dir.to_path_buf(),
             source,
         })?;
-        let path = entry.path();
         let kind = entry
             .file_type()
             .map_err(|source| SourceDigestError::File {
-                path: path.clone(),
+                path: entry.path(),
                 source,
             })?;
+        let path = entry.path();
         if kind.is_dir() {
             collect_files(root, &path, out)?;
             continue;
         }
-        let relative = path
-            .strip_prefix(root)
-            .map_err(|_| SourceDigestError::Escaped {
-                path: path.clone(),
+        let Ok(stripped) = path.strip_prefix(root) else {
+            return Err(SourceDigestError::Escaped {
+                path,
                 root: root.to_path_buf(),
-            })?
-            .to_str()
-            .ok_or_else(|| SourceDigestError::NonUtf8 { path: path.clone() })?
-            .replace('\\', "/");
+            });
+        };
+        let Some(relative_str) = stripped.to_str() else {
+            return Err(SourceDigestError::NonUtf8 { path });
+        };
+        let relative = if relative_str.contains('\\') {
+            relative_str.replace('\\', "/")
+        } else {
+            relative_str.to_owned()
+        };
         out.push((relative, path));
     }
     Ok(())
@@ -227,17 +233,17 @@ fn collect_files(
 /// larger than the remaining budget is never held in memory. The reader takes
 /// one byte more than the budget allows, so a file that exactly fills the
 /// budget is still accepted and the next byte is what reports the overrun.
-fn read_bounded(path: &Path, read: &mut u64) -> Result<Vec<u8>, SourceDigestError> {
+fn read_bounded(path: &Path, read: &mut u64, bytes: &mut Vec<u8>) -> Result<(), SourceDigestError> {
     use std::io::Read;
 
+    bytes.clear();
     let remaining = MAX_SOURCE_DIGEST_BYTES.saturating_sub(*read);
     let file = std::fs::File::open(path).map_err(|source| SourceDigestError::File {
         path: path.to_path_buf(),
         source,
     })?;
-    let mut bytes = Vec::new();
     file.take(remaining.saturating_add(1))
-        .read_to_end(&mut bytes)
+        .read_to_end(bytes)
         .map_err(|source| SourceDigestError::File {
             path: path.to_path_buf(),
             source,
@@ -249,5 +255,5 @@ fn read_bounded(path: &Path, read: &mut u64) -> Result<Vec<u8>, SourceDigestErro
         });
     }
     *read = read.saturating_add(bytes.len() as u64);
-    Ok(bytes)
+    Ok(())
 }

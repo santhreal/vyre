@@ -46,7 +46,7 @@ struct ByteSpan {
     word_aligned: bool,
 }
 
-impl BodyCtx<'_> {
+impl<'a> BodyCtx<'a> {
     pub(super) fn emit_u32_const(&mut self, value: u32) -> Reg {
         let reg = self.alloc(PtxType::U32);
         let _ = writeln!(self.text, "    mov.u32    {reg}, {value};");
@@ -166,11 +166,15 @@ impl BodyCtx<'_> {
 
     /// A binding whose elements are not four bytes wide has no word grid for a
     /// byte span to sit on.
-    fn require_word_element(&self, slot: u32, label: &str) -> Result<DataType, EmitError> {
-        let element = self.binding_for_slot(slot)?.element_type.clone();
-        let width = element.size_bytes();
-        if width == Some(4) {
-            return Ok(element);
+    fn require_word_element(
+        &self,
+        slot: u32,
+        label: &str,
+    ) -> Result<(&'a DataType, MemoryClass), EmitError> {
+        let binding = self.binding_for_slot(slot)?;
+        let element = &binding.element_type;
+        if element.size_bytes() == Some(4) {
+            return Ok((element, binding.memory_class));
         }
         Err(EmitError::UnsupportedDataType(format!(
             "async copy {label} element {element:?} is not four bytes wide. Fix: stage the transfer through a U32 buffer, whose word grid a byte span can address."
@@ -354,10 +358,9 @@ impl BodyCtx<'_> {
         size_id: u32,
         direction: AsyncCopyDirection,
     ) -> Result<(), EmitError> {
-        let source_element = self.require_word_element(source_slot, "source")?;
-        let destination_element = self.require_word_element(destination_slot, "destination")?;
-        let source_class = self.binding_for_slot(source_slot)?.memory_class;
-        let destination_class = self.binding_for_slot(destination_slot)?.memory_class;
+        let (source_element, source_class) = self.require_word_element(source_slot, "source")?;
+        let (destination_element, destination_class) =
+            self.require_word_element(destination_slot, "destination")?;
         let offset_reg = self.lookup_operand(offset_id)?;
         let size_reg = self.lookup_operand(size_id)?;
         let span = self.emit_byte_span(offset_reg, offset_id);
@@ -512,12 +515,11 @@ impl BodyCtx<'_> {
         if !(offset_aligned && size_aligned) {
             return Ok(false);
         }
-        let (source_type, source_class) =
-            match self.require_u32_slot(source_slot, "cp.async source") {
-                Ok(v) => v,
-                Err(_) => return Ok(false),
-            };
-        let (destination_type, destination_class) =
+        let source_class = match self.require_u32_slot(source_slot, "cp.async source") {
+            Ok(v) => v,
+            Err(_) => return Ok(false),
+        };
+        let destination_class =
             match self.require_u32_slot(destination_slot, "cp.async destination") {
                 Ok(v) => v,
                 Err(_) => return Ok(false),
@@ -571,13 +573,13 @@ impl BodyCtx<'_> {
         let source_addr = self.emit_memory_address_from_index_reg(
             source_slot,
             source_index,
-            &source_type,
+            &DataType::U32,
             source_class,
         )?;
         let destination_addr = self.emit_memory_address_from_index_reg(
             destination_slot,
             destination_index,
-            &destination_type,
+            &DataType::U32,
             destination_class,
         )?;
         let in_bounds = self.alloc(PtxType::Bool);
@@ -621,11 +623,7 @@ impl BodyCtx<'_> {
             return Ok(false);
         };
         if position != 0 {
-            return Err(EmitError::UnsupportedOp(KernelOp {
-                kind: op.kind.clone(),
-                operands: op.operands.clone(),
-                result: op.result,
-            }));
+            return Err(EmitError::UnsupportedOp(op.clone()));
         }
         let pending = self.pending_transfers.len();
         let keep = usize::from(in_flight_allowed).min(pending - 1);

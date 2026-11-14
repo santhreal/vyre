@@ -33,11 +33,7 @@ impl BodyCtx<'_> {
             )));
         }
         if !self.supports_native_form(spec) {
-            return Err(EmitError::UnsupportedOp(KernelOp {
-                kind: op.kind.clone(),
-                operands: op.operands.clone(),
-                result: op.result,
-            }));
+            return Err(EmitError::UnsupportedOp(op.clone()));
         }
 
         let mut cursor = 0usize;
