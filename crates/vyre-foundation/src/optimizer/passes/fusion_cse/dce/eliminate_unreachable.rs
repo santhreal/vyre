@@ -1,87 +1,82 @@
 use super::{const_loop_empty, const_truth};
 use crate::ir::Node;
 
+#[cfg(test)]
 #[inline]
 pub(crate) fn eliminate_unreachable(nodes: Vec<Node>) -> Vec<Node> {
-    let mut out = Vec::with_capacity(nodes.len());
-    for node in nodes {
+    eliminate_unreachable_tracked(nodes).0
+}
+
+#[inline]
+pub(crate) fn eliminate_unreachable_tracked(nodes: Vec<Node>) -> (Vec<Node>, bool) {
+    let total_len = nodes.len();
+    let mut changed = false;
+    let mut out = Vec::with_capacity(total_len);
+    for (idx, node) in nodes.into_iter().enumerate() {
         match node {
             Node::If {
                 cond,
                 then,
                 otherwise,
             } => match const_truth(&cond) {
-                Some(true) => out.extend(eliminate_unreachable(then)),
-                Some(false) => out.extend(eliminate_unreachable(otherwise)),
-                None => out.push(Node::if_then_else(
-                    cond,
-                    eliminate_unreachable(then),
-                    eliminate_unreachable(otherwise),
-                )),
+                Some(true) => {
+                    changed = true;
+                    out.extend(eliminate_unreachable_tracked(then).0);
+                }
+                Some(false) => {
+                    changed = true;
+                    out.extend(eliminate_unreachable_tracked(otherwise).0);
+                }
+                None => {
+                    let (then, c1) = eliminate_unreachable_tracked(then);
+                    let (otherwise, c2) = eliminate_unreachable_tracked(otherwise);
+                    changed |= c1 || c2;
+                    out.push(Node::If {
+                        cond,
+                        then,
+                        otherwise,
+                    });
+                }
             },
             Node::Loop {
                 var: _,
                 from,
                 to,
                 body: _,
-            } if const_loop_empty(&from, &to) => {}
+            } if const_loop_empty(&from, &to) => {
+                changed = true;
+            }
             Node::Loop {
                 var,
                 from,
                 to,
                 body,
-            } => out.push(Node::loop_for(&var, from, to, eliminate_unreachable(body))),
+            } => {
+                let (body, c) = eliminate_unreachable_tracked(body);
+                changed |= c;
+                out.push(Node::Loop {
+                    var,
+                    from,
+                    to,
+                    body,
+                });
+            }
             Node::Block(block_nodes) => {
-                let block_nodes = eliminate_unreachable(block_nodes);
-                if !block_nodes.is_empty() {
-                    out.push(Node::block(block_nodes));
+                let (block_nodes, c) = eliminate_unreachable_tracked(block_nodes);
+                if block_nodes.is_empty() {
+                    changed = true;
+                } else {
+                    changed |= c;
+                    out.push(Node::Block(block_nodes));
                 }
             }
             Node::Return => {
+                if idx + 1 < total_len {
+                    changed = true;
+                }
                 out.push(Node::Return);
                 break;
             }
-            Node::Let { name, value } => out.push(Node::let_bind(&name, value)),
-            Node::Assign { name, value } => out.push(Node::assign(&name, value)),
-            Node::Store {
-                buffer,
-                index,
-                value,
-            } => out.push(Node::store(&buffer, index, value)),
-            Node::Barrier { ordering } => out.push(Node::barrier_with_ordering(ordering)),
-            Node::LogicalBarrier { ordering } => out.push(Node::logical_barrier(ordering)),
-            Node::IndirectDispatch {
-                count_buffer,
-                count_offset,
-            } => out.push(Node::IndirectDispatch {
-                count_buffer,
-                count_offset,
-            }),
-            Node::AllReduce { .. }
-            | Node::AllGather { .. }
-            | Node::ReduceScatter { .. }
-            | Node::Broadcast { .. } => out.push(node),
-            Node::AsyncLoad {
-                source,
-                destination,
-                offset,
-                size,
-                tag,
-            } => out.push(Node::async_load_gpu_driven(
-                source,
-                destination,
-                *offset,
-                *size,
-                tag,
-            )),
-            Node::AsyncStore {
-                source,
-                destination,
-                offset,
-                size,
-                tag,
-            } => out.push(Node::async_store(source, destination, *offset, *size, tag)),
-            Node::AsyncWait { tag } => out.push(Node::async_wait(&tag)),
             Node::Region {
                 generator,
                 source_region,
@@ -89,10 +84,12 @@ pub(crate) fn eliminate_unreachable(nodes: Vec<Node>) -> Vec<Node> {
             } => {
                 let body_nodes =
                     std::sync::Arc::try_unwrap(body).unwrap_or_else(|arc| (*arc).clone());
+                let (new_body, c) = eliminate_unreachable_tracked(body_nodes);
+                changed |= c;
                 out.push(Node::Region {
                     generator,
                     source_region,
-                    body: std::sync::Arc::new(eliminate_unreachable(body_nodes)),
+                    body: std::sync::Arc::new(new_body),
                 });
             }
             Node::TileElementwise {
@@ -100,20 +97,16 @@ pub(crate) fn eliminate_unreachable(nodes: Vec<Node>) -> Vec<Node> {
                 inputs,
                 body,
             } => {
+                let (body, c) = eliminate_unreachable_tracked(body);
+                changed |= c;
                 out.push(Node::TileElementwise {
                     out: name,
                     inputs,
-                    body: eliminate_unreachable(body),
+                    body,
                 });
             }
-            Node::TileLoad { .. }
-            | Node::TileStore { .. }
-            | Node::TileMatmul { .. }
-            | Node::TileReduce { .. }
-            | Node::TileDecl { .. } => out.push(node),
-            Node::Trap { .. } | Node::Resume { .. } => out.push(node.clone()),
-            Node::Opaque(extension) => out.push(Node::Opaque(extension.clone())),
+            other => out.push(other),
         }
     }
-    out
+    (out, changed)
 }

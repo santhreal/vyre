@@ -92,8 +92,6 @@ pub mod pass_catalog;
 /// and the typed reason it declined.
 mod pass_result;
 pub mod passes;
-/// Backend-neutral planar rewrite batching used by optimizer passes.
-pub(crate) mod planar_batch;
 /// Columnar / SoA fact view of a `Program` that hot
 /// optimizer passes can opt into. Built once via
 /// `ProgramFacts::build(&program)` and then queried in O(1) hash
@@ -118,10 +116,6 @@ pub use derived_order::{
     DerivedPassNode, DerivedPassOrder,
 };
 pub use pass_result::{PassAnalysis, PassResult, RefusalReason};
-pub use planar_batch::{
-    default_planar_rewrite_batch_threshold, planar_rewrite_schedule_mask, RewriteBatch,
-    RewriteBatchCandidates, RewriteBatchItem, RewriteBatchPlan, RewriteCandidate,
-};
 // ProgramPassKind is now a newtype over `Box<dyn ProgramPass>`; built-in passes are
 // auto-discovered via `inventory::iter::<ProgramPassRegistration>` (the same
 // mechanism external passes already use). The hand-maintained import
@@ -302,59 +296,6 @@ pub trait ProgramPass: sealed::Sealed + Send + Sync {
         self.transform(program)
     }
 
-    /// Whether this pass implements candidate-granular planar batching.
-    ///
-    /// The default is false so legacy passes keep exact behavior. Passes that
-    /// override [`ProgramPass::rewrite_candidates`] and
-    /// [`ProgramPass::apply_rewrite_batch`] return true; the scheduler then
-    /// calls [`ProgramPass::batch_apply`] instead of forcing one rewrite per
-    /// pass invocation.
-    fn supports_planar_batching(&self) -> bool {
-        false
-    }
-
-    /// Candidate rewrites available for planar batching.
-    fn rewrite_candidates(&self, _program: &Program) -> RewriteBatchCandidates {
-        RewriteBatchCandidates::empty()
-    }
-
-    /// Apply one selected disjoint rewrite wave.
-    fn apply_rewrite_batch(
-        &self,
-        program: Program,
-        _batch: &RewriteBatch,
-        caps: &AdapterCaps,
-    ) -> PassResult {
-        self.transform_for_adapter(program, caps)
-    }
-
-    /// Batch-aware transform entry point used by the scheduler.
-    fn batch_apply(&self, program: Program, caps: &AdapterCaps) -> PassResult {
-        if !self.supports_planar_batching() {
-            return self.transform_for_adapter(program, caps);
-        }
-        let candidates = self.rewrite_candidates(&program);
-        if candidates.is_empty() {
-            return PassResult::unchanged(program);
-        }
-        if !candidates.should_batch() {
-            return self.transform_for_adapter(program, caps);
-        }
-        let plan = candidates.plan();
-        if !plan.has_batches() {
-            return PassResult::unchanged(program);
-        }
-
-        let mut changed = false;
-        let mut program = program;
-        for batch in plan.batches() {
-            let result = self.apply_rewrite_batch(program, batch, caps);
-            changed |= result.changed;
-            program = result.program;
-        }
-        PassResult { program, changed }
-    }
-
     /// Refusal-aware transform. Default delegates to [`ProgramPass::transform`] and wraps the result
     /// in `Ok`. Passes that want to refuse a rewrite (cost certificate predicts cost up,
     /// effect lattice forbids the fusion, etc.) override this and return
@@ -371,22 +312,6 @@ pub trait ProgramPass: sealed::Sealed + Send + Sync {
         caps: &AdapterCaps,
     ) -> Result<PassResult, RefusalReason> {
         Ok(self.transform_for_adapter(program, caps))
-    }
-
-    /// Refusal-aware batch transform. Passes with typed refusal contracts
-    /// override this when their batched application can be rejected before
-    /// touching the IR.
-    ///
-    /// # Errors
-    ///
-    /// Returns [`RefusalReason`] when a batched rewrite would violate cost,
-    /// effect, or wire-contract constraints.
-    fn try_batch_apply(
-        &self,
-        program: Program,
-        caps: &AdapterCaps,
-    ) -> Result<PassResult, RefusalReason> {
-        self.try_transform(program, caps)
     }
 
     /// Effects this pass is explicitly allowed to introduce.
@@ -467,13 +392,6 @@ impl ProgramPassKind {
         self.0.transform_for_adapter(program, caps)
     }
 
-    /// Batch-aware transform.
-    #[must_use]
-    #[inline]
-    pub fn batch_apply(&self, program: Program, caps: &AdapterCaps) -> PassResult {
-        self.0.batch_apply(program, caps)
-    }
-
     /// Refusal-aware transform.
     ///
     /// # Errors
@@ -485,19 +403,6 @@ impl ProgramPassKind {
         caps: &AdapterCaps,
     ) -> Result<PassResult, RefusalReason> {
         self.0.try_transform(program, caps)
-    }
-
-    /// Refusal-aware batch transform.
-    ///
-    /// # Errors
-    /// Returns the [`RefusalReason`] reported by the underlying pass.
-    #[inline]
-    pub fn try_batch_apply(
-        &self,
-        program: Program,
-        caps: &AdapterCaps,
-    ) -> Result<PassResult, RefusalReason> {
-        self.0.try_batch_apply(program, caps)
     }
 
     /// Analyses preserved by this pass after running. See [`ProgramPass::preserves`].

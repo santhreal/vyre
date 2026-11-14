@@ -23,9 +23,7 @@ impl DcePass {
     /// Run DCE over the program entry.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let before = program.clone();
-        let optimized = engine::dce(program);
-        PassResult::from_programs(before, optimized)
+        engine::dce_pass(program)
     }
 }
 

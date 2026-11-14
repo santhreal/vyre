@@ -40,9 +40,7 @@ impl Canonicalize {
 
     /// Run the canonical-form rewrite on `program`.
     pub fn transform(program: Program) -> PassResult {
-        let before = program.clone();
-        let canonical = super::canonicalize_engine::run(program);
-        PassResult::from_programs(before, canonical)
+        super::canonicalize_engine::run_pass(program)
     }
 }
 

@@ -392,7 +392,7 @@ impl PassScheduler {
                 let snapshot = program.clone();
                 let (next_program, landed) = if enforce_gates {
                     let before = self.gate_facts_for(gates, &program);
-                    match pass.try_batch_apply(program, &self.adapter) {
+                    match pass.try_transform(program, &self.adapter) {
                         Ok(result) if result.changed => {
                             match self.judge_rewrite(
                                 &before,
@@ -436,7 +436,7 @@ impl PassScheduler {
                         }
                     }
                 } else {
-                    let result = pass.batch_apply(program, &self.adapter);
+                    let result = pass.transform_for_adapter(program, &self.adapter);
                     if result.changed {
                         next_dirty.fill(true);
                         let landed = changed || result.program != snapshot;
@@ -617,7 +617,7 @@ impl PassScheduler {
                     metric.effect_bits_before = before.effect_bits();
                     metric.linear_type_violations_before = before.linear_violation_count();
                     metric.shape_predicate_violations_before = before.shape_violation_count();
-                    let result = pass.try_batch_apply(program, &self.adapter);
+                    let result = pass.try_transform(program, &self.adapter);
                     metric.runtime_ns = u128::from(perf_scope.finish().elapsed_ns);
                     match result {
                         Ok(result) if result.changed => {
@@ -690,7 +690,7 @@ impl PassScheduler {
                         }
                     }
                 } else {
-                    let result = pass.batch_apply(program, &self.adapter);
+                    let result = pass.transform_for_adapter(program, &self.adapter);
                     metric.runtime_ns = u128::from(perf_scope.finish().elapsed_ns);
                     let landed = result.changed && result.program != snapshot;
                     metric.decision = if landed {

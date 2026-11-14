@@ -11,4 +11,5 @@ pub(crate) type LiveSet = imbl::HashSet<Ident>;
 pub(crate) struct LiveResult {
     pub(crate) nodes: Vec<Node>,
     pub(crate) live_in: LiveSet,
+    pub(crate) changed: bool,
 }

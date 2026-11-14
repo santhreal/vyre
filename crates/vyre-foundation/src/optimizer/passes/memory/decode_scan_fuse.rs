@@ -63,24 +63,21 @@ fn fits_workgroup_budget(buf: &BufferDecl, budget_bytes: u64) -> bool {
     bytes > 0 && bytes <= budget_bytes
 }
 
+fn is_decl_promotable(buf: &BufferDecl, budget_bytes: u64) -> bool {
+    buf.access() == BufferAccess::ReadWrite
+        && buf.count() > 0
+        && !buf.is_pipeline_live_out()
+        && fits_workgroup_budget(buf, budget_bytes)
+}
+
 /// The single promotability predicate shared by [`run`], [`count_opportunities`]
 /// and [`candidate_handoffs`] so all three agree exactly on what is a handoff.
-///
-/// A buffer is a promotable handoff when it is `ReadWrite` (written then read),
-/// statically sized (`count > 0`: workgroup allocations must be compile-time
-/// sized), not externally observed (`!pipeline_live_out`: workgroup buffers do
-/// not survive past dispatch end), fits the workgroup byte budget, AND is not
-/// referenced by a cross-workgroup op (see [`cross_workgroup_buffers`]).
 fn is_promotable_handoff(
     buf: &BufferDecl,
     cross_workgroup: &FxHashSet<Ident>,
     budget_bytes: u64,
 ) -> bool {
-    buf.access() == BufferAccess::ReadWrite
-        && buf.count() > 0
-        && !buf.is_pipeline_live_out()
-        && fits_workgroup_budget(buf, budget_bytes)
-        && !cross_workgroup.contains(&Ident::from(buf.name()))
+    is_decl_promotable(buf, budget_bytes) && !cross_workgroup.contains(buf.name())
 }
 
 /// Collect every buffer referenced by a CROSS-WORKGROUP op anywhere in `nodes`.
@@ -148,9 +145,7 @@ impl DecodeScanFuse {
     /// the shared-memory budget the target actually reports.
     #[must_use]
     pub fn transform_for_adapter(program: Program, caps: &AdapterCaps) -> PassResult {
-        let before = program.clone();
-        let optimized = run(program, caps);
-        PassResult::from_programs(before, optimized)
+        run_pass(program, caps)
     }
 }
 
@@ -165,39 +160,40 @@ impl DecodeScanFuse {
 /// shared memory promotes buffers a lower-capability target cannot hold.
 #[must_use]
 pub fn run(program: Program, caps: &AdapterCaps) -> Program {
+    run_pass(program, caps).program
+}
+
+/// Promote eligible storage handoff buffers to workgroup memory and report
+/// whether any buffer changed without cloning an unchanged `Program`.
+#[must_use]
+pub fn run_pass(program: Program, caps: &AdapterCaps) -> PassResult {
     let budget_bytes = u64::from(caps.max_shared_memory_bytes);
+    if !program
+        .buffers
+        .iter()
+        .any(|b| is_decl_promotable(b, budget_bytes))
+    {
+        return PassResult::unchanged(program);
+    }
     let mut cross_workgroup: FxHashSet<Ident> = FxHashSet::default();
     cross_workgroup_buffers(program.entry(), &mut cross_workgroup);
-    let promotable: FxHashSet<Ident> = program
-        .buffers
-        .iter()
-        .filter(|b| is_promotable_handoff(b, &cross_workgroup, budget_bytes))
-        .map(|b| Ident::from(b.name()))
-        .collect();
 
-    if promotable.is_empty() {
-        return program;
+    let mut any_promoted = false;
+    let mut new_buffers: Vec<BufferDecl> = Vec::with_capacity(program.buffers.len());
+    for b in program.buffers.iter() {
+        if is_promotable_handoff(b, &cross_workgroup, budget_bytes) {
+            any_promoted = true;
+            new_buffers.push(BufferDecl::workgroup(b.name(), b.count(), b.element()));
+        } else {
+            new_buffers.push(b.clone());
+        }
     }
 
-    let new_buffers: Vec<BufferDecl> = program
-        .buffers
-        .iter()
-        .map(|b| {
-            if promotable.contains(&Ident::from(b.name())) {
-                BufferDecl::workgroup(b.name(), b.count(), b.element())
-            } else {
-                b.clone()
-            }
-        })
-        .collect();
+    if !any_promoted {
+        return PassResult::unchanged(program);
+    }
 
-    // Only the buffer table changes here, so replace only the buffer table.
-    // Going through `Program::wrapped` instead built a fresh program, which
-    // resets `entry_op_id` and `non_composable_with_self`: a self-exclusive
-    // body came out of this pass looking safe to duplicate. It also deep-cloned
-    // the buffer table and re-interned every name, which is what the
-    // hand-rolled `Arc::try_unwrap` here was working around.
-    program.with_rewritten_buffers(new_buffers)
+    PassResult::changed(program.with_rewritten_buffers(new_buffers))
 }
 
 /// Count decode-handoff candidate buffers in `program`  -  the
@@ -205,6 +201,13 @@ pub fn run(program: Program, caps: &AdapterCaps) -> Program {
 #[must_use]
 pub fn count_opportunities(program: &Program, caps: &AdapterCaps) -> usize {
     let budget_bytes = u64::from(caps.max_shared_memory_bytes);
+    if !program
+        .buffers
+        .iter()
+        .any(|b| is_decl_promotable(b, budget_bytes))
+    {
+        return 0;
+    }
     let mut cross_workgroup: FxHashSet<Ident> = FxHashSet::default();
     cross_workgroup_buffers(program.entry(), &mut cross_workgroup);
     program
@@ -229,7 +232,7 @@ pub fn candidate_handoffs(program: &Program, caps: &AdapterCaps) -> FxHashMap<Id
         // candidates that `run` would never promote; routing through
         // `is_promotable_handoff` fixes that divergence.
         if is_promotable_handoff(buf, &cross_workgroup, budget_bytes) {
-            out.insert(Ident::from(buf.name()), buf.count());
+            out.insert(buf.name.clone().into(), buf.count());
         }
     }
     out

@@ -44,19 +44,25 @@
 use crate::ir_inner::model::expr::Expr;
 use crate::ir_inner::model::node::Node;
 use crate::ir_inner::model::program::Program;
+use crate::optimizer::PassResult;
+use std::borrow::Cow;
 
 /// Run the canonical-form pass on `program`, returning the
 /// canonicalized form with `validated=false` so downstream passes
 /// re-check the rewritten shape.
 #[must_use]
 pub fn run(program: Program) -> Program {
-    // VYRE_IR_HOTSPOTS CRIT: `program.entry().to_vec()` cloned the
-    // whole `Vec<Node>` unconditionally. `Program::map_entry` moves the
-    // entry out of its Arc when uniquely owned (the common case  -
-    // canonicalize runs on programs the pass pipeline has exclusive
-    // access to) and rebuilds on the remaining fields without an
-    // intermediate scaffold allocation.
-    program.map_entry(canonicalize_nodes)
+    run_pass(program).program
+}
+
+/// Run the canonical-form pass and report whether any expression changed
+/// without cloning or rebuilding an already-canonical `Program`.
+#[must_use]
+pub fn run_pass(program: Program) -> PassResult {
+    match canonicalize_nodes_cow(program.entry()) {
+        Cow::Borrowed(_) => PassResult::unchanged(program),
+        Cow::Owned(rewritten) => PassResult::changed(program.with_rewritten_entry(rewritten)),
+    }
 }
 
 /// Run the canonical-form pass from a borrowed `Program`.
@@ -67,125 +73,197 @@ pub fn run(program: Program) -> Program {
 /// nodes that are actually rewritten.
 #[must_use]
 pub fn run_borrowed(program: &Program) -> Program {
-    program.with_rewritten_entry(canonicalize_nodes_borrowed(program.entry()))
+    match canonicalize_nodes_cow(program.entry()) {
+        Cow::Borrowed(_) => program.clone(),
+        Cow::Owned(rewritten) => program.with_rewritten_entry(rewritten),
+    }
 }
 
-fn canonicalize_nodes_borrowed(nodes: &[Node]) -> Vec<Node> {
-    nodes.iter().cloned().map(canonicalize_node).collect()
+fn canonicalize_nodes_cow(nodes: &[Node]) -> Cow<'_, [Node]> {
+    for (idx, node) in nodes.iter().enumerate() {
+        if let Cow::Owned(first) = canonicalize_node_cow(node) {
+            let mut out = Vec::with_capacity(nodes.len());
+            out.extend_from_slice(&nodes[..idx]);
+            out.push(first);
+            for rest in &nodes[idx + 1..] {
+                out.push(canonicalize_node_cow(rest).into_owned());
+            }
+            return Cow::Owned(out);
+        }
+    }
+    Cow::Borrowed(nodes)
 }
 
-fn canonicalize_nodes(nodes: Vec<Node>) -> Vec<Node> {
-    nodes.into_iter().map(canonicalize_node).collect()
+fn canonicalize_exprs_cow(exprs: &[Expr]) -> Cow<'_, [Expr]> {
+    for (idx, expr) in exprs.iter().enumerate() {
+        if let Cow::Owned(first) = canonicalize_expr_cow(expr) {
+            let mut out = Vec::with_capacity(exprs.len());
+            out.extend_from_slice(&exprs[..idx]);
+            out.push(first);
+            for rest in &exprs[idx + 1..] {
+                out.push(canonicalize_expr_cow(rest).into_owned());
+            }
+            return Cow::Owned(out);
+        }
+    }
+    Cow::Borrowed(exprs)
 }
 
-fn canonicalize_node(node: Node) -> Node {
+fn canonicalize_node_cow(node: &Node) -> Cow<'_, Node> {
     match node {
-        Node::Let { name, value } => Node::Let {
-            name,
-            value: canonicalize_expr(value),
+        Node::Let { name, value } => match canonicalize_expr_cow(value) {
+            Cow::Borrowed(_) => Cow::Borrowed(node),
+            Cow::Owned(value) => Cow::Owned(Node::Let {
+                name: name.clone(),
+                value,
+            }),
         },
-        Node::Assign { name, value } => Node::Assign {
-            name,
-            value: canonicalize_expr(value),
+        Node::Assign { name, value } => match canonicalize_expr_cow(value) {
+            Cow::Borrowed(_) => Cow::Borrowed(node),
+            Cow::Owned(value) => Cow::Owned(Node::Assign {
+                name: name.clone(),
+                value,
+            }),
         },
         Node::Store {
             buffer,
             index,
             value,
-        } => Node::Store {
-            buffer,
-            index: canonicalize_expr(index),
-            value: canonicalize_expr(value),
+        } => match (canonicalize_expr_cow(index), canonicalize_expr_cow(value)) {
+            (Cow::Borrowed(_), Cow::Borrowed(_)) => Cow::Borrowed(node),
+            (index, value) => Cow::Owned(Node::Store {
+                buffer: buffer.clone(),
+                index: index.into_owned(),
+                value: value.into_owned(),
+            }),
         },
         Node::If {
             cond,
             then,
             otherwise,
-        } => Node::If {
-            cond: canonicalize_expr(cond),
-            then: canonicalize_nodes(then),
-            otherwise: canonicalize_nodes(otherwise),
+        } => match (
+            canonicalize_expr_cow(cond),
+            canonicalize_nodes_cow(then),
+            canonicalize_nodes_cow(otherwise),
+        ) {
+            (Cow::Borrowed(_), Cow::Borrowed(_), Cow::Borrowed(_)) => Cow::Borrowed(node),
+            (cond, then, otherwise) => Cow::Owned(Node::If {
+                cond: cond.into_owned(),
+                then: then.into_owned(),
+                otherwise: otherwise.into_owned(),
+            }),
         },
         Node::Loop {
             var,
             from,
             to,
             body,
-        } => Node::Loop {
-            var,
-            from: canonicalize_expr(from),
-            to: canonicalize_expr(to),
-            body: canonicalize_nodes(body),
+        } => match (
+            canonicalize_expr_cow(from),
+            canonicalize_expr_cow(to),
+            canonicalize_nodes_cow(body),
+        ) {
+            (Cow::Borrowed(_), Cow::Borrowed(_), Cow::Borrowed(_)) => Cow::Borrowed(node),
+            (from, to, body) => Cow::Owned(Node::Loop {
+                var: var.clone(),
+                from: from.into_owned(),
+                to: to.into_owned(),
+                body: body.into_owned(),
+            }),
         },
-        Node::Block(children) => Node::Block(canonicalize_nodes(children)),
+        Node::Block(children) => match canonicalize_nodes_cow(children) {
+            Cow::Borrowed(_) => Cow::Borrowed(node),
+            Cow::Owned(children) => Cow::Owned(Node::Block(children)),
+        },
         Node::Region {
             generator,
             source_region,
             body,
-        } => {
-            // VYRE_IR_HOTSPOTS CRIT: avoid cloning the inner Vec<Node>
-            // when the Arc is uniquely owned  -  try_unwrap hands the
-            // Vec back directly.
-            let body_vec = match std::sync::Arc::try_unwrap(body) {
-                Ok(v) => v,
-                Err(arc) => (*arc).clone(),
-            };
-            Node::Region {
-                generator,
-                source_region,
-                body: std::sync::Arc::new(canonicalize_nodes(body_vec)),
-            }
-        }
-        other => other,
+        } => match canonicalize_nodes_cow(body) {
+            Cow::Borrowed(_) => Cow::Borrowed(node),
+            Cow::Owned(new_body) => Cow::Owned(Node::Region {
+                generator: generator.clone(),
+                source_region: source_region.clone(),
+                body: std::sync::Arc::new(new_body),
+            }),
+        },
+        _ => Cow::Borrowed(node),
     }
 }
 
-fn canonicalize_expr(expr: Expr) -> Expr {
+fn canonicalize_expr_cow(expr: &Expr) -> Cow<'_, Expr> {
     match expr {
         Expr::BinOp { op, left, right } => {
-            let mut l = canonicalize_expr(*left);
-            let mut r = canonicalize_expr(*right);
+            let l = canonicalize_expr_cow(left);
+            let r = canonicalize_expr_cow(right);
             if crate::ir_inner::model::program::canonical::commutative_operands_out_of_order(
-                op, &l, &r,
+                *op,
+                l.as_ref(),
+                r.as_ref(),
             ) {
-                std::mem::swap(&mut l, &mut r);
+                return Cow::Owned(Expr::BinOp {
+                    op: *op,
+                    left: Box::new(r.into_owned()),
+                    right: Box::new(l.into_owned()),
+                });
             }
-            // NOTE: reflexive comparison (`x == x`, `x != x`) is NOT folded
-            // here. canonicalize is type-blind and the fold is unsound for
-            // float NaN, see the module-level doc. Operand-order
-            // canonicalization (above) is the only rewrite Eq/Ne gets; that
-            // is sound for every type because `a == b` ≡ `b == a`.
-            Expr::BinOp {
-                op,
-                left: Box::new(l),
-                right: Box::new(r),
+            match (l, r) {
+                (Cow::Borrowed(_), Cow::Borrowed(_)) => Cow::Borrowed(expr),
+                (l, r) => Cow::Owned(Expr::BinOp {
+                    op: *op,
+                    left: Box::new(l.into_owned()),
+                    right: Box::new(r.into_owned()),
+                }),
             }
         }
-        Expr::UnOp { op, operand } => Expr::UnOp {
-            op,
-            operand: Box::new(canonicalize_expr(*operand)),
+        Expr::UnOp { op, operand } => match canonicalize_expr_cow(operand) {
+            Cow::Borrowed(_) => Cow::Borrowed(expr),
+            Cow::Owned(operand) => Cow::Owned(Expr::UnOp {
+                op: op.clone(),
+                operand: Box::new(operand),
+            }),
         },
         Expr::Select {
             cond,
             true_val,
             false_val,
-        } => Expr::Select {
-            cond: Box::new(canonicalize_expr(*cond)),
-            true_val: Box::new(canonicalize_expr(*true_val)),
-            false_val: Box::new(canonicalize_expr(*false_val)),
+        } => match (
+            canonicalize_expr_cow(cond),
+            canonicalize_expr_cow(true_val),
+            canonicalize_expr_cow(false_val),
+        ) {
+            (Cow::Borrowed(_), Cow::Borrowed(_), Cow::Borrowed(_)) => Cow::Borrowed(expr),
+            (cond, true_val, false_val) => Cow::Owned(Expr::Select {
+                cond: Box::new(cond.into_owned()),
+                true_val: Box::new(true_val.into_owned()),
+                false_val: Box::new(false_val.into_owned()),
+            }),
         },
-        Expr::Fma { a, b, c } => Expr::Fma {
-            a: Box::new(canonicalize_expr(*a)),
-            b: Box::new(canonicalize_expr(*b)),
-            c: Box::new(canonicalize_expr(*c)),
+        Expr::Fma { a, b, c } => match (
+            canonicalize_expr_cow(a),
+            canonicalize_expr_cow(b),
+            canonicalize_expr_cow(c),
+        ) {
+            (Cow::Borrowed(_), Cow::Borrowed(_), Cow::Borrowed(_)) => Cow::Borrowed(expr),
+            (a, b, c) => Cow::Owned(Expr::Fma {
+                a: Box::new(a.into_owned()),
+                b: Box::new(b.into_owned()),
+                c: Box::new(c.into_owned()),
+            }),
         },
-        Expr::Cast { target, value } => Expr::Cast {
-            target,
-            value: Box::new(canonicalize_expr(*value)),
+        Expr::Cast { target, value } => match canonicalize_expr_cow(value) {
+            Cow::Borrowed(_) => Cow::Borrowed(expr),
+            Cow::Owned(value) => Cow::Owned(Expr::Cast {
+                target: target.clone(),
+                value: Box::new(value),
+            }),
         },
-        Expr::Load { buffer, index } => Expr::Load {
-            buffer,
-            index: Box::new(canonicalize_expr(*index)),
+        Expr::Load { buffer, index } => match canonicalize_expr_cow(index) {
+            Cow::Borrowed(_) => Cow::Borrowed(expr),
+            Cow::Owned(index) => Cow::Owned(Expr::Load {
+                buffer: buffer.clone(),
+                index: Box::new(index),
+            }),
         },
         Expr::Atomic {
             op,
@@ -194,36 +272,58 @@ fn canonicalize_expr(expr: Expr) -> Expr {
             expected,
             value,
             ordering,
-        } => Expr::Atomic {
-            op,
-            buffer,
-            index: Box::new(canonicalize_expr(*index)),
-            expected: expected.map(|e| Box::new(canonicalize_expr(*e))),
-            value: Box::new(canonicalize_expr(*value)),
-            ordering,
+        } => {
+            let idx_cow = canonicalize_expr_cow(index);
+            let exp_cow = expected.as_deref().map(canonicalize_expr_cow);
+            let val_cow = canonicalize_expr_cow(value);
+            if matches!(idx_cow, Cow::Borrowed(_))
+                && exp_cow
+                    .as_ref()
+                    .is_none_or(|e| matches!(e, Cow::Borrowed(_)))
+                && matches!(val_cow, Cow::Borrowed(_))
+            {
+                Cow::Borrowed(expr)
+            } else {
+                Cow::Owned(Expr::Atomic {
+                    op: *op,
+                    buffer: buffer.clone(),
+                    index: Box::new(idx_cow.into_owned()),
+                    expected: exp_cow.map(|e| Box::new(e.into_owned())),
+                    value: Box::new(val_cow.into_owned()),
+                    ordering: *ordering,
+                })
+            }
+        }
+        Expr::Call { op_id, args } => match canonicalize_exprs_cow(args) {
+            Cow::Borrowed(_) => Cow::Borrowed(expr),
+            Cow::Owned(args) => Cow::Owned(Expr::Call {
+                op_id: op_id.clone(),
+                args,
+            }),
         },
-        // Compound operand-bearing exprs must canonicalize their children too,
-        // or a commutative BinOp nested inside them (e.g. `subgroup_add(1 + a)`,
-        // `f(1 + a)`) stays un-normalized and two semantically-equal Programs
-        // produce different wire bytes, fragmenting the content-addressed
-        // pipeline cache the canonical form is the foundation for. Fields that
-        // are not operands (`Call.op_id`, `SubgroupReduce.op`) are preserved.
-        Expr::Call { op_id, args } => Expr::Call {
-            op_id,
-            args: args.into_iter().map(canonicalize_expr).collect(),
+        Expr::SubgroupBallot { cond } => match canonicalize_expr_cow(cond) {
+            Cow::Borrowed(_) => Cow::Borrowed(expr),
+            Cow::Owned(cond) => Cow::Owned(Expr::SubgroupBallot {
+                cond: Box::new(cond),
+            }),
         },
-        Expr::SubgroupBallot { cond } => Expr::SubgroupBallot {
-            cond: Box::new(canonicalize_expr(*cond)),
+        Expr::SubgroupShuffle { value, lane } => {
+            match (canonicalize_expr_cow(value), canonicalize_expr_cow(lane)) {
+                (Cow::Borrowed(_), Cow::Borrowed(_)) => Cow::Borrowed(expr),
+                (value, lane) => Cow::Owned(Expr::SubgroupShuffle {
+                    value: Box::new(value.into_owned()),
+                    lane: Box::new(lane.into_owned()),
+                }),
+            }
+        }
+        Expr::SubgroupReduce { op, value } => match canonicalize_expr_cow(value) {
+            Cow::Borrowed(_) => Cow::Borrowed(expr),
+            Cow::Owned(value) => Cow::Owned(Expr::SubgroupReduce {
+                op: *op,
+                value: Box::new(value),
+            }),
         },
-        Expr::SubgroupShuffle { value, lane } => Expr::SubgroupShuffle {
-            value: Box::new(canonicalize_expr(*value)),
-            lane: Box::new(canonicalize_expr(*lane)),
-        },
-        Expr::SubgroupReduce { op, value } => Expr::SubgroupReduce {
-            op,
-            value: Box::new(canonicalize_expr(*value)),
-        },
-        other => other,
+        _ => Cow::Borrowed(expr),
     }
 }
 

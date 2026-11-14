@@ -732,7 +732,7 @@ fn the_optimizer_expression_rewrite_reaches_every_operand_slot() {
             sample.label()
         );
         let rewritten = pass
-            .batch_apply(
+            .transform_for_adapter(
                 program,
                 &vyre_foundation::optimizer::AdapterCaps::conservative(),
             )

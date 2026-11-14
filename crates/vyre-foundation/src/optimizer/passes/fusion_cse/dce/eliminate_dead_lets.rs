@@ -8,12 +8,15 @@ use crate::ir::Node;
 )]
 pub(crate) fn eliminate_dead_lets(nodes: Vec<Node>, live_after: LiveSet) -> LiveResult {
     let reachable_len = reachable_prefix(&nodes).len();
+    let mut changed = reachable_len < nodes.len();
     let mut live = live_after;
     let mut kept = Vec::with_capacity(reachable_len);
 
     for node in nodes.into_iter().take(reachable_len).rev() {
         match node {
-            Node::Let { name, value } if !live.contains(&name) && !expr_has_effect(&value) => {}
+            Node::Let { name, value } if !live.contains(&name) && !expr_has_effect(&value) => {
+                changed = true;
+            }
             Node::Let { name, value } => {
                 live.remove(&name);
                 collect_expr_refs(&value, &mut live);
@@ -44,6 +47,7 @@ pub(crate) fn eliminate_dead_lets(nodes: Vec<Node>, live_after: LiveSet) -> Live
             } => {
                 let then_result = eliminate_dead_lets(then, live.clone());
                 let otherwise_result = eliminate_dead_lets(otherwise, live.clone());
+                changed |= then_result.changed || otherwise_result.changed;
                 let mut branch_live = then_result.live_in;
                 branch_live.extend(otherwise_result.live_in);
                 collect_expr_refs(&cond, &mut branch_live);
@@ -64,6 +68,7 @@ pub(crate) fn eliminate_dead_lets(nodes: Vec<Node>, live_after: LiveSet) -> Live
                 let mut body_live_after = live.clone();
                 body_live_after.insert(var.clone());
                 let body_result = eliminate_dead_lets(body, body_live_after);
+                changed |= body_result.changed;
                 live.extend(body_result.live_in);
                 live.remove(&var);
                 if outer_var_live {
@@ -80,6 +85,7 @@ pub(crate) fn eliminate_dead_lets(nodes: Vec<Node>, live_after: LiveSet) -> Live
             }
             Node::Block(block_nodes) => {
                 let block_result = eliminate_dead_lets(block_nodes, live.clone());
+                changed |= block_result.changed;
                 live.extend(block_result.live_in);
                 kept.push(Node::Block(block_result.nodes));
             }
@@ -140,6 +146,7 @@ pub(crate) fn eliminate_dead_lets(nodes: Vec<Node>, live_after: LiveSet) -> Live
                 let body_nodes =
                     std::sync::Arc::try_unwrap(body).unwrap_or_else(|arc| (*arc).clone());
                 let body_result = eliminate_dead_lets(body_nodes, live.clone());
+                changed |= body_result.changed;
                 live.extend(body_result.live_in);
                 kept.push(Node::Region {
                     generator,
@@ -173,6 +180,7 @@ pub(crate) fn eliminate_dead_lets(nodes: Vec<Node>, live_after: LiveSet) -> Live
                 let mut inner_live = live.clone();
                 inner_live.insert(out.clone());
                 let body_result = eliminate_dead_lets(body, inner_live);
+                changed |= body_result.changed;
                 live.extend(body_result.live_in);
                 for inp in &inputs {
                     live.insert(inp.clone());
@@ -214,5 +222,6 @@ pub(crate) fn eliminate_dead_lets(nodes: Vec<Node>, live_after: LiveSet) -> Live
     LiveResult {
         nodes: kept,
         live_in: live,
+        changed,
     }
 }

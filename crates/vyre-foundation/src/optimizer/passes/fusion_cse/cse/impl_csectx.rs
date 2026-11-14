@@ -79,13 +79,35 @@ impl CseCtx {
     }
 
     #[inline]
-    pub(crate) fn nodes(&mut self, nodes: &[Node]) -> Vec<Node> {
-        // VYRE_IR_HOTSPOTS CRIT (cse/impl_csectx.rs:64-65): pre-allocate the
-        // result vector with the exact capacity needed so the collector
-        // doesn't reallocate mid-way for large node lists.
-        let mut out = Vec::with_capacity(nodes.len());
-        out.extend(nodes.iter().map(|node| self.node(node)));
-        out
+    pub(crate) fn nodes_cow<'a>(&mut self, nodes: &'a [Node]) -> Cow<'a, [Node]> {
+        for (idx, node) in nodes.iter().enumerate() {
+            if let Cow::Owned(first) = self.node_cow(node) {
+                let mut out = Vec::with_capacity(nodes.len());
+                out.extend_from_slice(&nodes[..idx]);
+                out.push(first);
+                for rest in &nodes[idx + 1..] {
+                    out.push(self.node_cow(rest).into_owned());
+                }
+                return Cow::Owned(out);
+            }
+        }
+        Cow::Borrowed(nodes)
+    }
+
+    #[inline]
+    fn exprs_cow<'a>(&mut self, exprs: &'a [Expr]) -> Cow<'a, [Expr]> {
+        for (idx, expr) in exprs.iter().enumerate() {
+            if let Cow::Owned(first) = self.expr(expr) {
+                let mut out = Vec::with_capacity(exprs.len());
+                out.extend_from_slice(&exprs[..idx]);
+                out.push(first);
+                for rest in &exprs[idx + 1..] {
+                    out.push(self.expr(rest).into_owned());
+                }
+                return Cow::Owned(out);
+            }
+        }
+        Cow::Borrowed(exprs)
     }
 
     #[inline]
@@ -93,66 +115,103 @@ impl CseCtx {
         clippy::too_many_lines,
         reason = "CSE node rewrite keeps visible-value state transitions adjacent to Node variant handling"
     )]
-    pub(crate) fn node(&mut self, node: &Node) -> Node {
+    pub(crate) fn node_cow<'a>(&mut self, node: &'a Node) -> Cow<'a, Node> {
         match node {
             Node::Let { name, value } => {
-                let value = self.expr(value);
-                if expr_has_effect(value.as_ref()) {
+                let value_cow = self.expr(value);
+                if expr_has_effect(value_cow.as_ref()) {
                     self.clear_observed_state();
-                    return Node::let_bind(name, value.into_owned());
+                    return match value_cow {
+                        Cow::Borrowed(_) => Cow::Borrowed(node),
+                        Cow::Owned(v) => Cow::Owned(Node::Let {
+                            name: name.clone(),
+                            value: v,
+                        }),
+                    };
                 }
 
-                // Do not CSE-alias literals through variables: `let state = 0u`
-                // must not record `LitU32(0) → "state"` because `state` may be
-                // reassigned later while the literal stays constant.
                 if matches!(
-                    value.as_ref(),
+                    value_cow.as_ref(),
                     Expr::Var(_)
                         | Expr::LitU32(_)
                         | Expr::LitI32(_)
                         | Expr::LitF32(_)
                         | Expr::LitBool(_)
                 ) {
-                    return Node::let_bind(name, value.into_owned());
+                    return match value_cow {
+                        Cow::Borrowed(_) => Cow::Borrowed(node),
+                        Cow::Owned(v) => Cow::Owned(Node::Let {
+                            name: name.clone(),
+                            value: v,
+                        }),
+                    };
                 }
-                let key = self.intern_expr(value.as_ref());
-                let canonical = if let Some(existing) = self.visible_value(key) {
-                    Expr::var(existing.clone())
+                let key = self.intern_expr(value_cow.as_ref());
+                if let Some(existing) = self.visible_value(key) {
+                    Cow::Owned(Node::Let {
+                        name: name.clone(),
+                        value: Expr::Var(existing.clone()),
+                    })
                 } else {
                     self.record_insert(key, name.clone());
-                    value.into_owned()
-                };
-                Node::let_bind(name, canonical)
+                    match value_cow {
+                        Cow::Borrowed(_) => Cow::Borrowed(node),
+                        Cow::Owned(v) => Cow::Owned(Node::Let {
+                            name: name.clone(),
+                            value: v,
+                        }),
+                    }
+                }
             }
             Node::Assign { name, value } => {
-                let value = self.expr(value).into_owned();
+                let value_cow = self.expr(value);
                 self.clear_observed_state();
-                Node::assign(name, value)
+                match value_cow {
+                    Cow::Borrowed(_) => Cow::Borrowed(node),
+                    Cow::Owned(v) => Cow::Owned(Node::Assign {
+                        name: name.clone(),
+                        value: v,
+                    }),
+                }
             }
             Node::Store {
                 buffer,
                 index,
                 value,
             } => {
-                let index = self.expr(index).into_owned();
-                let value = self.expr(value).into_owned();
+                let index_cow = self.expr(index);
+                let value_cow = self.expr(value);
                 self.clear_observed_state();
-                Node::store(buffer, index, value)
+                match (index_cow, value_cow) {
+                    (Cow::Borrowed(_), Cow::Borrowed(_)) => Cow::Borrowed(node),
+                    (idx, val) => Cow::Owned(Node::Store {
+                        buffer: buffer.clone(),
+                        index: idx.into_owned(),
+                        value: val.into_owned(),
+                    }),
+                }
             }
             Node::If {
                 cond,
                 then,
                 otherwise,
             } => {
-                let cond = self.expr(cond).into_owned();
+                let cond_cow = self.expr(cond);
                 self.enter_scope();
-                let then = self.nodes(then);
+                let then_cow = self.nodes_cow(then);
                 self.leave_scope();
                 self.enter_scope();
-                let otherwise = self.nodes(otherwise);
+                let otherwise_cow = self.nodes_cow(otherwise);
                 self.leave_scope();
                 self.clear_observed_state();
-                Node::if_then_else(cond, then, otherwise)
+                match (cond_cow, then_cow, otherwise_cow) {
+                    (Cow::Borrowed(_), Cow::Borrowed(_), Cow::Borrowed(_)) => Cow::Borrowed(node),
+                    (c, t, o) => Cow::Owned(Node::If {
+                        cond: c.into_owned(),
+                        then: t.into_owned(),
+                        otherwise: o.into_owned(),
+                    }),
+                }
             }
             Node::Loop {
                 var,
@@ -160,30 +219,38 @@ impl CseCtx {
                 to,
                 body,
             } => {
-                let from = self.expr(from).into_owned();
-                let to = self.expr(to).into_owned();
+                let from_cow = self.expr(from);
+                let to_cow = self.expr(to);
                 let mut body_ctx = CseCtx::default();
-                let body = body_ctx.nodes(body);
+                let body_cow = body_ctx.nodes_cow(body);
                 self.clear_observed_state();
-                Node::loop_for(var, from, to, body)
+                match (from_cow, to_cow, body_cow) {
+                    (Cow::Borrowed(_), Cow::Borrowed(_), Cow::Borrowed(_)) => Cow::Borrowed(node),
+                    (f, t, b) => Cow::Owned(Node::Loop {
+                        var: var.clone(),
+                        from: f.into_owned(),
+                        to: t.into_owned(),
+                        body: b.into_owned(),
+                    }),
+                }
             }
-            Node::Return => Node::Return,
+            Node::Return
+            | Node::TileMatmul { .. }
+            | Node::TileReduce { .. }
+            | Node::TileDecl { .. } => Cow::Borrowed(node),
             Node::Block(nodes) => {
                 self.enter_scope();
-                let nodes = self.nodes(nodes);
+                let nodes_cow = self.nodes_cow(nodes);
                 self.leave_scope();
                 self.clear_observed_state();
-                Node::block(nodes)
+                match nodes_cow {
+                    Cow::Borrowed(_) => Cow::Borrowed(node),
+                    Cow::Owned(n) => Cow::Owned(Node::Block(n)),
+                }
             }
-            Node::Barrier { ordering } => {
-                self.clear_observed_state();
-                Node::barrier_with_ordering(*ordering)
-            }
-            Node::LogicalBarrier { ordering } => {
-                self.clear_observed_state();
-                Node::logical_barrier(*ordering)
-            }
-            Node::IndirectDispatch { .. }
+            Node::Barrier { .. }
+            | Node::LogicalBarrier { .. }
+            | Node::IndirectDispatch { .. }
             | Node::AsyncLoad { .. }
             | Node::AsyncStore { .. }
             | Node::AsyncWait { .. }
@@ -192,25 +259,27 @@ impl CseCtx {
             | Node::AllReduce { .. }
             | Node::AllGather { .. }
             | Node::ReduceScatter { .. }
-            | Node::Broadcast { .. } => {
+            | Node::Broadcast { .. }
+            | Node::Opaque(_) => {
                 self.clear_observed_state();
-                node.clone()
+                Cow::Borrowed(node)
             }
             Node::Region {
                 generator,
                 source_region,
                 body,
             } => {
-                // Regions create a new variable scope
                 self.enter_scope();
-                let nodes = self.nodes(body);
+                let body_cow = self.nodes_cow(body);
                 self.leave_scope();
-                // Observed state (loads/stores) does not leak out of region
                 self.clear_observed_state();
-                Node::Region {
-                    generator: generator.clone(),
-                    source_region: source_region.clone(),
-                    body: std::sync::Arc::new(nodes),
+                match body_cow {
+                    Cow::Borrowed(_) => Cow::Borrowed(node),
+                    Cow::Owned(nodes) => Cow::Owned(Node::Region {
+                        generator: generator.clone(),
+                        source_region: source_region.clone(),
+                        body: std::sync::Arc::new(nodes),
+                    }),
                 }
             }
             Node::TileLoad {
@@ -221,13 +290,15 @@ impl CseCtx {
                 layout,
             } => {
                 self.clear_observed_state();
-                let origin = origin.iter().map(|e| self.expr(e).into_owned()).collect();
-                Node::TileLoad {
-                    tile: tile.clone(),
-                    tile_type: tile_type.clone(),
-                    buffer: buffer.clone(),
-                    origin,
-                    layout: layout.clone(),
+                match self.exprs_cow(origin) {
+                    Cow::Borrowed(_) => Cow::Borrowed(node),
+                    Cow::Owned(origin) => Cow::Owned(Node::TileLoad {
+                        tile: tile.clone(),
+                        tile_type: tile_type.clone(),
+                        buffer: buffer.clone(),
+                        origin,
+                        layout: layout.clone(),
+                    }),
                 }
             }
             Node::TileStore {
@@ -236,46 +307,27 @@ impl CseCtx {
                 tile,
             } => {
                 self.clear_observed_state();
-                let origin = origin.iter().map(|e| self.expr(e).into_owned()).collect();
-                Node::TileStore {
-                    buffer: buffer.clone(),
-                    origin,
-                    tile: tile.clone(),
+                match self.exprs_cow(origin) {
+                    Cow::Borrowed(_) => Cow::Borrowed(node),
+                    Cow::Owned(origin) => Cow::Owned(Node::TileStore {
+                        buffer: buffer.clone(),
+                        origin,
+                        tile: tile.clone(),
+                    }),
                 }
             }
-            Node::TileMatmul { acc, a, b } => Node::TileMatmul {
-                acc: acc.clone(),
-                a: a.clone(),
-                b: b.clone(),
-            },
-            Node::TileReduce {
-                out,
-                tile,
-                op,
-                axis,
-            } => Node::TileReduce {
-                out: out.clone(),
-                tile: tile.clone(),
-                op: *op,
-                axis: *axis,
-            },
             Node::TileElementwise { out, inputs, body } => {
                 self.enter_scope();
-                let body = self.nodes(body);
+                let body_cow = self.nodes_cow(body);
                 self.leave_scope();
-                Node::TileElementwise {
-                    out: out.clone(),
-                    inputs: inputs.clone(),
-                    body,
+                match body_cow {
+                    Cow::Borrowed(_) => Cow::Borrowed(node),
+                    Cow::Owned(body) => Cow::Owned(Node::TileElementwise {
+                        out: out.clone(),
+                        inputs: inputs.clone(),
+                        body,
+                    }),
                 }
-            }
-            Node::TileDecl { name, tile } => Node::TileDecl {
-                name: name.clone(),
-                tile: tile.clone(),
-            },
-            Node::Opaque(extension) => {
-                self.clear_observed_state();
-                Node::Opaque(extension.clone())
             }
         }
     }

@@ -182,4 +182,15 @@ impl PassResult {
             changed: false,
         }
     }
+
+    /// Declare the pass rewrote the program without a redundant `before` clone
+    /// or structural comparison.
+    #[must_use]
+    #[inline]
+    pub fn changed(program: Program) -> Self {
+        Self {
+            program,
+            changed: true,
+        }
+    }
 }

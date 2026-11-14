@@ -7,11 +7,7 @@ use crate::ir_inner::model::program::LinearType;
 use crate::lower::effects::ProgramEffects;
 use crate::optimizer::passes::algebraic::const_fold::ConstFold;
 use crate::optimizer::passes::algebraic::strength_reduce::StrengthReduce;
-use crate::optimizer::{
-    PassAnalysis, PassMetadata, PassResult, ProgramPass, RefusalReason, RewriteBatch,
-    RewriteBatchCandidates, RewriteCandidate,
-};
-use std::sync::atomic::{AtomicUsize, Ordering};
+use crate::optimizer::{PassAnalysis, PassMetadata, PassResult, ProgramPass, RefusalReason};
 use std::sync::Arc;
 
 mod rewrite_passes;
@@ -391,55 +387,6 @@ impl ProgramPass for RefusingPass {
     }
 }
 
-#[derive(Debug)]
-struct BatchingPass {
-    batch_calls: Arc<AtomicUsize>,
-    transform_calls: Arc<AtomicUsize>,
-    threshold: usize,
-}
-
-impl crate::optimizer::sealed::Sealed for BatchingPass {}
-
-impl ProgramPass for BatchingPass {
-    fn metadata(&self) -> PassMetadata {
-        PassMetadata::new("batching_pass", &[], &[])
-    }
-
-    fn analyze(&self, _program: &Program) -> PassAnalysis {
-        PassAnalysis::RUN
-    }
-
-    fn transform(&self, program: Program) -> PassResult {
-        self.transform_calls.fetch_add(1, Ordering::Relaxed);
-        rewrite_matching_stores(program, None)
-    }
-
-    fn supports_planar_batching(&self) -> bool {
-        true
-    }
-
-    fn rewrite_candidates(&self, program: &Program) -> RewriteBatchCandidates {
-        let mut candidates = Vec::new();
-        collect_store_candidates(program.entry(), &mut candidates);
-        let width = candidates.len() as u32;
-        RewriteBatchCandidates::new(candidates, 1, width, 2).with_threshold(self.threshold)
-    }
-
-    fn apply_rewrite_batch(
-        &self,
-        program: Program,
-        batch: &RewriteBatch,
-        _caps: &crate::optimizer::AdapterCaps,
-    ) -> PassResult {
-        self.batch_calls.fetch_add(1, Ordering::Relaxed);
-        rewrite_matching_stores(program, Some(batch))
-    }
-
-    fn fingerprint(&self, _program: &Program) -> u64 {
-        0
-    }
-}
-
 struct SchedulerGateContract {
     build_breaking_pass: fn(PassMetadata) -> ProgramPassKind,
     build_preserving_pass: fn(PassMetadata) -> ProgramPassKind,
@@ -539,7 +486,6 @@ fn first_ran_metric(report: &OptimizerRunReport) -> &PassRunMetric {
 }
 
 mod basic_execution;
-mod batching;
 mod cost_monotone;
 mod effect_handlers;
 mod gate_fact_cache;

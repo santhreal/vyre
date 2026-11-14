@@ -99,7 +99,7 @@ fn trace(program: &Program, iterations: usize) -> String {
                 continue;
             }
             let before = current.clone();
-            let result = pass.batch_apply(current, &caps);
+            let result = pass.transform_for_adapter(current, &caps);
             if result.program != before {
                 let same_identity =
                     fingerprint_program(&result.program) == fingerprint_program(&before);

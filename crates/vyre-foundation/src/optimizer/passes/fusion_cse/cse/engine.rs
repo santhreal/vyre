@@ -1,5 +1,7 @@
 use super::CseCtx;
 use crate::ir_inner::model::program::Program;
+use crate::optimizer::PassResult;
+use std::borrow::Cow;
 
 /// Run local value-numbering CSE over pure expressions, reusing an existing
 /// scratchpad context.
@@ -13,8 +15,19 @@ use crate::ir_inner::model::program::Program;
     reason = "CSE consumes Program to reuse its allocation-preserving with_rewritten_entry path"
 )]
 pub fn cse_into(program: Program, ctx: &mut CseCtx) -> Program {
+    cse_pass_into(program, ctx).program
+}
+
+/// Run local value-numbering CSE and report whether any node changed without
+/// cloning an unchanged `Program`.
+#[must_use]
+#[inline]
+pub(crate) fn cse_pass_into(program: Program, ctx: &mut CseCtx) -> PassResult {
     ctx.clear();
-    program.with_rewritten_entry(ctx.nodes(program.entry()))
+    match ctx.nodes_cow(program.entry()) {
+        Cow::Borrowed(_) => PassResult::unchanged(program),
+        Cow::Owned(rewritten) => PassResult::changed(program.with_rewritten_entry(rewritten)),
+    }
 }
 
 // Thread-local CseCtx scratchpad. Each `cse(program)` call would otherwise
@@ -30,5 +43,12 @@ thread_local! {
 #[must_use]
 #[inline]
 pub fn cse(program: Program) -> Program {
-    CSE_CTX.with(|cell| cse_into(program, &mut cell.borrow_mut()))
+    cse_pass(program).program
+}
+
+/// Run local value-numbering CSE using the thread-local scratchpad context.
+#[must_use]
+#[inline]
+pub(crate) fn cse_pass(program: Program) -> PassResult {
+    CSE_CTX.with(|cell| cse_pass_into(program, &mut cell.borrow_mut()))
 }

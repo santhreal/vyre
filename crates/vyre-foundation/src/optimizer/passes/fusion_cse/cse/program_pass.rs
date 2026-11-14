@@ -35,9 +35,7 @@ impl CsePass {
     /// Run CSE over the program entry.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let before = program.clone();
-        let optimized = engine::cse(program);
-        PassResult::from_programs(before, optimized)
+        engine::cse_pass(program)
     }
 }
 

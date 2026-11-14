@@ -81,7 +81,7 @@ fn a_scheduler_built_for_an_adapter_does_not_produce_the_conservative_program() 
         "Fix: the scheduler was given an adapter reporting {} shared bytes per workgroup and \
          still produced the program the conservative fallback produces. The adapter is not \
          reaching the pass: check that the pass declares `adapter_dependent = true` and that \
-         the scheduler calls `batch_apply` with its own adapter.",
+         the scheduler calls `transform_for_adapter` with its own adapter.",
         roomy.max_shared_memory_bytes
     );
 }

@@ -40,7 +40,9 @@ pub(crate) use const_truth::const_truth;
 /// Remove let-bindings whose values are neither live nor effectful.
 pub(crate) use eliminate_dead_lets::eliminate_dead_lets;
 /// Trim unreachable control-flow nodes after static terminators.
+#[cfg(test)]
 pub(crate) use eliminate_unreachable::eliminate_unreachable;
+pub(crate) use eliminate_unreachable::eliminate_unreachable_tracked;
 /// Result bundle returned by liveness pruning.
 pub(crate) use live_result::LiveResult;
 /// The identifier set liveness propagates; the only place its type is named.

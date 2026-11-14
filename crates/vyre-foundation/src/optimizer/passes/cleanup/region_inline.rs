@@ -38,9 +38,7 @@ impl RegionInlinePass {
     /// Flatten small regions into the surrounding body.
     #[must_use]
     pub fn transform(program: Program) -> PassResult {
-        let before = program.clone();
-        let optimized = super::region_inline_engine::run(program);
-        PassResult::from_programs(before, optimized)
+        super::region_inline_engine::run_pass(program)
     }
 }
 

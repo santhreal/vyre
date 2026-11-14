@@ -41,8 +41,6 @@ pub mod config_schema;
 pub mod failure_domain;
 /// Typed region-based SSA intermediate representation.
 pub mod region_ssa;
-/// Compiler data substrate, arenas, interners, and query engine.
-pub mod substrate;
 
 pub mod ir {
     //! The vyre intermediate representation.
@@ -73,10 +71,6 @@ pub mod ir {
         LivenessInterval, ProgramGraph, ProgramGraphBuilder, ProgramGraphError, ProgramGraphNode,
         ProgramGraphSharingMetrics, ProgramGraphTemplate, ProgramGraphValue, ShapeDim,
         ValueContract, ValueLifetime,
-    };
-    pub use crate::ir_inner::model::program_graph_delta::{
-        AffectedGraphClosure, GenerationTracker, GraphDelta, GraphDeltaError, GraphDeltaOp,
-        GRAPH_DELTA_VERSION,
     };
     pub use crate::ir_inner::model::program_graph_identity::{
         ProgramGraphIdentityContext, ProgramGraphIdentityError, PROGRAM_GRAPH_IDENTITY_VERSION,
@@ -128,8 +122,6 @@ pub mod match_result;
 mod memory_model;
 /// Optimizer performance counters.
 pub mod perf;
-/// Source-derived platform support matrix, wire types, and adapters.
-pub mod platform;
 /// Program capability analysis.
 pub mod program_caps;
 /// Single owner of scalar operator semantics, shared by the literal folder
@@ -137,8 +129,6 @@ pub mod program_caps;
 pub(crate) mod scalar_ops;
 /// Closed orthogonal semantic type system.
 pub mod types;
-/// Single declarative verifier and certified compilation gate.
-pub mod verifier;
 
 /// Inventory-registered algebraic-law registry (`algebraic_law_registry::laws_for_op`).
 pub mod algebraic_law_registry;
@@ -161,9 +151,6 @@ pub mod extension;
 
 /// Substrate-neutral allocation reservation arithmetic shared by hot paths.
 pub mod allocation;
-
-/// Endian-fixed encode/decode helpers for `Expr::Opaque` / `Node::Opaque` payloads.
-pub mod opaque_payload;
 
 /// Packed AST (VAST) wire layout plus host-side tree walks.
 pub mod vast;

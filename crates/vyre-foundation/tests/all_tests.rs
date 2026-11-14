@@ -222,10 +222,6 @@ pub mod fusion_workgroup_geometry;
 #[path = "geometry_foundation_contracts.rs"]
 pub mod geometry_foundation_contracts;
 
-/// Integration tests from `tests/graph_delta_contract.rs`.
-#[path = "graph_delta_contract.rs"]
-pub mod graph_delta_contract;
-
 /// Integration tests from `tests/host_identity_invariance.rs`.
 #[path = "host_identity_invariance.rs"]
 pub mod host_identity_invariance;
@@ -373,10 +369,6 @@ pub mod type_system_composition_contracts;
 #[path = "symbolic_shape_interner.rs"]
 pub mod symbolic_shape_interner;
 
-/// Integration tests from `tests/declarative_verifier.rs`.
-#[path = "declarative_verifier.rs"]
-pub mod declarative_verifier;
-
 /// Integration tests from `tests/memory_ordering_models_agree.rs`.
 #[path = "memory_ordering_models_agree.rs"]
 pub mod memory_ordering_models_agree;
@@ -408,10 +400,6 @@ pub mod numeric_region_budget;
 /// Integration tests from `tests/numeric_scalar_format.rs`.
 #[path = "numeric_scalar_format.rs"]
 pub mod numeric_scalar_format;
-
-/// Integration tests from `tests/opaque_payload_endian.rs`.
-#[path = "opaque_payload_endian.rs"]
-pub mod opaque_payload_endian;
 
 /// Integration tests from `tests/opaque_wire_round_trip.rs`.
 #[path = "opaque_wire_round_trip.rs"]
@@ -545,10 +533,6 @@ pub mod region_inline_scope;
 /// Integration tests from `tests/region_law_derivation.rs`.
 #[path = "region_law_derivation.rs"]
 pub mod region_law_derivation;
-
-/// Integration tests from `tests/region_ssa_contracts.rs`.
-#[path = "region_ssa_contracts.rs"]
-pub mod region_ssa_contracts;
 
 /// Integration tests from `tests/registry_closure.rs`.
 #[path = "registry_closure.rs"]
@@ -773,17 +757,10 @@ pub mod workspace_naming_footguns;
 #[path = "causal_contracts.rs"]
 pub mod causal_contracts;
 
-/// Integration tests from `tests/platform_support_matrix.rs`.
-#[path = "platform_support_matrix.rs"]
-pub mod platform_support_matrix;
-
 /// Integration tests from `tests/typed_configuration_schema_contracts.rs`.
 #[path = "typed_configuration_schema_contracts.rs"]
 pub mod typed_configuration_schema_contracts;
 
-/// Integration tests from `tests/compiler_substrate_contract.rs`.
-#[path = "compiler_substrate_contract.rs"]
-pub mod compiler_substrate_contract;
 /// Integration tests from `tests/region_fusion_contracts.rs`.
 #[path = "region_fusion_contracts.rs"]
 pub mod region_fusion_contracts;

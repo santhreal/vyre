@@ -14,6 +14,7 @@
 use crate::ir::Ident;
 use crate::ir_inner::model::node::Node;
 use crate::ir_inner::model::program::Program;
+use crate::optimizer::PassResult;
 use crate::visit::any_descendant;
 use crate::visit::bound_names::count_bound_names;
 use rustc_hash::FxHashMap;
@@ -44,9 +45,31 @@ pub fn run(program: Program) -> Program {
     run_with_threshold(program, DEFAULT_INLINE_THRESHOLD)
 }
 
+/// Run the pass with the default threshold, preserving `program` untouched
+/// when every region in `program` exceeds the inline threshold.
+#[must_use]
+pub fn run_pass(program: Program) -> PassResult {
+    if !has_inlinable_region(program.entry(), DEFAULT_INLINE_THRESHOLD) {
+        return PassResult::unchanged(program);
+    }
+    PassResult::changed(run_with_threshold(program, DEFAULT_INLINE_THRESHOLD))
+}
+
+fn has_inlinable_region(nodes: &[Node], threshold: usize) -> bool {
+    nodes.iter().any(|root| {
+        any_descendant(root, &mut |node| match node {
+            Node::Region { body, .. } => count_nodes_capped(body, threshold) <= threshold,
+            _ => false,
+        })
+    })
+}
+
 /// Run the pass with an explicit inline threshold.
 #[must_use]
 pub fn run_with_threshold(program: Program, threshold: usize) -> Program {
+    if !has_inlinable_region(program.entry(), threshold) {
+        return program;
+    }
     program.map_entry(|owned_entry| {
         let mut entry = Vec::with_capacity(owned_entry.len());
         inline_nodes_into(owned_entry, threshold, &mut entry);
