@@ -346,7 +346,7 @@ const DRIVER_CRATE_FLOOR: usize = 4;
 /// scan rather than a workspace with no backends.
 #[must_use]
 pub fn declared_driver_crates() -> std::collections::BTreeSet<String> {
-    structure_gate::member_directories(&crate::monorepo::vyre_workspace_root())
+    crate::monorepo::vyre_member_directories()
         .into_keys()
         .filter(|name| name.starts_with("vyre-driver-"))
         .collect()

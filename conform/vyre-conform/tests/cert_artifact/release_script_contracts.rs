@@ -1,6 +1,6 @@
 #[test]
 fn release_scripts_make_sharded_conformance_certificate_load_bearing() {
-    let repo = structure_gate::workspace_root();
+    let repo = vyre_test_support::monorepo::vyre_workspace_root();
     let prove = std::fs::read_to_string(repo.join("scripts/prove-release-shards.sh"))
         .expect("Fix: sharded release proof helper must be readable");
     assert!(
@@ -56,7 +56,7 @@ fn release_scripts_make_sharded_conformance_certificate_load_bearing() {
 /// stub conform binary instead.
 #[test]
 fn the_shard_pool_counts_exactly_the_shards_that_failed() {
-    let repo = structure_gate::workspace_root();
+    let repo = vyre_test_support::monorepo::vyre_workspace_root();
     let dir = tempfile::tempdir().expect("Fix: fixture directory must exist");
     let cargo = stub(
         dir.path(),

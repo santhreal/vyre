@@ -61,7 +61,8 @@ impl CoverageScope {
     /// Returns the corrective action when `cargo metadata` fails or reports no
     /// target directory.
     pub fn of_workspace(root: &Path) -> Result<Self, String> {
-        let output = crate::cargo_runner::command(root)
+        let output = Command::new(std::env::var("CARGO").unwrap_or_else(|_| "cargo".to_string()))
+            .current_dir(root)
             .args(["metadata", "--no-deps", "--format-version", "1"])
             .output()
             .map_err(|error| format!("Fix: cannot start `cargo metadata`: {error}"))?;
@@ -458,4 +459,19 @@ fn le_u64(bytes: &[u8]) -> u64 {
     let mut word = [0u8; 8];
     word.copy_from_slice(&bytes[..8]);
     u64::from_le_bytes(word)
+}
+
+/// Prune stale instrumented executables under `root`'s coverage target directory.
+pub fn prune(root: &Path) -> Result<(), String> {
+    let scope = CoverageScope::of_workspace(root)?;
+    let profdata = llvm_profdata()?;
+    let ids = profiled_build_ids(&scope.directory, &profdata)?;
+    let selection = select(&scope, &ids)?;
+    delete(&selection)?;
+    eprintln!(
+        "pruned {} stale coverage object(s), kept {}",
+        selection.stale.len(),
+        selection.kept
+    );
+    Ok(())
 }

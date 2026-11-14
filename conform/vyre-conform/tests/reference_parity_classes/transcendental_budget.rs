@@ -97,7 +97,7 @@ fn every_transcendental_op_builds_a_payload_on_every_artifact_route_backend() {
     }
     assert!(
         refused.is_empty(),
-        "Fix: the production artifact route cannot build a payload for a transcendental op. A dialect emitter must not refuse a descriptor for want of a parity window: the window chooses between two instructions where the target offers both, and is never an admission gate. See crates/vyre-emit-ptx/tests/ulp_budget_is_not_an_admission_gate.rs.\n{}",
+        "Fix: the production artifact route cannot build a payload for a transcendental op. A dialect emitter must not refuse a descriptor for want of a parity window: the window chooses between two instructions where the target offers both, and is never an admission gate. See crates/vyre-emit/tests/ptx/ulp_budget_is_not_an_admission_gate.rs.\n{}",
         refused.join("\n")
     );
 }

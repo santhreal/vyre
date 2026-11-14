@@ -19,9 +19,8 @@
 //!
 //! # How resolution works
 //!
-//! [`vyre_workspace_root`] delegates to [`structure_gate::workspace_root`],
-//! which walks up from the working directory to the manifest that declares the
-//! workspace. It is deliberately not this crate's `CARGO_MANIFEST_DIR`: a
+//! [`vyre_workspace_root`] walks up from the working directory to the manifest
+//! that declares `[workspace]`.
 //! target directory shared by several checkouts computes the same unit hash for
 //! this crate, so cargo hands one checkout a binary another one built, and a
 //! compiled-in path then names the wrong tree.
@@ -60,21 +59,28 @@ const DATAFLOW_RELATIVE: &str = "libs/dataflow";
 
 /// Root of the vyre cargo workspace, resolved from the working directory.
 ///
-/// Delegates to [`structure_gate::workspace_root`], the one owner of "which
-/// checkout am I reporting on". Never compiled in: every checkout of this
-/// repository shares one cargo target directory, cargo hashes a member by its
-/// path relative to the workspace root and checks freshness by mtime, so two
-/// checkouts compute the same unit hash and hand each other compiled binaries.
-/// A path fixed at compile time then names whichever tree built last, and a
-/// test that reads docs, pins, fixtures or golden files through it audits that
-/// tree while claiming to describe this one.
+/// Walks up from `std::env::current_dir()` to the ancestor holding `[workspace]`.
 ///
 /// # Panics
 ///
 /// Panics when no ancestor of the working directory declares a `[workspace]`.
 #[must_use]
 pub fn vyre_workspace_root() -> PathBuf {
-    structure_gate::workspace_root()
+    let cwd = std::env::current_dir().expect("working directory must be readable");
+    for ancestor in cwd.ancestors() {
+        let candidate = ancestor.join("Cargo.toml");
+        if let Ok(text) = std::fs::read_to_string(&candidate) {
+            if let Ok(parsed) = toml::from_str::<toml::Value>(&text) {
+                if parsed.get("workspace").is_some() {
+                    return ancestor.to_path_buf();
+                }
+            }
+        }
+    }
+    panic!(
+        "no Cargo.toml declaring [workspace] found above {}",
+        cwd.display()
+    )
 }
 
 /// Directory of the workspace member that declares `package`, in this checkout.
@@ -89,7 +95,9 @@ pub fn vyre_workspace_root() -> PathBuf {
 /// Panics when no workspace member declares `package`.
 #[must_use]
 pub fn vyre_crate_directory(package: &str) -> PathBuf {
-    structure_gate::member_directory(&vyre_workspace_root(), package)
+    vyre_member_directories()
+        .remove(package)
+        .unwrap_or_else(|| panic!("no workspace member declares package `{package}`"))
 }
 
 /// Every workspace member's directory in this checkout, keyed by the package
@@ -103,7 +111,24 @@ pub fn vyre_crate_directory(package: &str) -> PathBuf {
 /// Panics when the root manifest cannot be read or parsed.
 #[must_use]
 pub fn vyre_member_directories() -> std::collections::BTreeMap<String, PathBuf> {
-    structure_gate::member_directories(&vyre_workspace_root())
+    let root = vyre_workspace_root();
+    let mut out = std::collections::BTreeMap::new();
+    for rel in vyre_workspace_members(&root) {
+        let dir = root.join(&rel);
+        let manifest = dir.join("Cargo.toml");
+        let text = std::fs::read_to_string(&manifest)
+            .unwrap_or_else(|e| panic!("cannot read {}: {e}", manifest.display()));
+        let parsed: toml::Value = toml::from_str(&text)
+            .unwrap_or_else(|e| panic!("cannot parse {}: {e}", manifest.display()));
+        if let Some(name) = parsed
+            .get("package")
+            .and_then(|p| p.get("name"))
+            .and_then(toml::Value::as_str)
+        {
+            out.insert(name.to_owned(), dir);
+        }
+    }
+    out
 }
 
 /// The one source file in this checkout that declares `marker`.
@@ -115,9 +140,8 @@ pub fn vyre_member_directories() -> std::collections::BTreeMap<String, PathBuf> 
 /// the test claims to check. Searching for the declaration instead follows the
 /// file wherever it goes, across crates as well as directories.
 ///
-/// The search covers every source file the workspace holds, from
-/// [`structure_gate::source_file_roster`], which is the same roster the
-/// structure gate walks. `marker` must be the opening text of the declaration,
+/// The search covers every Rust source file across all workspace members.
+/// `marker` must be the opening text of the declaration,
 /// such as
 /// `pub fn fnv1a64_program`, and a file matches when some line begins with it
 /// once indentation is trimmed. Matching a line prefix rather than any
@@ -159,34 +183,32 @@ pub fn declaring_source_file(marker: &str) -> PathBuf {
     }
 }
 
-/// Every workspace source file with its text, read once per process.
-///
-/// [`declaring_source_file`] used to read the whole corpus on every call: 4495
-/// files and 37 MiB, walked again for each marker. A roster test that resolves
-/// three exemption owners therefore paid for three complete walks, and on a
-/// network-mounted checkout that is minutes per walk rather than milliseconds:
-/// one such test held a validation host for ten minutes with no output. The
-/// corpus does not change while a test binary runs, so one read serves every
-/// marker.
-///
-/// The read is spread across many lanes because it is latency-bound rather than
-/// bandwidth-bound: each file is one round trip to the server, and 37 MiB is
-/// nothing beside 4495 of those. The lane count comes from
-/// [`structure_gate::read_lanes`], which holds the width above the core count
-/// and below the descriptor budget the whole process shares. The roster comes
-/// from [`structure_gate::source_file_roster`] rather than a full workspace
-/// scan, which walks the tree once instead of once per roster a scan derives
-/// from source text. Chunks are contiguous slices of that roster, so the corpus
-/// keeps its order and a duplicate-home report names files in the same
-/// sequence every run.
+/// Every workspace member Rust source file with its text, read once per process.
 static SOURCE_CORPUS: LazyLock<Vec<(String, String)>> = LazyLock::new(read_source_corpus);
 
 fn read_source_corpus() -> Vec<(String, String)> {
     let root = vyre_workspace_root();
-    let files = structure_gate::source_file_roster(&root);
-    let per_lane = files
-        .len()
-        .div_ceil(structure_gate::read_lanes(files.len()));
+    let mut abs_files = Vec::new();
+    for rel_member in vyre_workspace_members(&root) {
+        let member_dir = root.join(&rel_member);
+        crate::registry_closure::collect_rust_files(&member_dir.join("src"), &mut abs_files);
+        crate::registry_closure::collect_rust_files(&member_dir.join("tests"), &mut abs_files);
+    }
+    abs_files.sort();
+    abs_files.dedup();
+    let files: Vec<String> = abs_files
+        .into_iter()
+        .filter_map(|p| {
+            p.strip_prefix(&root)
+                .ok()
+                .map(|r| r.to_string_lossy().replace('\\', "/"))
+        })
+        .collect();
+    let lanes = std::thread::available_parallelism()
+        .map(|n| (n.get() * 2).clamp(4, 32))
+        .unwrap_or(8)
+        .min(files.len().max(1));
+    let per_lane = files.len().div_ceil(lanes);
     if per_lane == 0 {
         return Vec::new();
     }
@@ -234,24 +256,26 @@ fn read_source_corpus() -> Vec<(String, String)> {
 /// Workspace member paths and excluded paths from the root manifest, in this
 /// checkout.
 ///
-/// Delegates to [`structure_gate`], which owns the root-manifest parse. A
-/// contract that reads `Cargo.toml` itself to answer "is this directory in the
-/// workspace" grows a second roster, and the two disagree the first time a
-/// path is written in a shape only one of them recognizes.
-///
 /// # Panics
 ///
 /// Panics when the root manifest cannot be read or parsed.
 #[must_use]
 pub fn vyre_workspace_rosters() -> WorkspaceRosters {
     let root = vyre_workspace_root();
+    let parsed = parse_root_workspace_manifest(&root);
+    let excluded = parsed
+        .get("workspace")
+        .and_then(|w| w.get("exclude"))
+        .and_then(toml::Value::as_array)
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|v| v.as_str().map(str::to_owned))
+                .collect()
+        })
+        .unwrap_or_default();
     WorkspaceRosters {
-        members: structure_gate::workspace_members(&root)
-            .into_iter()
-            .collect(),
-        excluded: structure_gate::workspace_excludes(&root)
-            .into_iter()
-            .collect(),
+        members: vyre_workspace_members(&root).into_iter().collect(),
+        excluded,
     }
 }
 
@@ -601,4 +625,43 @@ mod tests {
 
         std::fs::remove_dir_all(outer).expect("the nested target fixture must be removable");
     }
+}
+
+/// Workspace member paths declared in the root `Cargo.toml` at `root`.
+#[must_use]
+pub fn vyre_workspace_members(root: &Path) -> Vec<String> {
+    let parsed = parse_root_workspace_manifest(root);
+    let mut out = Vec::new();
+    if let Some(arr) = parsed
+        .get("workspace")
+        .and_then(|w| w.get("members"))
+        .and_then(toml::Value::as_array)
+    {
+        for item in arr.iter().filter_map(toml::Value::as_str) {
+            if let Some(prefix) = item.strip_suffix("/*") {
+                if let Ok(entries) = std::fs::read_dir(root.join(prefix)) {
+                    for entry in entries.flatten() {
+                        let p = entry.path();
+                        if p.join("Cargo.toml").is_file() {
+                            if let Ok(rel) = p.strip_prefix(root) {
+                                out.push(rel.to_string_lossy().replace('\\', "/"));
+                            }
+                        }
+                    }
+                }
+            } else {
+                out.push(item.to_owned());
+            }
+        }
+    }
+    out.sort();
+    out.dedup();
+    out
+}
+
+fn parse_root_workspace_manifest(root: &Path) -> toml::Value {
+    let manifest = root.join("Cargo.toml");
+    let text = std::fs::read_to_string(&manifest)
+        .unwrap_or_else(|e| panic!("cannot read {}: {e}", manifest.display()));
+    toml::from_str(&text).unwrap_or_else(|e| panic!("cannot parse {}: {e}", manifest.display()))
 }

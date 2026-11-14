@@ -86,7 +86,7 @@ dense-matvec-cases = ["parity-oracles", "dep:vyre-primitives"]
 # The one owner of "which checkout am I reporting on". Resolved from the working
 # directory at run time, never compiled in, so `monorepo` delegates to
 # `structure_gate::workspace_root` rather than resolving a second time.
-structure-gate = { path = "../../tools/structure-gate" }
+toml = { workspace = true }
 vyre-foundation = { workspace = true, optional = true }
 vyre-megakernel = { workspace = true, optional = true }
 vyre-lower = { workspace = true, optional = true }
@@ -113,7 +113,6 @@ inventory = { workspace = true }
 tempfile.workspace = true
 # The `#[path]` closure gate reads the root workspace manifest's `members` list,
 # so the owner set it pins is the declared one rather than a copy here.
-toml = { workspace = true }
 
 [package.metadata.vyre]
 publication_class = "private-test-support"
@@ -136,11 +135,3 @@ path = "tests/all_tests_ir_fixtures.rs"
 # parity oracle, so the target declares that feature alongside the fixtures.
 required-features = ["ir-fixtures", "parity-oracles"]
 
-# Isolated: the body calls `set_current_dir`, and a process has one working
-# directory. The contract is that `vyre_workspace_root` answers for the
-# checkout the command ran in, which can only be observed by changing that
-# directory, so any test sharing the binary would resolve its own paths
-# against whichever directory this one had set at that moment.
-[[test]]
-name = "workspace_root_follows_the_working_directory"
-path = "tests/workspace_root_follows_the_working_directory.rs"

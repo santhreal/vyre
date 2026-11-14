@@ -99,7 +99,6 @@ vyre-test-support = { workspace = true, features = [
 vyre-lower.workspace = true
 # Run-time checkout root, so a contract binary reused across checkouts still
 # reports on the tree cargo was invoked in. publish = false on both sides.
-structure-gate = { path = "../../tools/structure-gate" }
 toml = { workspace = true }
 # `vyre_test_support::spec_variant_tables` reads the public-API snapshot through
 # the run-time checkout root, so every crate that calls it carries this.
@@ -112,7 +111,6 @@ path = "tests/all_tests.rs"
 # process-global registry so a canonical bundle can carry a dialect op id in its
 # wire bytes. `op_matrix_truth` in `all_tests` asserts every registered op is
 # matrixed, and a fixture op is not a shipped op, so the two cannot share a
-# process. See `tools/xtask/test-harness-isolation.toml`.
 [[test]]
 name = "cert_regression_pin"
 path = "tests/cert_regression_pin/main.rs"

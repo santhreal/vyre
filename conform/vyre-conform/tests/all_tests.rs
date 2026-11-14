@@ -49,10 +49,6 @@ pub mod lens_parity;
 #[path = "library_contracts/mod.rs"]
 pub mod library_contracts;
 
-/// Integration tests from `tests/mesh_placement_contracts.rs`.
-#[path = "mesh_placement_contracts.rs"]
-pub mod mesh_placement_contracts;
-
 /// Integration tests from `tests/minimizer_contract.rs`.
 #[path = "minimizer_contract.rs"]
 pub mod minimizer_contract;

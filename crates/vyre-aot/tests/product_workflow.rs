@@ -15,7 +15,7 @@ use vyre_aot::{
     compile, install_package, load_installed_package, package_artifact, TargetId,
     ValidatedCompileRequest,
 };
-use vyre_debug::ArtifactReport;
+use xtask::debug::ArtifactReport;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program, ProgramGraph};
 use vyre_foundation::validate::BackendCapabilities;
 use vyre_megakernel::{

@@ -83,9 +83,8 @@ fn every_pinned_narrowing_result_is_what_rust_as_computes() {
 /// which is indistinguishable from a clean sweep.
 #[test]
 fn the_matrix_covers_every_narrowing_target_the_cast_table_admits() {
-    let root = structure_gate::workspace_root();
-    let source_path =
-        structure_gate::member_directory(&root, "vyre-foundation").join("src/validate/cast.rs");
+    let source_path = vyre_test_support::monorepo::vyre_crate_directory("vyre-foundation")
+        .join("src/validate/cast.rs");
     let source = std::fs::read_to_string(&source_path).unwrap_or_else(|error| {
         panic!(
             "Fix: the narrowing coverage gate cannot read {}: {error}",

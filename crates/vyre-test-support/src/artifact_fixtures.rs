@@ -17,14 +17,11 @@
 
 use std::collections::BTreeMap;
 
-use crate::graph_shapes;
 use vyre_foundation::ir::{
-    BufferAccess, BufferDecl, CollectiveOp, CommGroup, DataType, Expr, GraphInput, GraphOutput,
-    Node, Program, ProgramGraph, ShapeDim, ValueContract, ValueLifetime,
+    BufferAccess, BufferDecl, DataType, Expr, Node, Program, ProgramGraph, ShapeDim, ValueContract,
+    ValueLifetime,
 };
 use vyre_foundation::validate::BackendCapabilities;
-use vyre_megakernel::allocation::DeviceSlot;
-use vyre_megakernel::mesh::{CollectiveSupport, MeshAxis, MeshDevice, MeshFacts, MeshLink};
 use vyre_megakernel::{
     compile, Artifact, ArtifactNodeId, ArtifactValueId, CompileObjective, CompileRequest,
     DeviceFacts, Digest, ExternalFacts, ObjectiveMetric, SearchBudget, TargetEntryPoint,
@@ -70,94 +67,6 @@ fn decl_for(name: &str, slot: u32, contract: &ValueContract) -> BufferDecl {
         }
     };
     decl.with_count(declared_count(name, contract))
-}
-
-/// One node that reads one caller-supplied value of `count` elements, wired.
-///
-/// [`graph_over`] leaves ports unwired, so its logical region has a domain of one
-/// point and a placement has nothing to cut. A fixture that wants a domain states
-/// it through the port contract, which is where the logical stage reads it.
-pub fn wired_input_graph(count: u32) -> ProgramGraph {
-    let mut graph = ProgramGraph::new();
-    let value = contract(
-        DataType::U32,
-        count,
-        BufferAccess::ReadOnly,
-        ValueLifetime::Invocation,
-    );
-    let input = graph
-        .add_external_value("input", value.clone())
-        .expect("fixture external value must be valid. Fix: correct the contract this fixture declares for `input`");
-    graph
-        .add_node(
-            "entry",
-            Program::wrapped(vec![decl_for("input", 0, &value)], [8, 1, 1], Vec::new()),
-            vec![GraphInput {
-                buffer: "input".into(),
-                value: input,
-                contract: value,
-            }],
-            Vec::new(),
-        )
-        .expect("fixture node must be valid. Fix: correct the buffer declaration or the graph input this fixture wires to `entry`");
-    graph
-}
-
-/// One node that all-reduces a caller-visible value of `count` elements.
-///
-/// A placement records a transfer only where the program states an exchange, so
-/// a fixture that wants routed communication states the collective itself. The
-/// reduced value is read-write for the invocation, which keeps the region a
-/// reduction rather than retained state.
-pub fn collective_output_graph(count: u32) -> ProgramGraph {
-    let mut graph = ProgramGraph::new();
-    let reduced = contract(
-        DataType::U32,
-        count,
-        BufferAccess::ReadWrite,
-        ValueLifetime::Invocation,
-    );
-    graph
-        .add_node(
-            "reduce",
-            Program::wrapped(
-                vec![decl_for("out", 0, &reduced)],
-                [8, 1, 1],
-                vec![Node::AllReduce {
-                    buffer: "out".into(),
-                    op: CollectiveOp::Sum,
-                    group: CommGroup::WORLD,
-                }],
-            ),
-            Vec::new(),
-            vec![GraphOutput {
-                buffer: "out".into(),
-                name: "out".into(),
-                contract: reduced,
-                retained_successor_of: None,
-            }],
-        )
-        .expect("fixture collective node must be valid. Fix: correct the reduced contract or the collective output this fixture declares");
-    graph
-}
-
-/// One node that atomically updates a caller-visible value of `count` elements.
-pub fn atomic_output_graph(count: u32) -> ProgramGraph {
-    graph_shapes::atomic_output_graph(count, [8, 1, 1])
-}
-
-/// One node that reads the caller-supplied value it also writes.
-pub fn in_place_input_graph(count: u32) -> ProgramGraph {
-    graph_shapes::in_place_input_graph(count, [8, 1, 1])
-}
-
-/// Two nodes over one-element values, the second consuming the first.
-///
-/// One point per region is deliberate: no axis has a bound to cut, so the only
-/// placement that uses more than one device is the one that runs consecutive
-/// regions on consecutive devices.
-pub fn chained_graph() -> ProgramGraph {
-    graph_shapes::chained_graph(1, [1, 1, 1])
 }
 
 /// One-node graph over `values`, bound to Program slots in the order given.
@@ -227,73 +136,12 @@ pub fn params_and_out_graph() -> ProgramGraph {
 /// request digest, so two fixtures that differ only in seed compile to different
 /// artifact identities.
 pub fn compile_graph(graph: ProgramGraph, facts_seed: u8) -> Artifact {
-    compile_placed(graph, facts_seed, None)
-}
-
-/// Compile a fixture graph against one authenticated device mesh.
-///
-/// The placement is a schedule decision, so a fixture that wants more than one
-/// device supplies the mesh and lets selection cut the graph.
-pub fn compile_graph_on_mesh(graph: ProgramGraph, facts_seed: u8, mesh: MeshFacts) -> Artifact {
-    compile_placed(graph, facts_seed, Some(mesh))
-}
-
-/// Compile a fixture graph against one mesh under an objective that ranks the
-/// bytes one device holds first.
-///
-/// A placement that spreads whole regions leaves one submission as long as it
-/// was, so a latency objective keeps the single-device placement. A caller that
-/// states peak memory is the caller a spread placement is for.
-pub fn compile_graph_on_mesh_for_memory(
-    graph: ProgramGraph,
-    facts_seed: u8,
-    mesh: MeshFacts,
-) -> Artifact {
-    let request = placed_request_with(
-        graph,
-        facts_seed,
-        Some(mesh),
-        CompileObjective::minimize_latency()
-            .with_primary(ObjectiveMetric::PeakMemory)
-            .with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
-    );
+    let request = fixture_request(graph, facts_seed);
     compile(&request)
-        .expect("fixture request must compile. Fix: correct the graph or raise the artifact-bytes bound this fixture sets")
+        .expect("fixture request must compile. Fix: correct the graph this fixture compiles")
 }
 
-/// The validated request one fixture graph compiles from, placed on `mesh`.
-///
-/// A case that expects the compile to fail needs the request rather than the
-/// artifact, so the request is built here once and both paths use it.
-pub fn mesh_request(graph: ProgramGraph, mesh: MeshFacts) -> ValidatedCompileRequest {
-    placed_request(graph, 0, Some(mesh))
-}
-
-fn compile_placed(graph: ProgramGraph, facts_seed: u8, mesh: Option<MeshFacts>) -> Artifact {
-    let request = placed_request(graph, facts_seed, mesh);
-    compile(&request)
-        .expect("fixture request must compile. Fix: correct the graph or the placement this fixture compiles it under")
-}
-
-fn placed_request(
-    graph: ProgramGraph,
-    facts_seed: u8,
-    mesh: Option<MeshFacts>,
-) -> ValidatedCompileRequest {
-    placed_request_with(
-        graph,
-        facts_seed,
-        mesh,
-        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
-    )
-}
-
-fn placed_request_with(
-    graph: ProgramGraph,
-    facts_seed: u8,
-    mesh: Option<MeshFacts>,
-    objective: CompileObjective,
-) -> ValidatedCompileRequest {
+fn fixture_request(graph: ProgramGraph, facts_seed: u8) -> ValidatedCompileRequest {
     let collectives = graph
         .nodes()
         .iter()
@@ -307,20 +155,15 @@ fn placed_request_with(
         .collect();
     let mut facts = ExternalFacts::new(Digest([facts_seed; 32]), BTreeMap::new());
     facts.constant_identities = constant_identities;
-    let request = CompileRequest::new(
+    CompileRequest::new(
         graph,
         facts,
         device_facts_for(collectives, native_f16),
         SearchBudget::new(1, 1, 1, 0, 1_000_000_000),
-        objective,
-    );
-    let request = match mesh {
-        Some(mesh) => request.with_mesh(mesh),
-        None => request,
-    };
-    request
-        .validate()
-        .expect("fixture request must validate. Fix: correct the graph, the device facts, or the mesh this fixture places it on")
+        CompileObjective::minimize_latency().with_bound(ObjectiveMetric::ArtifactBytes, 1_000_000),
+    )
+    .validate()
+    .expect("fixture request must validate. Fix: correct the graph or the device facts this fixture compiles it under")
 }
 
 /// Facts for the device a fixture graph is compiled against.
@@ -341,48 +184,6 @@ fn device_facts_for(collectives: bool, native_f16: bool) -> DeviceFacts {
         },
         0,
     )
-}
-
-/// One mesh axis of `extent` coordinates.
-pub fn mesh_axis(extent: u32) -> MeshAxis {
-    MeshAxis {
-        name: "device".to_owned(),
-        extent,
-    }
-}
-
-/// One mesh device at one coordinate, in its own failure domain.
-pub fn mesh_device(slot: u16, coordinate: u32, memory_capacity_bytes: u64) -> MeshDevice {
-    MeshDevice {
-        slot: DeviceSlot(slot),
-        coordinate: vec![coordinate],
-        memory_capacity_bytes,
-        failure_domain: u32::from(slot),
-    }
-}
-
-/// One directed mesh link at the bandwidth and latency every fixture prices.
-pub fn mesh_link(from: u16, to: u16) -> MeshLink {
-    MeshLink {
-        from: DeviceSlot(from),
-        to: DeviceSlot(to),
-        bandwidth_bytes_per_ns: 64,
-        latency_ns: 1_000,
-    }
-}
-
-/// A two-device mesh of one axis, symmetric links, and every exchange kind.
-///
-/// Both capacities are large enough that no fixture is refused for capacity, so
-/// a capacity case states its own smaller figure.
-pub fn two_device_mesh() -> MeshFacts {
-    MeshFacts::new(
-        vec![mesh_axis(2)],
-        vec![mesh_device(0, 0, 1 << 30), mesh_device(1, 1, 1 << 30)],
-        vec![mesh_link(0, 1), mesh_link(1, 0)],
-        CollectiveSupport::ALL,
-    )
-    .expect("fixture mesh must authenticate. Fix: correct the device and link records this two-device mesh declares")
 }
 
 /// The canonical read-only single-input artifact.

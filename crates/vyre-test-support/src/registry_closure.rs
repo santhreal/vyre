@@ -79,7 +79,7 @@ pub fn assert_registry_closure_crates(crate_dirs: &[PathBuf], waiver: &[&str], f
     let mut gated_paths: BTreeSet<PathBuf> = BTreeSet::new();
     for (path, text) in &src_texts {
         let module_dir = module_directory(path);
-        for name in structure_gate::cfg_test::cfg_test_module_declarations(text) {
+        for name in cfg_test_module_declarations(text) {
             gated_paths.insert(module_dir.join(format!("{name}.rs")));
             gated_paths.insert(module_dir.join(&name));
         }
@@ -104,7 +104,7 @@ pub fn assert_registry_closure_crates(crate_dirs: &[PathBuf], waiver: &[&str], f
         // byte after the first `#[cfg(test)]` marker counted production code as
         // test text, and a crate whose first marker precedes its re-export list
         // had 174 symbols "covered" by a `pub use` block that merely names them.
-        let gated = structure_gate::cfg_test::cfg_test_items(text);
+        let gated = cfg_test_items(text);
         if !gated.is_empty() {
             corpus.push_str(&gated);
             corpus.push('\n');
@@ -584,4 +584,121 @@ mod tests {
         assert!(blocks[0].contains("OperationRegistration"));
         assert!(blocks[0].ends_with('}'));
     }
+}
+
+fn cfg_test_module_declarations(text: &str) -> Vec<String> {
+    let mut out = Vec::new();
+    let mut pending_cfg_test = false;
+    for raw_line in text.lines() {
+        let line = raw_line.trim();
+        if line.is_empty() || line.starts_with("//") {
+            continue;
+        }
+        if is_cfg_test_attr(line) {
+            pending_cfg_test = true;
+            continue;
+        }
+        if line.starts_with("#[") {
+            continue;
+        }
+        if pending_cfg_test {
+            pending_cfg_test = false;
+            let rest = line
+                .strip_prefix("pub(crate) ")
+                .or_else(|| line.strip_prefix("pub "))
+                .unwrap_or(line);
+            if let Some(after_mod) = rest.strip_prefix("mod ") {
+                if let Some(semi) = after_mod.strip_suffix(';') {
+                    let ident = semi.trim();
+                    if !ident.is_empty() && ident.chars().all(|c| c.is_alphanumeric() || c == '_') {
+                        out.push(ident.to_owned());
+                    }
+                }
+            }
+        }
+    }
+    out
+}
+
+fn cfg_test_items(text: &str) -> String {
+    let mut out = String::new();
+    let bytes = text.as_bytes();
+    let mut i = 0;
+    while i < bytes.len() {
+        let Some(rel) = text[i..].find("#[cfg(") else {
+            break;
+        };
+        let attr_start = i + rel;
+        let Some(attr_close_rel) = text[attr_start..].find(']') else {
+            break;
+        };
+        let attr_end = attr_start + attr_close_rel + 1;
+        let attr_slice = &text[attr_start..attr_end];
+        if !is_cfg_test_attr(attr_slice.trim()) {
+            i = attr_end;
+            continue;
+        }
+        let mut cursor = attr_end;
+        loop {
+            while cursor < bytes.len() && bytes[cursor].is_ascii_whitespace() {
+                cursor += 1;
+            }
+            if text[cursor..].starts_with("//") {
+                if let Some(nl) = text[cursor..].find('\n') {
+                    cursor += nl + 1;
+                    continue;
+                }
+                cursor = bytes.len();
+            } else if text[cursor..].starts_with("#[") {
+                if let Some(close) = text[cursor..].find(']') {
+                    cursor += close + 1;
+                    continue;
+                }
+            }
+            break;
+        }
+        while cursor < bytes.len() && bytes[cursor] != b'{' && bytes[cursor] != b';' {
+            cursor += 1;
+        }
+        if cursor >= bytes.len() {
+            break;
+        }
+        if bytes[cursor] == b';' {
+            out.push_str(&text[attr_start..=cursor]);
+            out.push('\n');
+            i = cursor + 1;
+            continue;
+        }
+        let mut depth = 0usize;
+        let mut end = cursor;
+        while end < bytes.len() {
+            match bytes[end] {
+                b'{' => depth += 1,
+                b'}' => {
+                    depth -= 1;
+                    if depth == 0 {
+                        end += 1;
+                        break;
+                    }
+                }
+                _ => {}
+            }
+            end += 1;
+        }
+        out.push_str(&text[attr_start..end]);
+        out.push('\n');
+        i = end;
+    }
+    out
+}
+
+fn is_cfg_test_attr(attr: &str) -> bool {
+    let Some(inner) = attr
+        .strip_prefix("#[cfg(")
+        .and_then(|s| s.strip_suffix(")]"))
+    else {
+        return false;
+    };
+    let trimmed = inner.trim();
+    trimmed == "test" || trimmed.starts_with("all(test,") || trimmed.ends_with(", test)")
 }

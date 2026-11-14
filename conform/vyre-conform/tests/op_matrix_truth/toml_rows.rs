@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use toml::Value;
 
 pub(crate) fn workspace_root() -> PathBuf {
-    structure_gate::workspace_root()
+    vyre_test_support::monorepo::vyre_workspace_root()
 }
 
 pub(crate) fn read_toml(path: &Path) -> Value {

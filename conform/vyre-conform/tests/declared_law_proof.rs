@@ -20,7 +20,7 @@ struct Decision {
 }
 
 fn decisions_path() -> PathBuf {
-    structure_gate::workspace_root().join("conform/vyre-conform/law-proof-decisions.toml")
+    vyre_test_support::monorepo::vyre_workspace_root().join("conform/vyre-conform/law-proof-decisions.toml")
 }
 
 /// The recorded decisions, keyed by `(op id, law)`, and the declared cap.

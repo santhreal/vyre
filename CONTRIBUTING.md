@@ -2,7 +2,7 @@
 
 ## Build
 
-Toolchain version is pinned in `rust-toolchain.toml`. Do not set `CARGO_TARGET_DIR` or pass `--target-dir`; rely on the host Cargo configuration.
+Toolchain version is pinned in `rust-toolchain.toml`. Do not override the host Cargo target directory; rely on the host Cargo configuration.
 
 Scope builds to the packages you edit:
 
