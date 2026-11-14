@@ -52,10 +52,10 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use vyre_alloc_probe::Region;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_reference::value::Value;
 use vyre_reference::{ReferenceBudget, ReferenceErrorClass, ReferenceRequest};
+use vyre_test_support::alloc_probe::Region;
 
 use crate::program_scale::{
     count_nodes, flat_chain, flat_chain_output, run_within_deadline, Verdict, MILLION_NODES,

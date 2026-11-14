@@ -35,13 +35,13 @@
 //! IR constructors. The shapes here are synthetic, so a registry entry whose
 //! lowering allocates per element is outside what these numbers say.
 
-use vyre_alloc_probe::{Region, ThreadAlloc};
 use vyre_foundation::ir::{
     BufferAccess, BufferDecl, DataType, Expr, Layout, Node, Program, Residency, Tile,
 };
 use vyre_foundation::visit::child_bodies;
 use vyre_reference::value::Value;
 use vyre_reference::{ReferenceBudget, ReferenceErrorClass, ReferenceRequest, WorkloadEnvelope};
+use vyre_test_support::alloc_probe::{Region, ThreadAlloc};
 
 use crate::program_scale::{
     assert_bounded_outcome, count_nodes, flat_chain, looped_chain, run_within_deadline,

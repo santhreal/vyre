@@ -15,11 +15,11 @@ use std::sync::mpsc::{channel, RecvTimeoutError};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use vyre_alloc_probe::Region;
 use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
 use vyre_foundation::visit::child_bodies;
 use vyre_reference::value::Value;
 use vyre_reference::{ReferenceBudget, ReferenceErrorClass, ReferenceRequest};
+use vyre_test_support::alloc_probe::Region;
 
 /// Wall-clock ceiling one bounded evaluation may take.
 ///
