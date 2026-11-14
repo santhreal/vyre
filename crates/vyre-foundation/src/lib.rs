@@ -35,8 +35,6 @@ pub use geometry::{
     GeometryRequirements, LaunchGeometry, Uniformity,
 };
 
-/// Canonical binary codec and verification for schema registry records.
-mod canonical_codec;
 /// Typed configuration schema and resolution.
 pub mod config_schema;
 /// Explicit failure domains and recovery classes.
@@ -82,12 +80,6 @@ pub mod ir {
     };
     pub use crate::ir_inner::model::program_graph_identity::{
         ProgramGraphIdentityContext, ProgramGraphIdentityError, PROGRAM_GRAPH_IDENTITY_VERSION,
-    };
-    pub use crate::ir_inner::model::resource_abi::{
-        AdmittedResourceRecord, ColorSpace, ExternalMemoryDescriptor, ExternalMemoryKind,
-        ExternalResourceCapability, ExternalSyncProtocol, ImageAspect, ImageDimension, ImageExtent,
-        ImageFormat, PlaneDescriptor, ResourceAbiError, ResourceUsageFlags, SamplerAddressMode,
-        SamplerDescriptor, SamplerFilter, SubresourceRange, ViewDescriptor,
     };
     pub use crate::ir_inner::model::tile::{
         row_major_coords, Layout, Layout as TileLayout, Residency, Tile, Tile as TileType,
@@ -143,8 +135,6 @@ pub mod program_caps;
 /// Single owner of scalar operator semantics, shared by the literal folder
 /// and the reference interpreter.
 pub(crate) mod scalar_ops;
-/// Security, Tenant Isolation, Capability Handles & Quota Authority.
-pub mod security;
 /// Closed orthogonal semantic type system.
 pub mod types;
 /// Single declarative verifier and certified compilation gate.
@@ -218,15 +208,8 @@ pub use error::{IrError, IrResult};
 /// outside vyre-foundation should depend on these helpers.
 #[cfg(test)]
 pub(crate) mod test_ir_inspect;
-pub use canonical_codec::{
-    CanonicalDecoder, CanonicalEncoder, CanonicalRecord, CanonicalSigner, CanonicalValue,
-    CodecError,
-};
 pub use vyre_spec::schema_registry::{
     CanonicalField, DefaultsPolicy, FieldType, SchemaBounds, SchemaDefinition, SchemaId,
     SchemaRegistry, CANONICAL_SCHEMA_REGISTRY,
 };
-pub use vyre_spec::{
-    CompatibilityCell, CompatibilityDisposition, CompatibilityMatrix, NegotiatedContract,
-    NegotiationError, ProtocolDomain, ProtocolVersion, CANONICAL_COMPATIBILITY_CELLS,
-};
+pub use vyre_spec::{CompatibilityDisposition, ProtocolDomain, ProtocolVersion};

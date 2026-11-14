@@ -56,7 +56,6 @@ pub mod diff_compile;
 /// or `RefusalReason::EffectLatticeViolation` with a structured fix string.
 pub mod effect_lattice;
 pub mod fact_cache;
-pub(crate) mod fusion_cert;
 /// Program-level shape-facts analysis. Derives one
 /// `BufferShapeFacts` per `BufferDecl`; downstream passes consume the
 /// derived map instead of recomputing buffer sizes ad hoc.
@@ -68,38 +67,14 @@ pub mod shape_facts;
 
 /// Shared algebraic rewrite legality rules consumed by semantic `Program` passes.
 pub mod algebraic_rules;
-/// Which declarative law families each IR construct exposes.
-pub mod construct_law;
-pub(crate) mod dsl;
 /// Equality-saturation engine substrate: minimal EGraph, rewrite families,
 /// saturation, and cost-based extraction.
 pub mod eqsat;
-/// GPU-resident e-graph snapshot substrate. Mirrors
-/// the CPU `EGraph` into a flat columnar layout uploadable to GPU
-/// scratch; backend saturation kernels walk the columns in
-/// parallel and feed discovered equivalences back through
-/// `apply_equivalences` to the CPU EGraph.
-pub mod eqsat_gpu;
-/// Tier-B TOML rule database  -  load equivalence rules from
-/// community-contributable `*.toml` files.
-pub mod eqsat_toml;
 /// Hash-consed Expr arena. Side-table substrate that
 /// collapses structurally-equal `Expr` subtrees into shared 32-bit
 /// `ExprId`s. Additive  -  does not change the IR shape; passes opt in
 /// via `ExprArena::intern` and operate on `ExprId`s.
 pub mod expr_arena;
-/// Program-level analysis built on the [`expr_arena`] substrate.
-/// Walks every `Expr` in a `Program` and returns aggregate stats +
-/// stable structural fingerprint usable as a cheap structural-
-/// similarity key. T020 SEED-2 first concrete consumer.
-pub mod expr_arena_analysis;
-/// Bounded LRU store of per-region dispatch performance
-/// records. Backends populate via `record(region, kernel_ns,
-/// bytes_touched)`; the optimizer queries `is_hot(region)` /
-/// `mean_kernel_ns(region)` to prioritise pass scheduling per
-/// region. Default-empty so passes that consume the hint must
-/// remain correct on the cold path.
-pub mod hot_path_hints;
 /// Alternatives derived from the laws a combine declares, through a bounded
 /// e-graph expansion over an expression mirror.
 pub mod law_saturation;
@@ -111,25 +86,11 @@ pub mod level_pipeline;
 /// Megakernel-fusion-scheduler subsystem (homotopy weight oracle +
 /// matroid subset selection).
 pub mod megakernel;
-/// Proof-producing multi-level equality saturation and Pareto-optimal extraction.
-pub mod multi_level_eqsat;
 /// Contributor-facing optimizer catalog derived from the live pass registry.
 pub mod pass_catalog;
-/// Stable pass-explanation records derived from scheduler metrics and the live
-/// optimizer catalog.
-pub(crate) mod pass_explain;
-/// Pass verifier: runs every registered pass against a synthetic corpus
-/// and asserts cost-monotone-down plus structural validity. Surfaces
-/// contract violations at test time so they're caught before merge instead
-/// of at the scheduler's runtime gate.
-pub mod pass_invariants;
-/// Machine-checkable pass-order validation for release gates and contributors.
-pub(crate) mod pass_order;
 /// What a pass answers the scheduler with: run or skip, the rewritten program,
 /// and the typed reason it declined.
 mod pass_result;
-/// Benchmark/hot-path-driven pass selection.
-pub(crate) mod pass_selection;
 pub mod passes;
 /// Backend-neutral planar rewrite batching used by optimizer passes.
 pub(crate) mod planar_batch;
@@ -146,12 +107,6 @@ pub(crate) mod rewrite;
 /// Declared level, preconditions, effects, numerical contract, proof witness,
 /// profitability, and expansion bound of every registered rewriting pass.
 pub mod rewrite_contract;
-/// SMT-LIB proof obligations for proof-carrying rewrites.
-pub mod rewrite_proof;
-/// N3  -  registry of shipped rewrite proof obligations consumed by the
-/// `vyre xtask verify-rewrite-proofs` runner and the
-/// `vyre-rewrite-proofs` GitHub Actions workflow.
-pub mod rewrite_proof_registry;
 mod scheduler;
 #[cfg(test)]
 #[path = "../../tests/internal/optimizer/mod.rs"]
@@ -162,19 +117,7 @@ pub use derived_order::{
     derive_pass_order, derive_registered_pass_order, DerivedPassEdge, DerivedPassEdgeKind,
     DerivedPassNode, DerivedPassOrder,
 };
-pub use fusion_cert::FusionCertificate;
-pub use pass_explain::{
-    explain_optimizer_report, explain_optimizer_report_with_catalog, CatalogLookupStatus,
-    PassExplanation, PassMetricDelta,
-};
-pub use pass_order::{
-    validate_registered_pass_order, validate_scheduled_pass_order, PassOrderValidation,
-};
 pub use pass_result::{PassAnalysis, PassResult, RefusalReason};
-pub use pass_selection::{
-    registered_passes_for_profile_and_program, select_pass_metadata_for_program,
-    PassSelectionDecision, PassSelectionReason,
-};
 pub use planar_batch::{
     default_planar_rewrite_batch_threshold, planar_rewrite_schedule_mask, RewriteBatch,
     RewriteBatchCandidates, RewriteBatchItem, RewriteBatchPlan, RewriteCandidate,
@@ -797,25 +740,6 @@ pub fn optimize_for_adapter(
         .with_linear_type_enforcement(true)
         .with_shape_predicate_enforcement(true)
         .run(program)
-}
-
-/// Run selected optimizer passes for `program` using hot-path telemetry.
-///
-/// Expensive pass families are instantiated only when the Program's shape or
-/// recorded dispatch telemetry justifies them; required dependencies are kept
-/// automatically so scheduler invariants remain intact.
-///
-/// # Errors
-/// Returns [`OptimizerError`] when selection or scheduling fails, or when the
-/// selected pass pipeline does not converge.
-pub fn optimize_with_hot_path_hints(
-    program: Program,
-    profile: OptimizerProfile,
-    hints: &hot_path_hints::HotPathHints,
-) -> Result<Program, OptimizerError> {
-    let passes =
-        pass_selection::registered_passes_for_profile_and_program(profile, &program, hints)?;
-    PassScheduler::try_with_passes(passes)?.run(program)
 }
 
 /// 32-byte BLAKE3 fingerprint of a Program for content-addressed pipeline

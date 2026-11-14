@@ -24,9 +24,3 @@ pub mod schedule_oracle;
 
 /// Greedy matroid-style fusion subset selection.
 pub mod matroid_subset;
-
-/// escape-fact-driven scratch reuse plan. Walks
-/// every Region in the program and queries `ProgramFacts::
-/// buffer_escapes` to identify per-arm buffers the runtime can
-/// recycle into a shared scratch pool.
-pub mod scratch_reuse;

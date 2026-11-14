@@ -122,10 +122,6 @@ pub mod composition_tagging_contracts;
 #[path = "const_fold_shift_fusion_amount_overflow.rs"]
 pub mod const_fold_shift_fusion_amount_overflow;
 
-/// Integration tests from `tests/construct_law_closure.rs`.
-#[path = "construct_law_closure.rs"]
-pub mod construct_law_closure;
-
 /// Integration tests from `tests/consumer_boundary.rs`.
 #[path = "consumer_boundary.rs"]
 pub mod consumer_boundary;
@@ -161,10 +157,6 @@ pub mod dialect_contracts;
 /// Integration tests from `tests/dialect_schema_translation_closure_contracts.rs`.
 #[path = "dialect_schema_translation_closure_contracts.rs"]
 pub mod dialect_schema_translation_closure_contracts;
-
-/// Integration tests from `tests/eqsat_gpu_mirror.rs`.
-#[path = "eqsat_gpu_mirror.rs"]
-pub mod eqsat_gpu_mirror;
 
 /// Integration tests from `tests/eqsat_unproved_rule_refusal.rs`.
 #[path = "eqsat_unproved_rule_refusal.rs"]
@@ -465,21 +457,9 @@ pub mod optimizer_pass_borrow_preservation;
 #[path = "optimizer_perf_regression.rs"]
 pub mod optimizer_perf_regression;
 
-/// Integration tests from `tests/optimizer_proof_contracts.rs`.
-#[path = "optimizer_proof_contracts.rs"]
-pub mod optimizer_proof_contracts;
-
 /// Integration tests from `tests/optimizer_reference_parity_smoke.rs`.
 #[path = "optimizer_reference_parity_smoke.rs"]
 pub mod optimizer_reference_parity_smoke;
-
-/// Integration tests from `tests/optimizer_rewrite_proof_contracts.rs`.
-#[path = "optimizer_rewrite_proof_contracts.rs"]
-pub mod optimizer_rewrite_proof_contracts;
-
-/// Integration tests from `tests/optimizer_rewrite_proof_registry_contracts.rs`.
-#[path = "optimizer_rewrite_proof_registry_contracts.rs"]
-pub mod optimizer_rewrite_proof_registry_contracts;
 
 /// Integration tests from `tests/optimizer_value_dependent_reference_parity.rs`.
 #[path = "optimizer_value_dependent_reference_parity.rs"]
@@ -488,10 +468,6 @@ pub mod optimizer_value_dependent_reference_parity;
 /// Integration tests from `tests/output_set_roundtrip.rs`.
 #[path = "output_set_roundtrip.rs"]
 pub mod output_set_roundtrip;
-
-/// Integration tests from `tests/parallelism_subgroup_operand_reads.rs`.
-#[path = "parallelism_subgroup_operand_reads.rs"]
-pub mod parallelism_subgroup_operand_reads;
 
 /// Integration tests from `tests/pipeline_compiles_for_the_adapter_it_was_given.rs`.
 #[path = "pipeline_compiles_for_the_adapter_it_was_given.rs"]
@@ -688,10 +664,6 @@ pub mod text_format_boundary;
 #[path = "tile_nodes_contracts.rs"]
 pub mod tile_nodes_contracts;
 
-/// Integration tests from `tests/transform_contract_classification.rs`.
-#[path = "transform_contract_classification.rs"]
-pub mod transform_contract_classification;
-
 /// Integration tests from `tests/transform_rewrites_still_fire.rs`.
 #[path = "transform_rewrites_still_fire.rs"]
 pub mod transform_rewrites_still_fire;
@@ -808,21 +780,9 @@ pub mod causal_contracts;
 #[path = "platform_support_matrix.rs"]
 pub mod platform_support_matrix;
 
-/// Integration tests from `tests/security_contracts.rs`.
-#[path = "security_contracts.rs"]
-pub mod security_contracts;
-
-/// Integration tests from `tests/declarative_schema_registry_contracts.rs`.
-#[path = "declarative_schema_registry_contracts.rs"]
-pub mod declarative_schema_registry_contracts;
-
 /// Integration tests from `tests/typed_configuration_schema_contracts.rs`.
 #[path = "typed_configuration_schema_contracts.rs"]
 pub mod typed_configuration_schema_contracts;
-
-/// Integration tests from `tests/resource_abi_contract.rs`.
-#[path = "resource_abi_contract.rs"]
-pub mod resource_abi_contract;
 
 /// Integration tests from `tests/compiler_substrate_contract.rs`.
 #[path = "compiler_substrate_contract.rs"]

@@ -203,12 +203,6 @@ pub mod declarative_schema_registry_coverage;
 /// Integration tests from `tests/operation_law_contract_records.rs`.
 #[path = "operation_law_contract_records.rs"]
 pub mod operation_law_contract_records;
-/// Integration tests from `tests/protocol_compatibility_matrix.rs`.
-#[path = "protocol_compatibility_matrix.rs"]
-pub mod protocol_compatibility_matrix;
-/// Integration tests from `tests/resource_capability_contracts.rs`.
-#[path = "resource_capability_contracts.rs"]
-pub mod resource_capability_contracts;
 /// Integration tests from `tests/wire_tag_surface.rs`.
 #[path = "wire_tag_surface.rs"]
 pub mod wire_tag_surface;

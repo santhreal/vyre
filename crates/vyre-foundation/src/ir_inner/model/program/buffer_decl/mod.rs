@@ -478,7 +478,7 @@ impl BufferDecl {
     ///
     /// The other half of [`Self::is_backend_allocated_output`], and the single
     /// definition of the host input ABI: `inputs` carries one value per buffer
-    /// this returns true for, in binding order. `vyre_driver`'s binding-role
+    /// this returns true for, in binding order. `vyre_runtime`'s binding-role
     /// mapping, `vyre_reference::is_reference_input`, and every backend read
     /// this rather than re-deriving it. Three copies of the rule existed, and
     /// they disagreed on a `Shared`-kind buffer, a `Persistent`-kind buffer and

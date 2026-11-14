@@ -17,8 +17,6 @@ pub mod canonicalize_engine;
 pub mod const_fold;
 /// Hardware quirk normalization (atomic ordering / scope edge cases).
 pub mod normalize_atomics;
-/// Mixed-precision + transcendental fast-path emit hints.
-pub mod precision_hint;
 /// Shift identities and chained-shift fusion shared by folding and reduction.
 pub(crate) mod shift_fusion;
 /// Algebraic rewrites derived from operation specifications.

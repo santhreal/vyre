@@ -24,8 +24,8 @@ use std::sync::LazyLock;
 use rustc_hash::FxHashMap;
 use vyre_spec::{
     ExtensionAtomicOp, ExtensionAtomicOpId, ExtensionBinOp, ExtensionBinOpId, ExtensionDataType,
-    ExtensionDataTypeId, ExtensionIdentity, ExtensionSchema,
-    ExtensionSchemaDigest, ExtensionUnOp, ExtensionUnOpId,
+    ExtensionDataTypeId, ExtensionIdentity, ExtensionSchema, ExtensionSchemaDigest, ExtensionUnOp,
+    ExtensionUnOpId,
 };
 
 pub use vyre_spec::{
@@ -237,7 +237,6 @@ impl ExtensionCatalogBundle {
         *blake3::hash(&bytes).as_bytes()
     }
 }
-
 
 // ---------------------------------------------------------------------
 // Registration types (one per extendable IR kind).

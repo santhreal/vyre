@@ -71,7 +71,7 @@ pub enum SyncScope {
     Workgroup,
     /// Grid-scope barrier (every block in the dispatch). Only some hardware
     /// supports this natively; backends that don't lower it must split the
-    /// kernel at the barrier (see `vyre-driver::grid_sync`).
+    /// kernel at the barrier (see `vyre-runtime::grid_sync`).
     Grid,
 }
 

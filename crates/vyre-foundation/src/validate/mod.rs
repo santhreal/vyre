@@ -72,6 +72,7 @@ pub mod linear_type;
 /// Every per-node validation rule, one owner each, shared by the production
 /// single-pass walk and the differential test's second walk.
 mod node_rules;
+#[cfg(test)]
 mod self_composition;
 mod shadowing;
 /// Shape-refinement predicate checker (P-1.0-V3.2). Evaluates each

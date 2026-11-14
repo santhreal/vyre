@@ -263,10 +263,13 @@ impl<'a> WireReader<'a> {
             needed: usize::MAX,
             got: self.src.len(),
         })?;
-        let end = self.cursor.checked_add(bytes_needed).ok_or(EnvelopeError::Truncated {
-            needed: usize::MAX,
-            got: self.src.len(),
-        })?;
+        let end = self
+            .cursor
+            .checked_add(bytes_needed)
+            .ok_or(EnvelopeError::Truncated {
+                needed: usize::MAX,
+                got: self.src.len(),
+            })?;
         if self.src.len() < end {
             return Err(EnvelopeError::Truncated {
                 needed: end,

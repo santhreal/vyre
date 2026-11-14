@@ -140,8 +140,6 @@ pub mod python_token;
 /// Declarative law families a rewrite may cite.
 /// Specification element.
 mod region_law;
-/// Domain-neutral resource, image, view, plane, sampler, external memory, and timeline sync capabilities.
-mod resource_capability;
 /// Declarative schema registry for all persisted and wire formats.
 pub mod schema_registry;
 /// Canonical semiring selector for dataflow and algebraic kernels.
@@ -226,9 +224,9 @@ pub use extension::{
     ExtensionAtomicOp, ExtensionAtomicOpId, ExtensionBinOp, ExtensionBinOpId, ExtensionDataType,
     ExtensionDataTypeId, ExtensionField, ExtensionFieldType, ExtensionIdentity, ExtensionNamespace,
     ExtensionNumericalContract, ExtensionOperand, ExtensionOperandKind, ExtensionProofFieldKind,
-    ExtensionProofFields, ExtensionResourceBounds, ExtensionSchema,
-    ExtensionSchemaDigest, ExtensionSemVer, ExtensionShapeRule, ExtensionTernaryOp,
-    ExtensionTernaryOpId, ExtensionUnOp, ExtensionUnOpId,
+    ExtensionProofFields, ExtensionResourceBounds, ExtensionSchema, ExtensionSchemaDigest,
+    ExtensionSemVer, ExtensionShapeRule, ExtensionTernaryOp, ExtensionTernaryOpId, ExtensionUnOp,
+    ExtensionUnOpId,
 };
 /// See [`float_type::FloatType`].
 /// Specification element.
@@ -326,25 +324,6 @@ pub use un_op::UnOp;
 /// Intrinsic descriptors.
 /// Specification element.
 mod intrinsic_descriptor;
-pub use compatibility::{
-    derive_artifact_identity, CacheNamespace, CompatibilityCell, CompatibilityDisposition,
-    CompatibilityMatrix, GenerationId, NegotiatedContract, NegotiationError, ProtocolDomain,
-    ProtocolVersion, RetainedSessionScope, RolloutManager, SessionScopeError, SessionStatus,
-    StaleGenerationError, CANONICAL_COMPATIBILITY_CELLS,
-};
+pub use compatibility::{CompatibilityDisposition, ProtocolDomain, ProtocolVersion};
 /// See [`intrinsic_descriptor::IntrinsicDescriptor`] and its identifying types.
 pub use intrinsic_descriptor::{Backend, BackendId, CpuFn, IntrinsicDescriptor};
-pub use resource_capability::{
-    all_address_modes, all_alias_set_kinds, all_border_colors, all_color_interpretations,
-    all_compare_functions, all_external_event_kinds, all_external_memory_kinds, all_filter_modes,
-    all_format_classes, all_image_formats, all_image_view_kinds, all_layout_states,
-    all_lifetime_state_kinds, all_mipmap_filter_modes, all_plane_kinds, all_provenance_kinds,
-    all_swizzle_components, all_sync_protocols, all_usage_flags, AddressMode,
-    AdmittedResourceRecord, BorderColor, ColorInterpretation, CompareFunction, ComponentSwizzle,
-    ExternalEventCapability, ExternalEventKind, ExternalMemoryCapability, ExternalMemoryKind,
-    FilterMode, FormatClass, ImageDimensions, ImageFormat, ImagePlane, ImageViewDescriptor,
-    ImageViewKind, MipmapFilterMode, PlaneKind, ResourceAbiError, ResourceAliasSet,
-    ResourceLayoutState, ResourceLifetimeState, ResourceOwnershipState, ResourcePermittedUsages,
-    ResourceProvenance, ResourceUsageTransition, SamplerCapability, SamplerDescriptor,
-    SubresourceRange, SwizzleComponent, TimelineSyncProtocol,
-};

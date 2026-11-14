@@ -7,8 +7,6 @@
 /// The one owner of the buffer-interference proof both `dead_store_elim` and
 /// `store_to_load_forward` need before either may rewrite across a gap.
 mod alias;
-/// Compile-time constant-buffer load folding.
-pub mod const_buffer_fold;
 /// Remove declared buffers that cannot affect any output.
 pub mod dead_buffer_elim;
 /// Drop sibling `Node::Store` whose value is overwritten before any

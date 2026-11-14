@@ -103,23 +103,6 @@ fn pack_le_wire_words_into<T: LeWireWord>(values: &[T], out: &mut Vec<u8>) {
     append_le_wire_words(values, out);
 }
 
-fn try_pack_le_wire_words_into<T: LeWireWord>(
-    values: &[T],
-    out: &mut Vec<u8>,
-    item_label: &str,
-    output_label: &str,
-) -> Result<(), String> {
-    let byte_len = values.len().checked_mul(T::WIDTH).ok_or_else(|| {
-        format!(
-            "{item_label} count {} overflows host byte indexing. Fix: shard the buffer.",
-            values.len()
-        )
-    })?;
-    reserve_exact_len(out, byte_len, output_label)?;
-    pack_le_wire_words_into(values, out);
-    Ok(())
-}
-
 /// Decode `count` little-endian `T` values from the front of `src` into `out`,
 /// reusing `out`'s existing allocation. `out` is cleared first.
 ///
@@ -183,43 +166,6 @@ fn fill_le_words_into<T: LeWireWord>(src: &[u8], count: usize, out: &mut Vec<T>)
     }
 }
 
-/// Borrow a `&[u32]` as little-endian bytes without copying on little-endian
-/// hosts.
-#[must_use]
-#[inline]
-pub fn borrow_u32_le_bytes(words: &[u32]) -> std::borrow::Cow<'_, [u8]> {
-    #[cfg(target_endian = "little")]
-    {
-        std::borrow::Cow::Borrowed(bytemuck::cast_slice(words))
-    }
-    #[cfg(target_endian = "big")]
-    {
-        std::borrow::Cow::Owned(pack_u32_slice(words))
-    }
-}
-
-/// View a little-endian byte slice as `&[u32]` without copying when 4-byte
-/// aligned on a little-endian host, falling back to an owned decode when
-/// unaligned or big-endian.
-pub fn view_u32_le_words<'a>(
-    bytes: &'a [u8],
-    label: &str,
-) -> Result<std::borrow::Cow<'a, [u32]>, String> {
-    if bytes.len() % 4 != 0 {
-        return Err(format!(
-            "{label}: u32 byte stream length {} is not a multiple of 4. Fix: align buffer byte length to 4-byte words.",
-            bytes.len()
-        ));
-    }
-    #[cfg(target_endian = "little")]
-    if let Ok(words) = bytemuck::try_cast_slice::<u8, u32>(bytes) {
-        return Ok(std::borrow::Cow::Borrowed(words));
-    }
-    let mut out = Vec::new();
-    unpack_u32_slice_into(bytes, bytes.len() / 4, label, &mut out)?;
-    Ok(std::borrow::Cow::Owned(out))
-}
-
 /// Pack a `&[u32]` into little-endian bytes for `DataType::U32` storage buffers.
 #[must_use]
 pub fn pack_u32_slice(words: &[u32]) -> Vec<u8> {
@@ -234,11 +180,6 @@ pub fn pack_u32_slice(words: &[u32]) -> Vec<u8> {
 /// so the wire format is identical across hosts.
 pub fn pack_u32_slice_into(words: &[u32], out: &mut Vec<u8>) {
     pack_le_wire_words_into(words, out);
-}
-
-/// Fallible `u32` little-endian pack into caller-owned byte storage.
-pub fn try_pack_u32_slice_into(words: &[u32], out: &mut Vec<u8>) -> Result<(), String> {
-    try_pack_le_wire_words_into(words, out, "u32 byte pack word", "u32 byte pack output")
 }
 
 /// Pack `&[u32]` into `out` as little-endian bytes, padded to at least
@@ -284,32 +225,19 @@ pub fn pack_u32_slice_min_words_into(
 /// Panics when the packed length overflows the wire ABI; see [`pack_u32_slice_into`].
 #[must_use]
 pub fn pack_bytes_as_u32_slice(bytes: &[u8]) -> Vec<u8> {
-    let mut out = Vec::new();
-    for byte in bytes {
-        out.extend_from_slice(&[*byte, 0, 0, 0]);
+    let mut out = Vec::with_capacity(bytes.len().saturating_mul(4));
+    for &byte in bytes {
+        out.extend_from_slice(&[byte, 0, 0, 0]);
     }
     out
 }
 
-/// Pack raw bytes into per-lane `u32` storage using caller-owned byte storage.
-pub fn pack_bytes_as_u32_slice_into(bytes: &[u8], out: &mut Vec<u8>) {
+fn pack_bytes_as_u32_slice_into(bytes: &[u8], out: &mut Vec<u8>) {
     out.clear();
-    for byte in bytes {
-        out.extend_from_slice(&[*byte, 0, 0, 0]);
+    out.reserve(bytes.len().saturating_mul(4));
+    for &byte in bytes {
+        out.extend_from_slice(&[byte, 0, 0, 0]);
     }
-}
-
-/// Fallible byte-lane pack using caller-owned byte storage.
-pub fn try_pack_bytes_as_u32_slice_into(bytes: &[u8], out: &mut Vec<u8>) -> Result<(), String> {
-    let byte_len = bytes.len().checked_mul(4).ok_or_else(|| {
-        format!(
-            "byte-lane pack word count {} overflows host byte indexing. Fix: shard the buffer.",
-            bytes.len()
-        )
-    })?;
-    reserve_exact_len(out, byte_len, "byte-lane pack output")?;
-    pack_bytes_as_u32_slice_into(bytes, out);
-    Ok(())
 }
 
 /// Pack raw bytes into per-lane `u32` storage (low 8 bits per word),
@@ -330,7 +258,7 @@ pub fn pack_bytes_as_u32_slice_min_words(
 
 /// Pack raw bytes into per-lane `u32` storage with a minimum word count,
 /// using caller-owned byte storage.
-pub fn pack_bytes_as_u32_slice_min_words_into(
+fn pack_bytes_as_u32_slice_min_words_into(
     bytes: &[u8],
     min_words: usize,
     out: &mut Vec<u8>,
@@ -364,57 +292,6 @@ pub fn pack_f32_slice(values: &[f32]) -> Vec<u8> {
 /// `cast_slice` copy on LE hosts, scalar fallback on BE hosts.
 pub fn pack_f32_slice_into(values: &[f32], out: &mut Vec<u8>) {
     pack_le_wire_words_into(values, out);
-}
-/// Fallible `f32` little-endian pack into caller-owned byte storage.
-pub fn try_pack_f32_slice_into(values: &[f32], out: &mut Vec<u8>) -> Result<(), String> {
-    try_pack_le_wire_words_into(values, out, "f32 byte pack value", "f32 byte pack output")
-}
-
-#[cfg(test)]
-mod fallible_pack_wrapper_tests {
-    use super::{
-        pack_bytes_as_u32_slice, pack_bytes_as_u32_slice_into, pack_f32_slice_into,
-        pack_u32_slice_into, try_pack_bytes_as_u32_slice_into, try_pack_f32_slice_into,
-        try_pack_u32_slice_into,
-    };
-
-    #[test]
-    fn convenience_wrappers_match_fallible_packers() {
-        let words = [0x0102_0304_u32, 0xaabb_ccdd];
-        let mut compat_words = Vec::new();
-        let mut fallible_words = Vec::new();
-        pack_u32_slice_into(&words, &mut compat_words);
-        try_pack_u32_slice_into(&words, &mut fallible_words)
-            .expect("Fix: small u32 wire pack must reserve");
-        assert_eq!(compat_words, fallible_words);
-
-        let bytes = b"abc";
-        assert_eq!(pack_bytes_as_u32_slice(bytes), {
-            let mut out = Vec::new();
-            try_pack_bytes_as_u32_slice_into(bytes, &mut out)
-                .expect("Fix: small byte-lane wire pack must reserve");
-            out
-        });
-
-        let floats = [1.0_f32, -0.0, f32::INFINITY];
-        let mut compat_floats = Vec::new();
-        let mut fallible_floats = Vec::new();
-        pack_f32_slice_into(&floats, &mut compat_floats);
-        try_pack_f32_slice_into(&floats, &mut fallible_floats)
-            .expect("Fix: small f32 wire pack must reserve");
-        assert_eq!(compat_floats, fallible_floats);
-    }
-
-    #[test]
-    fn caller_owned_byte_lane_wrapper_reuses_existing_buffer() {
-        let mut compat = Vec::with_capacity(16);
-        let ptr = compat.as_ptr();
-
-        pack_bytes_as_u32_slice_into(b"xy", &mut compat);
-
-        assert_eq!(compat, vec![b'x', 0, 0, 0, b'y', 0, 0, 0]);
-        assert_eq!(compat.as_ptr(), ptr);
-    }
 }
 
 /// Decode a packed LE-`u32` byte buffer back into `out` as `Vec<u32>`,
@@ -494,20 +371,15 @@ pub fn unpack_f32_slice(bytes: &[u8], count: usize, label: &str) -> Result<Vec<f
 #[must_use]
 pub fn decode_f32_le_bytes_all(bytes: &[u8]) -> Vec<f32> {
     let mut out = Vec::new();
-    for chunk in bytes.chunks_exact(4) {
-        out.push(f32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
-    }
+    fill_le_words_into::<f32>(bytes, bytes.len() / 4, &mut out);
     out
 }
 
-/// Test-grade decode helper that drains an entire LE-`u32` byte buffer.
-/// Companion to [`decode_f32_le_bytes_all`].
+/// Decode an entire LE-`u32` byte buffer into `Vec<u32>`, dropping any trailing partial word.
 #[must_use]
 pub fn decode_u32_le_bytes_all(bytes: &[u8]) -> Vec<u32> {
     let mut out = Vec::new();
-    for chunk in bytes.chunks_exact(4) {
-        out.push(u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
-    }
+    fill_le_words_into::<u32>(bytes, bytes.len() / 4, &mut out);
     out
 }
 
@@ -559,16 +431,8 @@ pub fn pack_i32_slice_into(values: &[i32], out: &mut Vec<u8>) {
 #[must_use]
 pub fn decode_i32_le_bytes_all(bytes: &[u8]) -> Vec<i32> {
     let mut out = Vec::new();
-    for chunk in bytes.chunks_exact(4) {
-        out.push(i32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]));
-    }
+    fill_le_words_into::<i32>(bytes, bytes.len() / 4, &mut out);
     out
-}
-/// Pack a `&[u64]` into little-endian bytes for 8-byte storage buffers.
-#[cfg(test)]
-#[must_use]
-pub fn pack_u64_slice(values: &[u64]) -> Vec<u8> {
-    pack_le_wire_words_owned(values)
 }
 
 /// Pack `&[u64]` into `out`. LE bytemuck fast path; 8 bytes per value.
@@ -580,18 +444,8 @@ pub fn pack_u64_slice_into(values: &[u64], out: &mut Vec<u8>) {
 #[must_use]
 pub fn decode_u64_le_bytes_all(bytes: &[u8]) -> Vec<u64> {
     let mut out = Vec::new();
-    for chunk in bytes.chunks_exact(8) {
-        out.push(u64::from_le_bytes([
-            chunk[0], chunk[1], chunk[2], chunk[3], chunk[4], chunk[5], chunk[6], chunk[7],
-        ]));
-    }
+    fill_le_words_into::<u64>(bytes, bytes.len() / 8, &mut out);
     out
-}
-/// Pack a `&[u16]` into little-endian bytes for `f16`/`bf16` storage.
-#[cfg(test)]
-#[must_use]
-pub fn pack_u16_slice(values: &[u16]) -> Vec<u8> {
-    pack_le_wire_words_owned(values)
 }
 
 /// Pack `&[u16]` into `out`. LE bytemuck fast path; 2 bytes per value.
@@ -613,38 +467,15 @@ fn pack_le_wire_words_owned<T: LeWireWord>(values: &[T]) -> Vec<u8> {
     }
 }
 
-/// Pack a `&[u32]` into a freshly-allocated `Vec<u8>` through the
-/// direct owned fast path.
-///
-/// On little-endian hosts this is the bandwidth-floor implementation:
-/// one allocation + one `memcpy` via `bytemuck::cast_slice(...).to_vec()`,
-/// no scalar loop and no streaming adapter overhead. This is the
-/// canonical owned packing implementation used by [`pack_u32_slice`].
-///
-/// On big-endian hosts the function falls back to the scalar loop into
-/// a pre-reserved Vec so the wire format stays bit-identical.
-#[cfg(test)]
-#[must_use]
-pub fn pack_u32_slice_into_uninit(words: &[u32]) -> Vec<u8> {
-    pack_le_wire_words_owned(words)
-}
-
-/// Pack a `&[f32]` into a freshly-allocated `Vec<u8>` without zero-fill.
-/// Same shape as [`pack_u32_slice_into_uninit`] for the f32 wire path.
-#[cfg(test)]
-#[must_use]
-pub fn pack_f32_slice_into_uninit(values: &[f32]) -> Vec<u8> {
-    pack_le_wire_words_owned(values)
-}
-
 /// Append raw bytes onto `out` as one `u32` per byte (low 8 bits, zero
 /// high bits). Streaming companion to [`pack_bytes_as_u32_slice`] -
 /// no intermediate `Vec` allocation, no clear of `out`. Used by header
 /// builders that concatenate a packed-lane byte stream onto a composite
 /// GPU haystack buffer in one extension pass.
 pub fn append_packed_byte_lane(bytes: &[u8], out: &mut Vec<u8>) {
-    for byte in bytes {
-        out.extend_from_slice(&[*byte, 0, 0, 0]);
+    out.reserve(bytes.len().saturating_mul(4));
+    for &byte in bytes {
+        out.extend_from_slice(&[byte, 0, 0, 0]);
     }
 }
 
@@ -652,9 +483,7 @@ pub fn append_packed_byte_lane(bytes: &[u8], out: &mut Vec<u8>) {
 #[must_use]
 pub fn decode_u16_le_bytes_all(bytes: &[u8]) -> Vec<u16> {
     let mut out = Vec::new();
-    for chunk in bytes.chunks_exact(2) {
-        out.push(u16::from_le_bytes([chunk[0], chunk[1]]));
-    }
+    fill_le_words_into::<u16>(bytes, bytes.len() / 2, &mut out);
     out
 }
 
@@ -698,48 +527,9 @@ pub fn read_u32_le_word(bytes: &[u8], word_index: usize, label: &str) -> Result<
     }
 }
 
-/// Read one little-endian `u32` at a BYTE offset into `bytes`: the byte-addressed
-/// companion to [`read_u32_le_word`] (which is word-indexed). Use this when the
-/// caller already holds a byte offset rather than a word index; both share the
-/// same checked bounds and actionable diagnostics, so the workspace's byte-offset
-/// u32 readers decode through ONE implementation instead of re-rolling it.
-///
-/// # Errors
-/// Returns an error when `byte_offset + 4` overflows host indexing or when the
-/// four requested bytes are not fully present in `bytes`.
-pub fn read_u32_le_at(bytes: &[u8], byte_offset: usize, label: &str) -> Result<u32, String> {
-    if let Some(chunk) = bytes.get(byte_offset..).and_then(|tail| tail.get(..4)) {
-        Ok(u32::from_le_bytes([chunk[0], chunk[1], chunk[2], chunk[3]]))
-    } else {
-        Err(format!(
-            "{label}: u32 at byte offset {byte_offset} requires 4 bytes, but stream has {} bytes. Fix: backend output is truncated.",
-            bytes.len()
-        ))
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn read_u32_le_at_reads_byte_offset_and_agrees_with_word_reader() {
-        // word 0 = 0, word 1 @ byte 4 = 0x12345678
-        let bytes = [0u8, 0, 0, 0, 0x78, 0x56, 0x34, 0x12];
-        assert_eq!(read_u32_le_at(&bytes, 0, "t").unwrap(), 0);
-        assert_eq!(read_u32_le_at(&bytes, 4, "t").unwrap(), 0x1234_5678);
-        // The byte-offset reader at 4*word must equal the word-indexed reader at word.
-        assert_eq!(
-            read_u32_le_at(&bytes, 4, "t").unwrap(),
-            read_u32_le_word(&bytes, 1, "t").unwrap()
-        );
-        // Truncation fails closed (bytes 5..9 but only 8 present), never a silent read.
-        let err = read_u32_le_at(&bytes, 5, "t").unwrap_err();
-        assert!(
-            err.contains("truncated"),
-            "expected truncation error, got: {err}"
-        );
-    }
 
     #[test]
     fn byte_lane_pack_sets_low_byte_and_zeroes_high_bytes() {
@@ -753,7 +543,7 @@ mod tests {
         out.extend_from_slice(&[0xff; 32]);
         let ptr = out.as_ptr();
 
-        try_pack_bytes_as_u32_slice_into(&[0x11, 0x22], &mut out).unwrap();
+        pack_bytes_as_u32_slice_into(&[0x11, 0x22], &mut out);
 
         assert_eq!(out, vec![0x11, 0, 0, 0, 0x22, 0, 0, 0]);
         assert_eq!(out.as_ptr(), ptr);
@@ -847,7 +637,7 @@ mod tests {
         bytes.extend_from_slice(&[0xff; 32]);
         let bytes_ptr = bytes.as_ptr();
 
-        try_pack_u32_slice_into(&words, &mut bytes).unwrap();
+        pack_u32_slice_into(&words, &mut bytes);
 
         assert_eq!(bytes, pack_u32_slice(&words));
         assert_eq!(bytes.as_ptr(), bytes_ptr);
@@ -868,7 +658,7 @@ mod tests {
         bytes.extend_from_slice(&[0xff; 32]);
         let bytes_ptr = bytes.as_ptr();
 
-        try_pack_f32_slice_into(&values, &mut bytes).unwrap();
+        pack_f32_slice_into(&values, &mut bytes);
 
         assert_eq!(bytes, pack_f32_slice(&values));
         assert_eq!(bytes.as_ptr(), bytes_ptr);
