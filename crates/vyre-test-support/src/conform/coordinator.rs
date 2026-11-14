@@ -149,15 +149,14 @@ impl WorkerCoordinator {
             "req-ref-{}",
             REQUEST_COUNTER.fetch_add(1, Ordering::Relaxed)
         );
-        let binary_digest = self.binary_digest.clone();
         let env_digest = current_environment_digest();
 
         let request = WorkerRequest::new_reference(
             req_id,
             case.clone(),
             budget,
-            &binary_digest,
-            &binary_digest,
+            &self.binary_digest,
+            &self.binary_digest,
             &env_digest,
         );
 
@@ -205,25 +204,16 @@ impl WorkerCoordinator {
             "req-prod-{}",
             REQUEST_COUNTER.fetch_add(1, Ordering::Relaxed)
         );
-        let binary_digest = self.binary_digest.clone();
         let env_digest = current_environment_digest();
-        let target_facts_digest =
-            crate::conform::backend_selection::backend_registration(backend_id)
-                .ok()
-                .and_then(|r| r.acquire().ok())
-                .map(|h| {
-                    blake3::hash(format!("{:?}", h.device_profile().compile_facts()).as_bytes())
-                        .to_hex()
-                        .to_string()
-                });
+        let target_facts_digest = target_facts_digest(backend_id);
 
         let request = WorkerRequest::new_production(
             req_id,
             case.clone(),
             lease.clone(),
             budget,
-            &binary_digest,
-            &binary_digest,
+            &self.binary_digest,
+            &self.binary_digest,
             target_facts_digest,
             &env_digest,
         );
@@ -271,14 +261,13 @@ impl WorkerCoordinator {
         budget: Option<WorkerBudget>,
     ) -> Result<WorkerReceipt, CertificateRejection> {
         let (ref_receipt, prod_receipt) = self.execute_case_pair(backend_id, case, budget);
-        let expected_binary = self.binary_digest.clone();
         let expected_env = current_environment_digest();
         let expected_target_facts = target_facts_digest(backend_id);
 
         verify_receipts_for_certificate(
             &ref_receipt,
             &prod_receipt,
-            &expected_binary,
+            &self.binary_digest,
             expected_target_facts.as_deref(),
             &expected_env,
             &case.numerical_policy,
@@ -295,29 +284,13 @@ impl WorkerCoordinator {
         let exe = match std::env::current_exe() {
             Ok(path) => path,
             Err(e) => {
-                let mut receipt = WorkerReceipt {
-                    receipt_version: WorkerReceipt::SCHEMA_VERSION,
-                    request_id: request.request_id.clone(),
-                    case_id: request.case.case_id.clone(),
-                    mode: request.mode,
-                    status: WorkerStatus::ExecutionError {
+                return self.failed_receipt(
+                    request,
+                    WorkerStatus::ExecutionError {
                         message: format!("could not resolve current_exe: {e}"),
                     },
-                    outputs: Vec::new(),
-                    outputs_blake3: String::new(),
-                    artifact_blake3: None,
-                    payload_blake3: None,
-                    target_facts_blake3: None,
-                    compiler_binary_blake3: request.compiler_binary_blake3.clone(),
-                    runner_binary_blake3: request.runner_binary_blake3.clone(),
-                    environment_blake3: request.environment_blake3.clone(),
-                    device_lease_id: request.device_lease.as_ref().map(|l| l.lease_id.clone()),
-                    elapsed_ms: 0,
-                    peak_memory_bytes: 0,
-                    auth_tag: String::new(),
-                };
-                receipt.auth_tag = receipt.compute_auth_tag(&self.auth_secret);
-                return receipt;
+                    0,
+                );
             }
         };
 
@@ -343,29 +316,13 @@ impl WorkerCoordinator {
         let mut child = match cmd.spawn() {
             Ok(c) => c,
             Err(e) => {
-                let mut receipt = WorkerReceipt {
-                    receipt_version: WorkerReceipt::SCHEMA_VERSION,
-                    request_id: request.request_id.clone(),
-                    case_id: request.case.case_id.clone(),
-                    mode: request.mode,
-                    status: WorkerStatus::ExecutionError {
+                return self.failed_receipt(
+                    request,
+                    WorkerStatus::ExecutionError {
                         message: format!("spawn worker failed for {exe:?}: {e}"),
                     },
-                    outputs: Vec::new(),
-                    outputs_blake3: String::new(),
-                    artifact_blake3: None,
-                    payload_blake3: None,
-                    target_facts_blake3: None,
-                    compiler_binary_blake3: request.compiler_binary_blake3.clone(),
-                    runner_binary_blake3: request.runner_binary_blake3.clone(),
-                    environment_blake3: request.environment_blake3.clone(),
-                    device_lease_id: request.device_lease.as_ref().map(|l| l.lease_id.clone()),
-                    elapsed_ms: 0,
-                    peak_memory_bytes: 0,
-                    auth_tag: String::new(),
-                };
-                receipt.auth_tag = receipt.compute_auth_tag(&self.auth_secret);
-                return receipt;
+                    0,
+                );
             }
         };
 
@@ -393,30 +350,15 @@ impl WorkerCoordinator {
                 Err(e) => {
                     let _ = child.kill();
                     let _ = child.wait();
-                    let mut receipt = WorkerReceipt {
-                        receipt_version: WorkerReceipt::SCHEMA_VERSION,
-                        request_id: request.request_id.clone(),
-                        case_id: request.case.case_id.clone(),
-                        mode: request.mode,
-                        status: WorkerStatus::DriverLost {
+                    let elapsed_ms =
+                        u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
+                    return self.failed_receipt(
+                        request,
+                        WorkerStatus::DriverLost {
                             message: format!("try_wait failed: {e}"),
                         },
-                        outputs: Vec::new(),
-                        outputs_blake3: String::new(),
-                        artifact_blake3: None,
-                        payload_blake3: None,
-                        target_facts_blake3: None,
-                        compiler_binary_blake3: request.compiler_binary_blake3.clone(),
-                        runner_binary_blake3: request.runner_binary_blake3.clone(),
-                        environment_blake3: request.environment_blake3.clone(),
-                        device_lease_id: request.device_lease.as_ref().map(|l| l.lease_id.clone()),
-                        elapsed_ms: u64::try_from(started.elapsed().as_millis())
-                            .unwrap_or(u64::MAX),
-                        peak_memory_bytes: 0,
-                        auth_tag: String::new(),
-                    };
-                    receipt.auth_tag = receipt.compute_auth_tag(&self.auth_secret);
-                    return receipt;
+                        elapsed_ms,
+                    );
                 }
             }
         }
@@ -428,30 +370,15 @@ impl WorkerCoordinator {
                 let _ = child.kill();
                 let _ = child.wait();
                 let elapsed_ms = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
-                let mut receipt = WorkerReceipt {
-                    receipt_version: WorkerReceipt::SCHEMA_VERSION,
-                    request_id: request.request_id.clone(),
-                    case_id: request.case.case_id.clone(),
-                    mode: request.mode,
-                    status: WorkerStatus::Timeout {
+                let budget_ms = request.budget.wall_timeout_ms;
+                return self.failed_receipt(
+                    request,
+                    WorkerStatus::Timeout {
                         elapsed_ms,
-                        budget_ms: request.budget.wall_timeout_ms,
+                        budget_ms,
                     },
-                    outputs: Vec::new(),
-                    outputs_blake3: String::new(),
-                    artifact_blake3: None,
-                    payload_blake3: None,
-                    target_facts_blake3: None,
-                    compiler_binary_blake3: request.compiler_binary_blake3.clone(),
-                    runner_binary_blake3: request.runner_binary_blake3.clone(),
-                    environment_blake3: request.environment_blake3.clone(),
-                    device_lease_id: request.device_lease.as_ref().map(|l| l.lease_id.clone()),
                     elapsed_ms,
-                    peak_memory_bytes: 0,
-                    auth_tag: String::new(),
-                };
-                receipt.auth_tag = receipt.compute_auth_tag(&self.auth_secret);
-                return receipt;
+                );
             }
         };
 
@@ -471,27 +398,8 @@ impl WorkerCoordinator {
                     message: format!("worker process failed with {status}: {stderr_str}"),
                 }
             };
-            let mut receipt = WorkerReceipt {
-                receipt_version: WorkerReceipt::SCHEMA_VERSION,
-                request_id: request.request_id.clone(),
-                case_id: request.case.case_id.clone(),
-                mode: request.mode,
-                status: worker_status,
-                outputs: Vec::new(),
-                outputs_blake3: String::new(),
-                artifact_blake3: None,
-                payload_blake3: None,
-                target_facts_blake3: None,
-                compiler_binary_blake3: request.compiler_binary_blake3.clone(),
-                runner_binary_blake3: request.runner_binary_blake3.clone(),
-                environment_blake3: request.environment_blake3.clone(),
-                device_lease_id: request.device_lease.as_ref().map(|l| l.lease_id.clone()),
-                elapsed_ms: u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX),
-                peak_memory_bytes: 0,
-                auth_tag: String::new(),
-            };
-            receipt.auth_tag = receipt.compute_auth_tag(&self.auth_secret);
-            return receipt;
+            let elapsed_ms = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
+            return self.failed_receipt(request, worker_status, elapsed_ms);
         }
 
         // If exit was success, read and decode stdout receipt
@@ -505,64 +413,63 @@ impl WorkerCoordinator {
         match parsed_receipt {
             Some(receipt) => {
                 if !receipt.verify_auth_tag(&self.auth_secret) {
-                    let mut prot_receipt = WorkerReceipt {
-                        receipt_version: WorkerReceipt::SCHEMA_VERSION,
-                        request_id: request.request_id.clone(),
-                        case_id: request.case.case_id.clone(),
-                        mode: request.mode,
-                        status: WorkerStatus::ProtocolViolation {
+                    let elapsed_ms =
+                        u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
+                    self.failed_receipt(
+                        request,
+                        WorkerStatus::ProtocolViolation {
                             message: "worker receipt failed authentication tag verification"
                                 .to_string(),
                         },
-                        outputs: Vec::new(),
-                        outputs_blake3: String::new(),
-                        artifact_blake3: None,
-                        payload_blake3: None,
-                        target_facts_blake3: None,
-                        compiler_binary_blake3: request.compiler_binary_blake3.clone(),
-                        runner_binary_blake3: request.runner_binary_blake3.clone(),
-                        environment_blake3: request.environment_blake3.clone(),
-                        device_lease_id: request.device_lease.as_ref().map(|l| l.lease_id.clone()),
-                        elapsed_ms: u64::try_from(started.elapsed().as_millis())
-                            .unwrap_or(u64::MAX),
-                        peak_memory_bytes: 0,
-                        auth_tag: String::new(),
-                    };
-                    prot_receipt.auth_tag = prot_receipt.compute_auth_tag(&self.auth_secret);
-                    prot_receipt
+                        elapsed_ms,
+                    )
                 } else {
                     receipt
                 }
             }
             None => {
                 let stdout_preview = String::from_utf8_lossy(&stdout_bytes);
-                let mut err_receipt = WorkerReceipt {
-                    receipt_version: WorkerReceipt::SCHEMA_VERSION,
-                    request_id: request.request_id.clone(),
-                    case_id: request.case.case_id.clone(),
-                    mode: request.mode,
-                    status: WorkerStatus::ProtocolViolation {
+                let elapsed_ms = u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX);
+                self.failed_receipt(
+                    request,
+                    WorkerStatus::ProtocolViolation {
                         message: format!(
                             "could not find valid worker receipt JSON in stdout: {stdout_preview}"
                         ),
                     },
-                    outputs: Vec::new(),
-                    outputs_blake3: String::new(),
-                    artifact_blake3: None,
-                    payload_blake3: None,
-                    target_facts_blake3: None,
-                    compiler_binary_blake3: request.compiler_binary_blake3.clone(),
-                    runner_binary_blake3: request.runner_binary_blake3.clone(),
-                    environment_blake3: request.environment_blake3.clone(),
-                    device_lease_id: request.device_lease.as_ref().map(|l| l.lease_id.clone()),
-                    elapsed_ms: u64::try_from(started.elapsed().as_millis()).unwrap_or(u64::MAX),
-                    peak_memory_bytes: 0,
-                    auth_tag: String::new(),
-                };
-                err_receipt.auth_tag = err_receipt.compute_auth_tag(&self.auth_secret);
-                err_receipt
+                    elapsed_ms,
+                )
             }
         }
+    }
+
+    fn failed_receipt(
+        &self,
+        request: WorkerRequest,
+        status: WorkerStatus,
+        elapsed_ms: u64,
+    ) -> WorkerReceipt {
+        let mut receipt = WorkerReceipt {
+            receipt_version: WorkerReceipt::SCHEMA_VERSION,
+            request_id: request.request_id,
+            case_id: request.case.case_id,
+            mode: request.mode,
+            status,
+            outputs: Vec::new(),
+            outputs_blake3: String::new(),
+            artifact_blake3: None,
+            payload_blake3: None,
+            target_facts_blake3: None,
+            compiler_binary_blake3: request.compiler_binary_blake3,
+            runner_binary_blake3: request.runner_binary_blake3,
+            environment_blake3: request.environment_blake3,
+            device_lease_id: request.device_lease.map(|l| l.lease_id),
+            elapsed_ms,
+            peak_memory_bytes: 0,
+            auth_tag: String::new(),
+        };
+        receipt.auth_tag = receipt.compute_auth_tag(&self.auth_secret);
+        receipt
     }
 }
 
@@ -573,15 +480,22 @@ impl WorkerCoordinator {
 /// test body when it runs one test at a time (`RUST_TEST_THREADS=1`), so the
 /// object can follow that prefix on the same line.
 fn receipt_in_stdout(stdout: &[u8]) -> Option<WorkerReceipt> {
-    String::from_utf8_lossy(stdout)
-        .lines()
+    stdout
+        .split(|&b| b == b'\n')
         .find_map(|line| {
-            let object = line[line.find('{')?..].trim_end();
-            if object.ends_with('}') {
-                serde_json::from_str::<WorkerReceipt>(object).ok()
-            } else {
-                None
+            let start = line.iter().position(|&b| b == b'{')?;
+            let mut object = &line[start..];
+            while let Some((&last, rest)) = object.split_last() {
+                if last.is_ascii_whitespace() {
+                    object = rest;
+                } else {
+                    break;
+                }
             }
+            object
+                .ends_with(b"}")
+                .then(|| serde_json::from_slice::<WorkerReceipt>(object).ok())
+                .flatten()
         })
         .or_else(|| serde_json::from_slice::<WorkerReceipt>(stdout).ok())
 }

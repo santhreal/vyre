@@ -1,11 +1,9 @@
 //! The declared exploded-supergraph (IFDS) CPU-reference case table.
 //!
 //! This module defines which cases exist and what a correct CSR for them holds
-//! ([`ExplodedIfdsCase::assert_csr`]). The arm in
-//! `vyre-libs-graph/tests/sweep_graph_cpu_oracle_matrix.rs` holds the CPU
-//! witness `vyre_reference::composition_witness::exploded_ifds_csr_witness` and
-//! the dispatched Program `vyre_libs_graph::graph::dispatch::exploded` to it.
-//!
+//! ([`ExplodedIfdsCase::assert_csr`]), shared by
+//! `vyre_reference::composition_witness::exploded_ifds_csr_witness` and
+//! `vyre_libs::graph::dispatch::exploded`.
 //! [`arm_coverage`] keeps a group from being declared and then skipped: the arm
 //! records the groups it asserted and the ledger reads this table back at run
 //! time, so a group added here with no arm turns that suite red.

@@ -1,22 +1,8 @@
 //! The declared dense byte-tile Four-Russians matvec case table, and the naive
 //! boolean-semiring oracle every arm is measured against.
 //!
-//! Two suites asserted the same contract over the same corpus generator: the
-//! primitive `dense_matvec_*` family owned by `vyre_libs_bitset::bitset::four_russians`
-//! and the substrate transform family in `vyre_libs_encoding::encoding::bitset_transform_pipeline`.
-//! The two files were identical apart from their sweep bounds, and the bounds
-//! disagreed in both directions: the primitive suite swept 0..=18 tiles by
-//! 1..=5 destination words, the substrate suite swept 0..=24 by 1..=4, so 24
-//! tiles at 5 destination words was exercised by neither. A corpus copied per
-//! crate is a corpus whose holes nobody can see, because the two copies look
-//! the same at a glance.
-//!
-//! This module owns which cases exist and what the answer is. What a crate
-//! asserts about a case stays in that crate: an arm names the API it pins.
-//! Consumers read this table from here, the same way
-//! [`crate::sweep_rng`] is shared. A copy of the table lived in each consumer's
-//! own `tests/` tree instead, which is the per-crate corpus this module was
-//! written to end.
+//! Shared case table and reference oracle for `vyre_libs::bitset::four_russians`
+//! and `vyre_libs::encoding::bitset_transform_pipeline`.
 //!
 //! [`arm_coverage`] is why a case group cannot be declared and then quietly
 //! skipped: each arm records the groups it asserted and the ledger reads this

@@ -153,9 +153,10 @@ pub(super) fn run_case(
             let requirements = case.requirements();
             let case_id = meta.id.0;
             let workload_fingerprint = workload_fingerprint(case_id.as_str(), None);
+            let held_out_corpus_id = Some(benchmark_held_out_corpus_id(&workload_fingerprint));
             return Ok(CaseReport {
-                id: case_id.clone(),
-                workload_fingerprint: workload_fingerprint.clone(),
+                id: case_id,
+                workload_fingerprint,
                 name: meta.name,
                 owner_crate: meta.owner_crate,
                 workload_class: format!("{:?}", meta.workload),
@@ -164,7 +165,7 @@ pub(super) fn run_case(
                 device_signature: Some(benchmark_device_signature(
                     ctx.preferred_backend.device_profile(),
                 )),
-                held_out_corpus_id: Some(benchmark_held_out_corpus_id(&workload_fingerprint)),
+                held_out_corpus_id,
                 needs_gpu: requirements.needs_gpu,
                 min_vram_bytes: requirements.min_vram_bytes,
                 min_input_bytes: requirements.min_input_bytes,
@@ -185,14 +186,17 @@ pub(super) fn run_case(
             });
         }
 
-        if let Some(active_ns) = d_samples
+        let has_dispatch = d_samples
             .get("dispatch_ns")
-            .filter(|samples| !samples.is_empty())
-            .or_else(|| d_samples.get("wall_ns"))
-        {
-            let mut sorted = active_ns.clone();
-            sorted.sort_unstable();
-            determinism_p50s.push(percentile(&sorted, 50.0));
+            .is_some_and(|vals| !vals.is_empty());
+        let active_key = if has_dispatch {
+            "dispatch_ns"
+        } else {
+            "wall_ns"
+        };
+        if let Some(active_ns) = d_samples.get_mut(active_key) {
+            active_ns.sort_unstable();
+            determinism_p50s.push(percentile(active_ns, 50.0));
         }
     }
     let (cached_fingerprint, compiled_ns) = ctx

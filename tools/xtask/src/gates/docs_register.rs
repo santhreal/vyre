@@ -1,7 +1,8 @@
 //! Verify prose document count, one README per crate, competitor-name absence,
 //! and register rules.
 
-use std::fs;
+use std::fs::File;
+use std::io::Read;
 use std::path::Path;
 use walkdir::WalkDir;
 
@@ -24,7 +25,7 @@ pub fn check(root: &Path) -> Result<(), Vec<String>> {
     let mut errors = Vec::new();
     let mut prose_docs = Vec::new();
     let mut crate_dirs = Vec::new();
-
+    let mut buf: Vec<u8> = Vec::with_capacity(65_536);
     for entry in WalkDir::new(root)
         .into_iter()
         .filter_entry(|e| !crate::source_scan::is_pruned(e))
@@ -41,15 +42,11 @@ pub fn check(root: &Path) -> Result<(), Vec<String>> {
         if matches!(ext, "md" | "adoc" | "rst") {
             // Transient in-flight deleted crate directories without Cargo.toml are ignored.
             if rel.starts_with("crates/") {
-                let parts: Vec<&str> = rel.split('/').collect();
-                if parts.len() >= 3
-                    && !root
-                        .join(parts[0])
-                        .join(parts[1])
-                        .join("Cargo.toml")
-                        .is_file()
-                {
-                    continue;
+                let mut parts = rel.split('/');
+                if let (Some(p0), Some(p1), Some(_)) = (parts.next(), parts.next(), parts.next()) {
+                    if !root.join(p0).join(p1).join("Cargo.toml").is_file() {
+                        continue;
+                    }
                 }
             }
             // A crate's own README is required, so it is outside the ceiling.
@@ -59,9 +56,9 @@ pub fn check(root: &Path) -> Result<(), Vec<String>> {
             if !crate_readme {
                 prose_docs.push(rel.into_owned());
             }
-            if let Ok(text) = fs::read_to_string(path) {
+            if read_into_buf(path, &mut buf) {
                 for token in BANNED_DOC_TOKENS {
-                    if text.contains(token) {
+                    if contains_bytes(&buf, token.as_bytes()) {
                         errors.push(format!(
                             "{}: contains banned token `{token}`",
                             path.display()
@@ -69,7 +66,7 @@ pub fn check(root: &Path) -> Result<(), Vec<String>> {
                     }
                 }
                 for comp in BANNED_COMPETITORS {
-                    if text.contains(comp) {
+                    if contains_bytes(&buf, comp.as_bytes()) {
                         errors.push(format!(
                             "{}: names competitor `{comp}` in tracked doc",
                             path.display()
@@ -77,12 +74,13 @@ pub fn check(root: &Path) -> Result<(), Vec<String>> {
                     }
                 }
             }
-        } else if matches!(ext, "rs" | "toml" | "yml") && !rel.starts_with("tools/xtask/") {
-            if let Ok(text) = fs::read_to_string(path) {
-                for comp in BANNED_COMPETITORS {
-                    if text.contains(comp) {
-                        errors.push(format!("{rel}: names competitor `{comp}` in tracked file"));
-                    }
+        } else if matches!(ext, "rs" | "toml" | "yml")
+            && !rel.starts_with("tools/xtask/")
+            && read_into_buf(path, &mut buf)
+        {
+            for comp in BANNED_COMPETITORS {
+                if contains_bytes(&buf, comp.as_bytes()) {
+                    errors.push(format!("{rel}: names competitor `{comp}` in tracked file"));
                 }
             }
         }
@@ -113,4 +111,18 @@ pub fn check(root: &Path) -> Result<(), Vec<String>> {
     } else {
         Err(errors)
     }
+}
+
+fn read_into_buf(path: &Path, buf: &mut Vec<u8>) -> bool {
+    buf.clear();
+    let Ok(file) = File::open(path) else {
+        return false;
+    };
+    file.take(4 * 1024 * 1024).read_to_end(buf).is_ok()
+}
+
+fn contains_bytes(haystack: &[u8], needle: &[u8]) -> bool {
+    !needle.is_empty()
+        && haystack.len() >= needle.len()
+        && haystack.windows(needle.len()).any(|w| w == needle)
 }

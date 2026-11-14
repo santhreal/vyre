@@ -1,6 +1,8 @@
 //! Zero-copy 8-line FNV-1a window duplication scanner across workspace Rust sources.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::fs::File;
+use std::io::Read;
 use std::path::Path;
 
 const WINDOW_LINES: usize = 8;
@@ -45,19 +47,25 @@ fn is_trivial(trimmed: &[u8]) -> bool {
 pub fn scan(root: &Path) -> DupReport {
     let roster = crate::workspace_manifest::source_file_roster(root);
     let mut window_owner: HashMap<u64, u32> = HashMap::with_capacity(65_536);
-    let mut dup_windows: HashMap<u64, ()> = HashMap::new();
-    let mut per_file_hashes: Vec<(u32, Vec<u64>)> = Vec::new();
+    let mut dup_windows: HashSet<u64> = HashSet::with_capacity(4_096);
+    let mut per_file_hashes: Vec<Vec<u64>> = Vec::with_capacity(roster.len());
+    let mut buf: Vec<u8> = Vec::with_capacity(65_536);
+    let mut line_hashes: Vec<u64> = Vec::with_capacity(1_024);
     let mut total_lines = 0usize;
 
     for (file_idx, rel) in roster.iter().enumerate() {
         if !rel.contains("/src/") || rel.ends_with("/tests.rs") {
             continue;
         }
-        let Ok(text) = crate::workspace_manifest::read_source_bounded(&root.join(rel)) else {
+        buf.clear();
+        let Ok(file) = File::open(root.join(rel)) else {
             continue;
         };
-        let mut line_hashes = Vec::new();
-        for line in text.as_bytes().split(|&b| b == b'\n') {
+        if file.take(4 * 1024 * 1024).read_to_end(&mut buf).is_err() {
+            continue;
+        }
+        line_hashes.clear();
+        for line in buf.split(|&b| b == b'\n') {
             let trimmed = trim_ascii(line);
             if is_trivial(trimmed) {
                 continue;
@@ -80,27 +88,26 @@ pub fn scan(root: &Path) -> DupReport {
                         window_owner.insert(wh, fid);
                     }
                     Some(&prev_fid) if prev_fid != fid => {
-                        dup_windows.insert(wh, ());
+                        dup_windows.insert(wh);
                     }
                     Some(_) => {}
                 }
             }
-            per_file_hashes.push((fid, win_hashes));
+            per_file_hashes.push(win_hashes);
         }
     }
 
     let mut duplicate_lines = 0usize;
-    for (_fid, win_hashes) in &per_file_hashes {
-        let len = win_hashes.len() + WINDOW_LINES - 1;
-        let mut mask = vec![false; len];
+    for win_hashes in &per_file_hashes {
+        let mut covered_until = 0usize;
         for (i, wh) in win_hashes.iter().enumerate() {
-            if dup_windows.contains_key(wh) {
-                for slot in &mut mask[i..i + WINDOW_LINES] {
-                    *slot = true;
-                }
+            if dup_windows.contains(wh) {
+                let start = i.max(covered_until);
+                let end = i + WINDOW_LINES;
+                duplicate_lines += end - start;
+                covered_until = end;
             }
         }
-        duplicate_lines += mask.iter().filter(|&&b| b).count();
     }
 
     let ratio_pct = if total_lines == 0 {

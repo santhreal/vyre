@@ -14,26 +14,26 @@ pub fn check(root: &Path) -> Result<(), Vec<String>> {
         return Err(vec!["invalid docs/CRATE_OWNERSHIP.toml".to_owned()]);
     };
 
-    let mut layer_ranks: BTreeMap<String, i64> = BTreeMap::new();
+    let mut layer_ranks: BTreeMap<&str, i64> = BTreeMap::new();
     if let Some(layers) = own_toml.get("layer").and_then(toml::Value::as_array) {
         for layer in layers {
             if let (Some(name), Some(rank)) = (
                 layer.get("name").and_then(toml::Value::as_str),
                 layer.get("rank").and_then(toml::Value::as_integer),
             ) {
-                layer_ranks.insert(name.to_owned(), rank);
+                layer_ranks.insert(name, rank);
             }
         }
     }
 
-    let mut pkg_layer: BTreeMap<String, String> = BTreeMap::new();
+    let mut pkg_layer: BTreeMap<&str, &str> = BTreeMap::new();
     if let Some(crates) = own_toml.get("crate").and_then(toml::Value::as_array) {
         for c in crates {
             if let (Some(pkg), Some(layer)) = (
                 c.get("package").and_then(toml::Value::as_str),
                 c.get("layer").and_then(toml::Value::as_str),
             ) {
-                pkg_layer.insert(pkg.to_owned(), layer.to_owned());
+                pkg_layer.insert(pkg, layer);
             }
         }
     }
@@ -63,14 +63,20 @@ pub fn check(root: &Path) -> Result<(), Vec<String>> {
 
     // Filter edges to workspace-internal production dependencies and check acyclicity + rank order.
     for (pkg, deps) in &edges {
-        let src_rank = pkg_layer.get(pkg).and_then(|l| layer_ranks.get(l)).copied();
+        let src_rank = pkg_layer
+            .get(pkg.as_str())
+            .and_then(|l| layer_ranks.get(l))
+            .copied();
         for dep in deps {
             if !member_names.contains(dep) {
                 continue;
             }
             if let (Some(sr), Some(dr)) = (
                 src_rank,
-                pkg_layer.get(dep).and_then(|l| layer_ranks.get(l)).copied(),
+                pkg_layer
+                    .get(dep.as_str())
+                    .and_then(|l| layer_ranks.get(l))
+                    .copied(),
             ) {
                 if sr < dr {
                     errors.push(format!(

@@ -152,19 +152,19 @@ pub fn execute_suite(
                     continue;
                 }
             };
-        let preferred_registration = match vyre_runtime::backend_registration(preferred_backend.id())
-        {
-            Ok(registration) => registration,
-            Err(error) => {
-                cases_report.push(case_failure(
-                    case,
-                    None,
-                    format!("Backend registration error: {error}"),
-                    case.performance_contract(),
-                ));
-                continue;
-            }
-        };
+        let preferred_registration =
+            match vyre_runtime::backend_registration(preferred_backend.id()) {
+                Ok(registration) => registration,
+                Err(error) => {
+                    cases_report.push(case_failure(
+                        case,
+                        None,
+                        format!("Backend registration error: {error}"),
+                        case.performance_contract(),
+                    ));
+                    continue;
+                }
+            };
         let materializer = match preferred_registration.materializer() {
             Ok(materializer) => Arc::from(materializer),
             Err(error) => {
@@ -397,19 +397,20 @@ fn case_failure(
     eprintln!("Case {} failed: {}", meta.id.0, reason);
     let case_id = meta.id.0;
     let workload_fingerprint = format!("bench-case:{case_id}");
+    let held_out_corpus_id = Some(benchmark_held_out_corpus_id(&workload_fingerprint));
     let device_signature = backend_id
         .as_ref()
         .map(|backend| format!("unprobed-backend:{backend}"));
     CaseReport {
-        id: case_id.clone(),
-        workload_fingerprint: workload_fingerprint.clone(),
+        id: case_id,
+        workload_fingerprint,
         name: meta.name,
         owner_crate: meta.owner_crate,
         workload_class: format!("{:?}", meta.workload),
         tags: meta.tags,
         backend_id,
         device_signature,
-        held_out_corpus_id: Some(benchmark_held_out_corpus_id(&workload_fingerprint)),
+        held_out_corpus_id,
         needs_gpu: requirements.needs_gpu,
         min_vram_bytes: requirements.min_vram_bytes,
         min_input_bytes: requirements.min_input_bytes,

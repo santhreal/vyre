@@ -19,50 +19,51 @@ pub(super) fn thermal_status_applies(
             .is_some_and(|stats| stats.max > 0)
 }
 
+fn insert_if_absent(metrics: &mut BTreeMap<String, MetricStats>, key: &str, value: MetricStats) {
+    if !metrics.contains_key(key) {
+        metrics.insert(key.to_owned(), value);
+    }
+}
+
 pub(super) fn normalize_benchmark_evidence_metrics(
     metrics: &mut BTreeMap<String, MetricStats>,
     cpu_digest: Option<u64>,
     gpu_digest: Option<u64>,
 ) {
     if let Some(cpu_digest) = cpu_digest {
-        metrics
-            .entry("cpu_digest".to_string())
-            .or_insert_with(|| single_sample_stats(cpu_digest));
+        insert_if_absent(metrics, "cpu_digest", single_sample_stats(cpu_digest));
     }
     if let Some(gpu_digest) = gpu_digest {
-        metrics
-            .entry("gpu_digest".to_string())
-            .or_insert_with(|| single_sample_stats(gpu_digest));
+        insert_if_absent(metrics, "gpu_digest", single_sample_stats(gpu_digest));
     }
     if let Some(active_time) = metrics
         .get("kernel_execute_ns")
         .or_else(|| metrics.get("dispatch_ns"))
         .or_else(|| metrics.get("wall_ns"))
-        .cloned()
+        .copied()
     {
-        metrics
-            .entry("active_time_ns".to_string())
-            .or_insert(active_time);
+        insert_if_absent(metrics, "active_time_ns", active_time);
     }
-    if !metrics.contains_key("batch_item_wall_ns") {
-        if let Some(wall) = metrics.get("wall_ns").cloned() {
-            metrics.insert("batch_item_wall_ns".to_string(), wall);
-        }
+    if let Some(wall) = metrics.get("wall_ns").copied() {
+        insert_if_absent(metrics, "batch_item_wall_ns", wall);
     }
     if let (Some(input), Some(output)) = (
-        metrics.get("host_to_device_bytes").cloned(),
-        metrics.get("device_to_host_bytes").cloned(),
+        metrics.get("host_to_device_bytes").copied(),
+        metrics.get("device_to_host_bytes").copied(),
     ) {
-        metrics
-            .entry("transfer_bytes".to_string())
-            .or_insert_with(|| sum_metric_stats(&input, &output));
+        if !metrics.contains_key("transfer_bytes") {
+            metrics.insert(
+                "transfer_bytes".to_owned(),
+                sum_metric_stats(&input, &output),
+            );
+        }
     } else if let Some(bytes) = metrics
         .get("bytes_touched")
         .or_else(|| metrics.get("bytes_read"))
         .or_else(|| metrics.get("bytes_written"))
-        .cloned()
+        .copied()
     {
-        metrics.entry("transfer_bytes".to_string()).or_insert(bytes);
+        insert_if_absent(metrics, "transfer_bytes", bytes);
     }
 }
 
@@ -102,59 +103,47 @@ pub(super) fn normalize_release_evidence_metrics(
         if let Some(input) = metrics
             .get("cuda_host_to_device_bytes")
             .filter(|stats| stats.max > 0)
-            .cloned()
+            .copied()
         {
-            metrics.insert("host_to_device_bytes".to_string(), input);
+            metrics.insert("host_to_device_bytes".to_owned(), input);
         }
         if let Some(output) = metrics
             .get("cuda_device_to_host_bytes")
             .filter(|stats| stats.max > 0)
-            .cloned()
+            .copied()
         {
-            metrics.insert("device_to_host_bytes".to_string(), output);
+            metrics.insert("device_to_host_bytes".to_owned(), output);
         }
     }
     if let Some(input) = metrics
         .get("input_bytes")
         .or_else(|| metrics.get("bytes_read"))
         .or_else(|| metrics.get("bytes_touched"))
-        .cloned()
+        .copied()
     {
-        metrics
-            .entry("host_to_device_bytes".to_string())
-            .or_insert(input);
+        insert_if_absent(metrics, "host_to_device_bytes", input);
     }
-    metrics
-        .entry("host_to_device_bytes".to_string())
-        .or_insert_with(|| single_sample_stats(0));
+    insert_if_absent(metrics, "host_to_device_bytes", single_sample_stats(0));
     if let Some(output) = metrics
         .get("output_bytes")
         .or_else(|| metrics.get("bytes_written"))
         .or_else(|| metrics.get("bytes_touched"))
-        .cloned()
+        .copied()
     {
-        metrics
-            .entry("device_to_host_bytes".to_string())
-            .or_insert(output);
+        insert_if_absent(metrics, "device_to_host_bytes", output);
     }
-    metrics
-        .entry("device_to_host_bytes".to_string())
-        .or_insert_with(|| single_sample_stats(0));
+    insert_if_absent(metrics, "device_to_host_bytes", single_sample_stats(0));
     if backend_id == "cuda" {
         if let Some(launches) = metrics
             .get("cuda_kernel_launches")
             .filter(|stats| stats.max > 0)
-            .cloned()
+            .copied()
         {
-            metrics
-                .entry("kernel_launches".to_string())
-                .or_insert(launches);
+            insert_if_absent(metrics, "kernel_launches", launches);
         }
     }
     if backend_id != "cpu-ref" {
-        metrics
-            .entry("kernel_launches".to_string())
-            .or_insert_with(|| single_sample_stats(1));
+        insert_if_absent(metrics, "kernel_launches", single_sample_stats(1));
     }
 }
 
@@ -162,55 +151,50 @@ pub(super) fn infer_optimization_passes_applied(
     metrics: &BTreeMap<String, MetricStats>,
     backend_id: &str,
 ) -> Vec<String> {
-    let mut passes = Vec::new();
+    let mut passes = Vec::with_capacity(10);
     let metric_positive = |name: &str| metrics.get(name).is_some_and(|stats| stats.max > 0);
-    if backend_id == "cuda" {
-        passes.push("cuda-explicit-backend-selection".to_string());
+    let launches_max = metrics.get("kernel_launches").map(|stats| stats.max);
+    // Inserted in strict ASCII order so no post-pass sort or dedup is needed.
+    if metrics.contains_key("lower_ns") || metrics.contains_key("cold_lower_ns") {
+        passes.push("backend-lowering".to_owned());
     }
-    if metrics.contains_key("cache_hit") || metrics.contains_key("cold_cache_lookup_ns") {
-        passes.push("pipeline-cache-lookup".to_string());
+    if backend_id == "cuda" {
+        passes.push("cuda-explicit-backend-selection".to_owned());
+    }
+    if metric_positive("cuda_graph_materialized_cache_hits") {
+        passes.push("cuda-graph-materialized-output-cache".to_owned());
+    }
+    if metric_positive("cuda_graph_launches") {
+        passes.push("cuda-graph-replay".to_owned());
     }
     if metric_positive("cuda_ptx_source_cache_entries")
         || metric_positive("cuda_ptx_source_cache_hits")
         || metric_positive("cuda_ptx_source_cache_misses")
     {
-        passes.push("cuda-ptx-source-cache".to_string());
-    }
-    if metric_positive("cuda_graph_launches") {
-        passes.push("cuda-graph-replay".to_string());
-    }
-    if metric_positive("cuda_graph_materialized_cache_hits") {
-        passes.push("cuda-graph-materialized-output-cache".to_string());
+        passes.push("cuda-ptx-source-cache".to_owned());
     }
     if metric_positive("cuda_host_upload_operations")
         || metric_positive("cuda_device_readback_operations")
     {
-        passes.push("cuda-transfer-operation-telemetry".to_string());
-    }
-    if metrics.contains_key("optimize_ns") || metrics.contains_key("cold_optimize_ns") {
-        passes.push("optimizer-pipeline".to_string());
-    }
-    if metrics.contains_key("lower_ns") || metrics.contains_key("cold_lower_ns") {
-        passes.push("backend-lowering".to_string());
-    }
-    if metrics
-        .get("kernel_launches")
-        .is_some_and(|stats| stats.max == 1)
-    {
-        passes.push("single-dispatch-launch-plan".to_string());
-    } else if metrics
-        .get("kernel_launches")
-        .is_some_and(|stats| stats.max > 1)
-    {
-        passes.push("multi-dispatch-launch-plan".to_string());
+        passes.push("cuda-transfer-operation-telemetry".to_owned());
     }
     if metrics.keys().any(|key| {
         key.starts_with("lower_") || key.starts_with("alias_") || key.starts_with("egraph_")
     }) {
-        passes.push("measured-lower-optimization-family".to_string());
+        passes.push("measured-lower-optimization-family".to_owned());
     }
-    passes.sort();
-    passes.dedup();
+    if launches_max.is_some_and(|max| max > 1) {
+        passes.push("multi-dispatch-launch-plan".to_owned());
+    }
+    if metrics.contains_key("optimize_ns") || metrics.contains_key("cold_optimize_ns") {
+        passes.push("optimizer-pipeline".to_owned());
+    }
+    if metrics.contains_key("cache_hit") || metrics.contains_key("cold_cache_lookup_ns") {
+        passes.push("pipeline-cache-lookup".to_owned());
+    }
+    if launches_max == Some(1) {
+        passes.push("single-dispatch-launch-plan".to_owned());
+    }
     passes
 }
 

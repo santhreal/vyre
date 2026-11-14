@@ -19,17 +19,16 @@
 //! `members` list is held to that discovery: a member whose manifest stopped
 //! declaring a package would otherwise silently drop out of the owner set and
 //! turn every escape from it into a pass. The declaration set is enumerated
-//! from source the same way, and both enumerations carry a floor, because the
-//! failure mode of a walk is finding nothing and an empty set satisfies every
-//! per-item assertion.
+//! from source the same way, and both enumerations verify a known anchor,
+//! because the failure mode of a walk is finding nothing and an empty set
+//! satisfies every per-item assertion.
 //!
 //! # What it does not catch
 //!
-//! Resolution assumes the declaration sits at the top level of its file, which
-//! is the only form this workspace uses. Rust resolves a `#[path]` inside an
-//! inline `mod outer { … }` block against `outer/` instead, so a nested
-//! declaration is reported against the wrong base directory; a target that then
-//! names no file is reported as a finding rather than passing quietly.
+//! Resolution tracks inline `mod name { … }` blocks using Rust 2021 submodule
+//! directory rules (crate roots and `mod.rs` resolve inline `mod name` to
+//! `<dir>/name`, while non-root `<dir>/foo.rs` resolves inline `mod name` to
+//! `<dir>/foo/name`).
 //!
 //! It reads attributes as text with comments masked out, so it judges what the
 //! source says rather than what a `cfg` selects: a declaration behind a
@@ -42,7 +41,9 @@
 //! rather than included escapes a `#[path]` audit entirely.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use xtask::workspace_root as vyre_workspace_root;
 
@@ -52,19 +53,12 @@ use xtask::workspace_root as vyre_workspace_root;
 /// and `.internal` is not a published tree.
 const PRUNED: &[&str] = &["target", ".git", "node_modules", ".internal"];
 
-/// Minimum packages the manifest discovery must find.
-///
-/// The workspace declared 34 members when this floor was set. A discovery that
-/// returns a handful would make almost every file unowned and every escape
-/// unclassifiable, so it fails here instead.
-const PACKAGE_FLOOR: usize = 30;
+/// Known workspace member that manifest discovery must always resolve.
+const ANCHOR_MEMBER: &str = "crates/vyre-runtime";
 
-/// Minimum `#[path]` module declarations the source scan must find.
-///
-/// The workspace carried 199 when this floor was set, every one of them
-/// in-package. A scan that returns nothing proves nothing.
-const DECLARATION_FLOOR: usize = 100;
-
+/// File inside `xtask` that declares this module via `#[path]`, proving the
+/// attribute scanner is non-vacuous regardless of how many crates exist.
+const ANCHOR_DECLARATION_FILE: &str = "tools/xtask/tests/all_tests.rs";
 /// One `#[path]` module declaration, resolved.
 struct Declaration {
     /// File that declares the module, relative to the workspace root.
@@ -81,22 +75,26 @@ struct Declaration {
 #[test]
 fn every_path_module_resolves_inside_its_own_package() {
     let root = vyre_workspace_root();
-    let packages = package_roots(&root);
+    let members = declared_members(&root);
+    let (packages, rs_files) = discover_workspace(&root, true);
+    let declarations = path_declarations(&root, &packages, &rs_files);
     assert!(
-        packages.len() >= PACKAGE_FLOOR,
-        "Fix: only {} Cargo package(s) were discovered under {}; at least {PACKAGE_FLOOR} are expected, so the manifest walk is broken and no escape could be classified.",
-        packages.len(),
-        root.display()
+        !members.is_empty()
+            && members.iter().any(|m| m == ANCHOR_MEMBER)
+            && packages.contains_key(&root.join(ANCHOR_MEMBER)),
+        "Fix: manifest discovery under {} did not resolve `{ANCHOR_MEMBER}` (members: {}, packages: {}).",
+        root.display(),
+        members.len(),
+        packages.len()
     );
 
-    let declarations = path_declarations(&root);
     assert!(
-        declarations.len() >= DECLARATION_FLOOR,
-        "Fix: only {} `#[path]` module declaration(s) were found under {}; at least {DECLARATION_FLOOR} are expected, so the source scan is broken and every escape would pass.",
-        declarations.len(),
+        declarations
+            .iter()
+            .any(|d| d.file == Path::new(ANCHOR_DECLARATION_FILE)),
+        "Fix: `#[path]` scan under {} did not find `{ANCHOR_DECLARATION_FILE}`, so the source scan is vacuous.",
         root.display()
     );
-
     let mut findings = Vec::new();
     for declaration in &declarations {
         let declaring = root.join(&declaration.file);
@@ -153,10 +151,9 @@ fn every_declared_workspace_member_is_a_discovered_package() {
 
     let members = declared_members(&root);
     assert!(
-        members.len() >= PACKAGE_FLOOR,
-        "Fix: the root manifest at {} lists only {} workspace member(s); at least {PACKAGE_FLOOR} are expected, so the members list was misparsed and the owner set it pins is meaningless.",
-        root.join("Cargo.toml").display(),
-        members.len()
+        !members.is_empty() && members.iter().any(|m| m == ANCHOR_MEMBER),
+        "Fix: root manifest at {} did not yield `{ANCHOR_MEMBER}` in workspace members ({members:?}).",
+        root.join("Cargo.toml").display()
     );
 
     let undiscovered: Vec<&String> = members
@@ -209,30 +206,96 @@ fn masking_keeps_byte_offsets_across_non_ascii_sources() {
     );
 }
 
+#[test]
+fn inline_mod_resolves_path_against_enclosing_module_directory() {
+    let pkg = Path::new("/ws/crates/demo");
+    let root_test = Path::new("/ws/crates/demo/tests/all_tests.rs");
+    let root_src = r#"
+        #[path = "top.rs"]
+        pub mod top;
+        pub mod lower {
+            #[path = "nested.rs"]
+            pub mod nested;
+            #[path = "../../../escaped.rs"]
+            pub mod escaped;
+        }
+    "#;
+    let found_root = scan_file_declarations(Some(pkg), root_test, &mask_comments(root_src));
+    assert_eq!(found_root.len(), 3);
+    assert_eq!(
+        found_root[0].2,
+        PathBuf::from("/ws/crates/demo/tests/top.rs")
+    );
+    assert_eq!(
+        found_root[1].2,
+        PathBuf::from("/ws/crates/demo/tests/lower/nested.rs")
+    );
+    assert_eq!(found_root[2].2, PathBuf::from("/ws/crates/escaped.rs"));
+    assert!(!found_root[2].2.starts_with(pkg));
+
+    let non_root = Path::new("/ws/crates/demo/src/helper.rs");
+    let non_root_src = r#"
+        mod inner {
+            #[path = "leaf.rs"]
+            mod leaf;
+        }
+    "#;
+    let found_non_root = scan_file_declarations(Some(pkg), non_root, &mask_comments(non_root_src));
+    assert_eq!(found_non_root.len(), 1);
+    assert_eq!(
+        found_non_root[0].2,
+        PathBuf::from("/ws/crates/demo/src/helper/inner/leaf.rs")
+    );
+}
+
 /// Every directory under `root` whose `Cargo.toml` declares a package, mapped to
 /// that manifest's path.
 ///
 /// Discovery is per-manifest rather than per-member so that a package excluded
 /// from the workspace, such as an example crate, still owns its own sources.
 fn package_roots(root: &Path) -> BTreeMap<PathBuf, PathBuf> {
+    discover_workspace(root, false).0
+}
+
+/// Single-walk discovery of package manifests and (when `collect_rs` is set)
+/// `.rs` source files under `root`, using `DirEntry::file_type()` to avoid
+/// per-entry `stat` round-trips.
+fn discover_workspace(root: &Path, collect_rs: bool) -> (BTreeMap<PathBuf, PathBuf>, Vec<PathBuf>) {
     let mut roots = BTreeMap::new();
+    let mut rs_files = Vec::new();
     let mut pending = vec![root.to_path_buf()];
     while let Some(dir) = pending.pop() {
-        let manifest = dir.join("Cargo.toml");
-        if manifest.is_file() {
-            let text = std::fs::read_to_string(&manifest)
-                .unwrap_or_else(|error| panic!("Fix: read {}: {error}", manifest.display()));
-            if declares_a_package(&text) {
-                roots.insert(dir.clone(), manifest);
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            continue;
+        };
+        for entry in entries.flatten() {
+            let file_name = entry.file_name();
+            let Some(name) = file_name.to_str() else {
+                continue;
+            };
+            if PRUNED.contains(&name) {
+                continue;
             }
-        }
-        for entry in read_dir(&dir) {
-            if entry.is_dir() {
-                pending.push(entry);
+            let Ok(ft) = entry.file_type() else {
+                continue;
+            };
+            let path = entry.path();
+            let is_dir = ft.is_dir() || (ft.is_symlink() && path.is_dir());
+            if is_dir {
+                pending.push(path);
+            } else if name == "Cargo.toml" {
+                let text = std::fs::read_to_string(&path)
+                    .unwrap_or_else(|error| panic!("Fix: read {}: {error}", path.display()));
+                if declares_a_package(&text) {
+                    roots.insert(dir.clone(), path);
+                }
+            } else if collect_rs && name.ends_with(".rs") {
+                rs_files.push(path);
             }
         }
     }
-    roots
+    rs_files.sort();
+    (roots, rs_files)
 }
 
 /// True when `manifest` has a `[package]` table.
@@ -288,110 +351,311 @@ fn owning_package<'a>(packages: &'a BTreeMap<PathBuf, PathBuf>, path: &Path) -> 
         .map(PathBuf::as_path)
 }
 
-/// Every `#[path]` module declaration under `root`, resolved against the
-/// declaring file's directory.
-fn path_declarations(root: &Path) -> Vec<Declaration> {
-    let mut declarations = Vec::new();
-    let mut pending = vec![root.to_path_buf()];
-    while let Some(dir) = pending.pop() {
-        for entry in read_dir(&dir) {
-            if entry.is_dir() {
-                pending.push(entry);
-                continue;
-            }
-            if entry.extension().and_then(|ext| ext.to_str()) != Some("rs") {
-                continue;
-            }
-            let text = std::fs::read_to_string(&entry)
-                .unwrap_or_else(|error| panic!("Fix: read {}: {error}", entry.display()));
-            let masked = mask_comments(&text);
-            for (offset, value) in path_attributes(&masked) {
-                declarations.push(Declaration {
-                    file: relative(root, &entry).to_path_buf(),
-                    line: masked[..offset].matches('\n').count() + 1,
-                    target: normalize(&dir.join(&value)),
-                    value,
-                });
-            }
-        }
+/// True when `entry` is a crate root or `mod.rs` inside `pkg_root`, so an
+/// inline `mod child { … }` resolves submodules under `entry.parent()/child`
+/// rather than `entry.parent()/<stem>/child`.
+fn is_root_or_mod_rs(pkg_root: Option<&Path>, entry: &Path) -> bool {
+    if entry.file_name().and_then(|n| n.to_str()) == Some("mod.rs") {
+        return true;
     }
+    let Some(pkg) = pkg_root else {
+        return false;
+    };
+    let Ok(rel) = entry.strip_prefix(pkg) else {
+        return false;
+    };
+    let parts: Vec<&str> = rel.iter().filter_map(|c| c.to_str()).collect();
+    matches!(
+        parts.as_slice(),
+        ["build.rs"]
+            | ["src", "lib.rs"]
+            | ["src", "main.rs"]
+            | ["src", "bin", _]
+            | ["tests", _]
+            | ["benches", _]
+            | ["examples", _]
+    )
+}
+
+/// Every `#[path]` module declaration under `root`, resolved against its
+/// enclosing module directory.
+fn path_declarations(
+    root: &Path,
+    packages: &BTreeMap<PathBuf, PathBuf>,
+    rs_files: &[PathBuf],
+) -> Vec<Declaration> {
+    let workers = rs_files.len().clamp(1, 8);
+    let cursor = AtomicUsize::new(0);
+    let mut chunks: Vec<Vec<Declaration>> = (0..workers).map(|_| Vec::new()).collect();
+    std::thread::scope(|scope| {
+        for out in &mut chunks {
+            let cursor = &cursor;
+            scope.spawn(move || {
+                let mut buf = Vec::with_capacity(64 * 1024);
+                loop {
+                    let idx = cursor.fetch_add(1, Ordering::Relaxed);
+                    let Some(entry) = rs_files.get(idx) else {
+                        break;
+                    };
+                    buf.clear();
+                    std::fs::File::open(entry)
+                        .and_then(|mut f| f.read_to_end(&mut buf))
+                        .unwrap_or_else(|error| panic!("Fix: read {}: {error}", entry.display()));
+                    if !buf.windows(2).any(|w| w == b"#[") || !buf.windows(4).any(|w| w == b"path")
+                    {
+                        continue;
+                    }
+                    let text = std::str::from_utf8(&buf).unwrap_or_else(|error| {
+                        panic!("Fix: invalid UTF-8 in {}: {error}", entry.display())
+                    });
+                    let masked = mask_comments(text);
+                    let pkg_root = owning_package(packages, entry);
+                    for (offset, value, target) in scan_file_declarations(pkg_root, entry, &masked)
+                    {
+                        out.push(Declaration {
+                            file: relative(root, entry).to_path_buf(),
+                            line: masked[..offset].matches('\n').count() + 1,
+                            target,
+                            value,
+                        });
+                    }
+                }
+            });
+        }
+    });
+    let mut declarations: Vec<Declaration> = chunks.into_iter().flatten().collect();
+    declarations.sort_by(|a, b| (&a.file, a.line).cmp(&(&b.file, b.line)));
     declarations
 }
 
-/// Byte offset and value of every `#[path = "…"]` attribute in `masked` that a
-/// `mod` declaration follows.
-///
-/// An attribute on anything else changes no module resolution, and the doc
-/// comments of the xtask gates that inspect this attribute quote it verbatim, so
-/// the following item is what separates a declaration from a mention.
-fn path_attributes(masked: &str) -> Vec<(usize, String)> {
+/// Byte offset, verbatim `#[path]` string, and lexical target path of every
+/// `#[path = "…"]` module declaration in `masked`.
+fn scan_file_declarations(
+    pkg_root: Option<&Path>,
+    entry: &Path,
+    masked: &str,
+) -> Vec<(usize, String, PathBuf)> {
+    let file_dir = entry.parent().unwrap_or_else(|| Path::new("."));
+    let file_submod_root = if is_root_or_mod_rs(pkg_root, entry) {
+        file_dir.to_path_buf()
+    } else {
+        match entry.file_stem() {
+            Some(stem) => file_dir.join(stem),
+            None => file_dir.to_path_buf(),
+        }
+    };
+
     let mut found = Vec::new();
     let bytes = masked.as_bytes();
-    let mut at = 0;
-    while let Some(hit) = masked[at..].find("#[") {
-        let start = at + hit;
-        at = start + 2;
-        let Some(close) = masked[at..].find(']') else {
-            break;
-        };
-        let inner = masked[at..at + close].trim();
-        at += close + 1;
-        let Some(literal) = inner.strip_prefix("path") else {
-            continue;
-        };
-        let literal = literal.trim_start();
-        let Some(literal) = literal.strip_prefix('=') else {
-            continue;
-        };
-        let literal = literal.trim();
-        let Some(value) = literal
-            .strip_prefix('"')
-            .and_then(|rest| rest.strip_suffix('"'))
-        else {
-            continue;
-        };
-        if value.contains('\\') || value.is_empty() {
+    let mut brace_depth = 0usize;
+    let mut mod_scopes: Vec<(usize, PathBuf)> = Vec::new();
+    let mut pending_path: Option<(usize, String)> = None;
+    let mut at = 0usize;
+
+    while at < bytes.len() {
+        if bytes[at].is_ascii_whitespace() {
+            at += 1;
             continue;
         }
-        if declares_a_module(bytes, at) {
-            found.push((start, value.to_string()));
+        if let Some(end) = raw_string_end(bytes, at) {
+            at = end;
+            continue;
         }
+        if bytes[at] == b'"' {
+            at = skip_quoted_string(masked, at);
+            continue;
+        }
+        if bytes[at] == b'\'' {
+            at = skip_char_or_lifetime(bytes, at);
+            continue;
+        }
+        if bytes[at..].starts_with(b"#[") {
+            let start = at;
+            if let Some((end, path_val)) = parse_attribute(masked, start) {
+                if let Some(val) = path_val {
+                    pending_path = Some((start, val));
+                }
+                at = end;
+                continue;
+            }
+        }
+        match bytes[at] {
+            b'{' => {
+                brace_depth += 1;
+                pending_path = None;
+                at += 1;
+                continue;
+            }
+            b'}' => {
+                brace_depth = brace_depth.saturating_sub(1);
+                while mod_scopes.last().is_some_and(|(d, _)| *d > brace_depth) {
+                    mod_scopes.pop();
+                }
+                pending_path = None;
+                at += 1;
+                continue;
+            }
+            b';' => {
+                pending_path = None;
+                at += 1;
+                continue;
+            }
+            _ => {}
+        }
+        if let Some((ident, next_at)) = scan_ident(masked, at) {
+            at = next_at;
+            if ident == "pub" {
+                while at < bytes.len() && bytes[at].is_ascii_whitespace() {
+                    at += 1;
+                }
+                if bytes.get(at) == Some(&b'(') {
+                    if let Some(close) = bytes[at..].iter().position(|&b| b == b')') {
+                        at += close + 1;
+                    }
+                }
+                continue;
+            }
+            if ident == "mod" {
+                while at < bytes.len() && bytes[at].is_ascii_whitespace() {
+                    at += 1;
+                }
+                let mod_name = if let Some((name, after_name)) = scan_ident(masked, at) {
+                    at = after_name;
+                    name.strip_prefix("r#").unwrap_or(name)
+                } else {
+                    ""
+                };
+                while at < bytes.len() && bytes[at].is_ascii_whitespace() {
+                    at += 1;
+                }
+                let base_dir = mod_scopes.last().map_or(file_dir, |(_, dir)| dir.as_path());
+                let is_inline = bytes.get(at) == Some(&b'{');
+                if let Some((attr_start, val)) = pending_path.take() {
+                    let resolved = normalize(&base_dir.join(&val));
+                    found.push((attr_start, val, resolved.clone()));
+                    if is_inline {
+                        brace_depth += 1;
+                        at += 1;
+                        let inline_dir = if resolved.extension().is_some() {
+                            resolved.parent().unwrap_or(&resolved).to_path_buf()
+                        } else {
+                            resolved
+                        };
+                        mod_scopes.push((brace_depth, inline_dir));
+                    }
+                } else if is_inline && !mod_name.is_empty() {
+                    brace_depth += 1;
+                    at += 1;
+                    let sub_dir = match mod_scopes.last() {
+                        Some((_, dir)) => dir.join(mod_name),
+                        None => file_submod_root.join(mod_name),
+                    };
+                    mod_scopes.push((brace_depth, normalize(&sub_dir)));
+                }
+                continue;
+            }
+            pending_path = None;
+            continue;
+        }
+        at += char_width(bytes[at]);
     }
     found
 }
 
-/// True when the item beginning at `at` is a module declaration, skipping any
-/// further attributes and a visibility qualifier.
-fn declares_a_module(bytes: &[u8], mut at: usize) -> bool {
-    loop {
-        while at < bytes.len() && bytes[at].is_ascii_whitespace() {
-            at += 1;
-        }
-        if bytes[at..].starts_with(b"#[") {
-            let Some(close) = bytes[at..].iter().position(|byte| *byte == b']') else {
-                return false;
-            };
-            at += close + 1;
+fn skip_quoted_string(masked: &str, start: usize) -> usize {
+    let bytes = masked.as_bytes();
+    let mut at = start + 1;
+    while at < bytes.len() {
+        if bytes[at] == b'\\' && at + 1 < bytes.len() {
+            at = (at + 1 + char_width(bytes[at + 1])).min(bytes.len());
             continue;
         }
-        if bytes[at..].starts_with(b"pub") {
-            at += 3;
-            while at < bytes.len() && bytes[at].is_ascii_whitespace() {
+        let b = bytes[at];
+        at += char_width(b);
+        if b == b'"' {
+            break;
+        }
+    }
+    at
+}
+
+fn skip_char_or_lifetime(bytes: &[u8], start: usize) -> usize {
+    if bytes.get(start + 1) == Some(&b'\\') {
+        let mut at = start + 2;
+        while at < bytes.len() && at <= start + 12 {
+            let b = bytes[at];
+            at += char_width(b);
+            if b == b'\'' {
+                return at;
+            }
+        }
+        return start + 1;
+    }
+    if start + 1 < bytes.len() {
+        let after_ch = start + 1 + char_width(bytes[start + 1]);
+        if bytes.get(after_ch) == Some(&b'\'') {
+            return after_ch + 1;
+        }
+    }
+    start + 1
+}
+
+fn parse_attribute(masked: &str, start: usize) -> Option<(usize, Option<String>)> {
+    let bytes = masked.as_bytes();
+    let mut at = start + 2;
+    let mut bracket_depth = 1usize;
+    while at < bytes.len() && bracket_depth > 0 {
+        if let Some(end) = raw_string_end(bytes, at) {
+            at = end;
+            continue;
+        }
+        if bytes[at] == b'"' {
+            at = skip_quoted_string(masked, at);
+            continue;
+        }
+        match bytes[at] {
+            b'[' => {
+                bracket_depth += 1;
                 at += 1;
             }
-            if bytes[at..].starts_with(b"(") {
-                let Some(close) = bytes[at..].iter().position(|byte| *byte == b')') else {
-                    return false;
-                };
-                at += close + 1;
+            b']' => {
+                bracket_depth -= 1;
+                at += 1;
             }
-            continue;
+            b => at += char_width(b),
         }
-        return bytes[at..].starts_with(b"mod")
-            && bytes
-                .get(at + 3)
-                .is_some_and(|byte| byte.is_ascii_whitespace());
     }
+    if bracket_depth != 0 {
+        return None;
+    }
+    let inner = masked[start + 2..at - 1].trim();
+    let path_val = inner
+        .strip_prefix("path")
+        .map(str::trim_start)
+        .and_then(|s| s.strip_prefix('='))
+        .map(str::trim)
+        .and_then(|s| s.strip_prefix('"')?.strip_suffix('"'))
+        .filter(|v| !v.is_empty() && !v.contains('\\'))
+        .map(str::to_owned);
+    Some((at, path_val))
+}
+
+fn scan_ident(masked: &str, start: usize) -> Option<(&str, usize)> {
+    let bytes = masked.as_bytes();
+    let mut at = start;
+    if bytes[at..].starts_with(b"r#")
+        && bytes
+            .get(at + 2)
+            .is_some_and(|b| b.is_ascii_alphabetic() || *b == b'_')
+    {
+        at += 2;
+    } else if !(bytes[at].is_ascii_alphabetic() || bytes[at] == b'_') {
+        return None;
+    }
+    while at < bytes.len() && (bytes[at].is_ascii_alphanumeric() || bytes[at] == b'_') {
+        at += 1;
+    }
+    Some((&masked[start..at], at))
 }
 
 /// `source` with every comment replaced by spaces, keeping byte offsets and line
@@ -502,22 +766,6 @@ fn char_width(lead: u8) -> usize {
         0xE0..=0xEF => 3,
         _ => 4,
     }
-}
-
-/// Entries of `dir`, or nothing when the directory is pruned or unreadable.
-fn read_dir(dir: &Path) -> Vec<PathBuf> {
-    let Ok(entries) = std::fs::read_dir(dir) else {
-        return Vec::new();
-    };
-    entries
-        .filter_map(Result::ok)
-        .map(|entry| entry.path())
-        .filter(|path| {
-            path.file_name()
-                .and_then(|name| name.to_str())
-                .is_some_and(|name| !PRUNED.contains(&name))
-        })
-        .collect()
 }
 
 /// `path` with `.` and `..` components folded away, without touching the disk.

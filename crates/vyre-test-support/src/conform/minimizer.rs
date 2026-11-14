@@ -7,7 +7,7 @@
 
 use std::time::{Duration, Instant};
 
-use vyre_foundation::ir::{BufferDecl, Expr, Node, Program};
+use vyre_foundation::ir::{Expr, Node, Program};
 use vyre_foundation::validate::validate;
 use vyre_foundation::visit::child_bodies;
 
@@ -127,37 +127,37 @@ impl CounterexampleMinimizer {
             let before_buffers = current.buffers().len();
 
             // 1. Shrink entry nodes (try removing statements)
-            current = shrink_entry_nodes(&current, &predicate, &mut steps, budget, start_time);
+            current = shrink_entry_nodes(current, &predicate, &mut steps, budget, start_time);
             if budget_exceeded(steps, budget, start_time) {
                 break;
             }
 
             // 2. Shrink nested bodies (blocks, if branches, loops)
-            current = shrink_nested_bodies(&current, &predicate, &mut steps, budget, start_time);
+            current = shrink_nested_bodies(current, &predicate, &mut steps, budget, start_time);
             if budget_exceeded(steps, budget, start_time) {
                 break;
             }
 
             // 3. Shrink expressions (simplify compound operations)
-            current = shrink_expressions(&current, &predicate, &mut steps, budget, start_time);
+            current = shrink_expressions(current, &predicate, &mut steps, budget, start_time);
             if budget_exceeded(steps, budget, start_time) {
                 break;
             }
 
             // 4. Shrink literals (shrink constant integer / float values)
-            current = shrink_literals(&current, &predicate, &mut steps, budget, start_time);
+            current = shrink_literals(current, &predicate, &mut steps, budget, start_time);
             if budget_exceeded(steps, budget, start_time) {
                 break;
             }
 
             // 5. Shrink unused buffer declarations
-            current = shrink_buffers(&current, &predicate, &mut steps, budget, start_time);
+            current = shrink_buffers(current, &predicate, &mut steps, budget, start_time);
             if budget_exceeded(steps, budget, start_time) {
                 break;
             }
 
             // 6. Shrink workgroup size toward [1, 1, 1]
-            current = shrink_workgroup_size(&current, &predicate, &mut steps, budget, start_time);
+            current = shrink_workgroup_size(current, &predicate, &mut steps, budget, start_time);
             if budget_exceeded(steps, budget, start_time) {
                 break;
             }
@@ -209,15 +209,27 @@ fn budget_exceeded(steps: usize, budget: MinimizationBudget, start_time: Instant
     false
 }
 
-fn make_program(
-    buffers: &[BufferDecl],
-    workgroup_size: [u32; 3],
-    entry: Vec<Node>,
-    entry_op_id: Option<&str>,
-) -> Program {
-    let mut prog = Program::from_raw_parts(buffers.to_vec(), workgroup_size, entry);
-    prog.entry_op_id = entry_op_id.map(ToString::to_string);
-    prog
+fn try_entry_replacement<F>(
+    program: &mut Program,
+    node_idx: usize,
+    replacement: Node,
+    predicate: &F,
+    steps: &mut usize,
+    budget: MinimizationBudget,
+    start_time: Instant,
+) -> bool
+where
+    F: Fn(&Program) -> bool,
+{
+    let mut candidate_entry = program.entry().to_vec();
+    candidate_entry[node_idx] = replacement;
+    let candidate = program.with_rewritten_entry(candidate_entry);
+    if let Some(accepted) = try_candidate(candidate, predicate, steps, budget, start_time) {
+        *program = accepted;
+        true
+    } else {
+        false
+    }
 }
 
 fn try_candidate<F>(
@@ -242,7 +254,7 @@ where
 }
 
 fn shrink_entry_nodes<F>(
-    program: &Program,
+    mut program: Program,
     predicate: &F,
     steps: &mut usize,
     budget: MinimizationBudget,
@@ -251,32 +263,25 @@ fn shrink_entry_nodes<F>(
 where
     F: Fn(&Program) -> bool,
 {
-    let mut current_entry = program.entry().to_vec();
-    let buffers = program.buffers();
-    let workgroup_size = program.workgroup_size;
-    let op_id = program.entry_op_id.as_deref();
-
     let mut i = 0;
-    while i < current_entry.len() {
+    while i < program.entry().len() {
         if budget_exceeded(*steps, budget, start_time) {
             break;
         }
-        let mut candidate_entry = current_entry.clone();
+        let mut candidate_entry = program.entry().to_vec();
         candidate_entry.remove(i);
-
-        let candidate = make_program(buffers, workgroup_size, candidate_entry, op_id);
+        let candidate = program.with_rewritten_entry(candidate_entry);
         if let Some(accepted) = try_candidate(candidate, predicate, steps, budget, start_time) {
-            current_entry = accepted.entry().to_vec();
+            program = accepted;
         } else {
             i += 1;
         }
     }
-
-    make_program(buffers, workgroup_size, current_entry, op_id)
+    program
 }
 
 fn shrink_nested_bodies<F>(
-    program: &Program,
+    mut program: Program,
     predicate: &F,
     steps: &mut usize,
     budget: MinimizationBudget,
@@ -285,102 +290,103 @@ fn shrink_nested_bodies<F>(
 where
     F: Fn(&Program) -> bool,
 {
-    let mut current_entry = program.entry().to_vec();
-    let buffers = program.buffers();
-    let workgroup_size = program.workgroup_size;
-    let op_id = program.entry_op_id.as_deref();
-
-    for node_idx in 0..current_entry.len() {
+    for node_idx in 0..program.entry().len() {
         if budget_exceeded(*steps, budget, start_time) {
             break;
         }
-        match current_entry[node_idx].clone() {
+        match &program.entry()[node_idx] {
             Node::If {
                 cond,
                 then,
                 otherwise,
-            } => {
-                // Try replacing with empty otherwise
-                if !otherwise.is_empty() {
-                    let mut candidate_entry = current_entry.clone();
-                    candidate_entry[node_idx] = Node::If {
-                        cond: cond.clone(),
-                        then: then.clone(),
-                        otherwise: Vec::new(),
-                    };
-                    let candidate = make_program(buffers, workgroup_size, candidate_entry, op_id);
-                    if let Some(accepted) =
-                        try_candidate(candidate, predicate, steps, budget, start_time)
-                    {
-                        current_entry = accepted.entry().to_vec();
-                    }
-                }
+            } if !otherwise.is_empty() => {
+                let replacement = Node::If {
+                    cond: cond.clone(),
+                    then: then.clone(),
+                    otherwise: Vec::new(),
+                };
+                let _ = try_entry_replacement(
+                    &mut program,
+                    node_idx,
+                    replacement,
+                    predicate,
+                    steps,
+                    budget,
+                    start_time,
+                );
             }
-            Node::Loop {
-                var,
-                from,
-                to,
-                body,
-            } => {
-                // Try removing nodes inside the loop body
-                let mut current_body = body.clone();
+            Node::Loop { .. } => {
                 let mut b_idx = 0;
-                while b_idx < current_body.len() {
+                loop {
                     if budget_exceeded(*steps, budget, start_time) {
                         break;
                     }
-                    let mut candidate_body = current_body.clone();
+                    let Node::Loop {
+                        var,
+                        from,
+                        to,
+                        body,
+                    } = &program.entry()[node_idx]
+                    else {
+                        break;
+                    };
+                    if b_idx >= body.len() {
+                        break;
+                    }
+                    let mut candidate_body = body.clone();
                     candidate_body.remove(b_idx);
-
-                    let mut candidate_entry = current_entry.clone();
-                    candidate_entry[node_idx] = Node::Loop {
+                    let replacement = Node::Loop {
                         var: var.clone(),
                         from: from.clone(),
                         to: to.clone(),
                         body: candidate_body,
                     };
-                    let candidate = make_program(buffers, workgroup_size, candidate_entry, op_id);
-                    if let Some(accepted) =
-                        try_candidate(candidate, predicate, steps, budget, start_time)
-                    {
-                        current_entry = accepted.entry().to_vec();
-                        if let Node::Loop { body: new_b, .. } = &current_entry[node_idx] {
-                            current_body = new_b.clone();
-                        }
-                    } else {
+                    if !try_entry_replacement(
+                        &mut program,
+                        node_idx,
+                        replacement,
+                        predicate,
+                        steps,
+                        budget,
+                        start_time,
+                    ) {
                         b_idx += 1;
                     }
                 }
             }
-            Node::Region {
-                generator,
-                source_region,
-                body,
-            } => {
-                let mut current_body = body.clone();
+            Node::Region { .. } => {
                 let mut b_idx = 0;
-                while b_idx < current_body.len() {
+                loop {
                     if budget_exceeded(*steps, budget, start_time) {
                         break;
                     }
-                    let mut candidate_body = (*current_body).clone();
+                    let Node::Region {
+                        generator,
+                        source_region,
+                        body,
+                    } = &program.entry()[node_idx]
+                    else {
+                        break;
+                    };
+                    if b_idx >= body.len() {
+                        break;
+                    }
+                    let mut candidate_body = (**body).clone();
                     candidate_body.remove(b_idx);
-
-                    let mut candidate_entry = current_entry.clone();
-                    candidate_entry[node_idx] = Node::Region {
+                    let replacement = Node::Region {
                         generator: generator.clone(),
                         source_region: source_region.clone(),
                         body: std::sync::Arc::new(candidate_body),
                     };
-                    let candidate = make_program(buffers, workgroup_size, candidate_entry, op_id);
-                    if let Some(accepted) =
-                        try_candidate(candidate, predicate, steps, budget, start_time)
-                    {
-                        current_entry = accepted.entry().to_vec();
-                        if let Node::Region { body: new_b, .. } = &current_entry[node_idx] {
-                            current_body = new_b.clone();
-                        }
-                    } else {
+                    if !try_entry_replacement(
+                        &mut program,
+                        node_idx,
+                        replacement,
+                        predicate,
+                        steps,
+                        budget,
+                        start_time,
+                    ) {
                         b_idx += 1;
                     }
                 }
@@ -388,8 +394,7 @@ where
             _ => {}
         }
     }
-
-    make_program(buffers, workgroup_size, current_entry, op_id)
+    program
 }
 
 fn simplify_expr(expr: &Expr) -> Vec<Expr> {
@@ -421,7 +426,7 @@ fn simplify_expr(expr: &Expr) -> Vec<Expr> {
 }
 
 fn shrink_expressions<F>(
-    program: &Program,
+    mut program: Program,
     predicate: &F,
     steps: &mut usize,
     budget: MinimizationBudget,
@@ -430,79 +435,68 @@ fn shrink_expressions<F>(
 where
     F: Fn(&Program) -> bool,
 {
-    let mut current_entry = program.entry().to_vec();
-    let buffers = program.buffers();
-    let workgroup_size = program.workgroup_size;
-    let op_id = program.entry_op_id.as_deref();
-
-    for node_idx in 0..current_entry.len() {
+    for node_idx in 0..program.entry().len() {
         if budget_exceeded(*steps, budget, start_time) {
             break;
         }
-        let node = &current_entry[node_idx];
-        match node {
+        let replacements: Vec<Node> = match &program.entry()[node_idx] {
             Node::Let { name, value } => {
-                for simplified in simplify_expr(value) {
-                    let mut candidate_entry = current_entry.clone();
-                    candidate_entry[node_idx] = Node::Let {
+                let name = name.clone();
+                simplify_expr(value)
+                    .into_iter()
+                    .map(|simplified| Node::Let {
                         name: name.clone(),
                         value: simplified,
-                    };
-                    let candidate = make_program(buffers, workgroup_size, candidate_entry, op_id);
-                    if let Some(accepted) =
-                        try_candidate(candidate, predicate, steps, budget, start_time)
-                    {
-                        current_entry = accepted.entry().to_vec();
-                        break;
-                    }
-                }
+                    })
+                    .collect()
             }
             Node::Assign { name, value } => {
-                for simplified in simplify_expr(value) {
-                    let mut candidate_entry = current_entry.clone();
-                    candidate_entry[node_idx] = Node::Assign {
+                let name = name.clone();
+                simplify_expr(value)
+                    .into_iter()
+                    .map(|simplified| Node::Assign {
                         name: name.clone(),
                         value: simplified,
-                    };
-                    let candidate = make_program(buffers, workgroup_size, candidate_entry, op_id);
-                    if let Some(accepted) =
-                        try_candidate(candidate, predicate, steps, budget, start_time)
-                    {
-                        current_entry = accepted.entry().to_vec();
-                        break;
-                    }
-                }
+                    })
+                    .collect()
             }
             Node::Store {
                 buffer,
                 index,
                 value,
             } => {
-                for simplified in simplify_expr(value) {
-                    let mut candidate_entry = current_entry.clone();
-                    candidate_entry[node_idx] = Node::Store {
+                let buffer = buffer.clone();
+                let index = index.clone();
+                simplify_expr(value)
+                    .into_iter()
+                    .map(|simplified| Node::Store {
                         buffer: buffer.clone(),
                         index: index.clone(),
                         value: simplified,
-                    };
-                    let candidate = make_program(buffers, workgroup_size, candidate_entry, op_id);
-                    if let Some(accepted) =
-                        try_candidate(candidate, predicate, steps, budget, start_time)
-                    {
-                        current_entry = accepted.entry().to_vec();
-                        break;
-                    }
-                }
+                    })
+                    .collect()
             }
-            _ => {}
+            _ => Vec::new(),
+        };
+        for replacement in replacements {
+            if try_entry_replacement(
+                &mut program,
+                node_idx,
+                replacement,
+                predicate,
+                steps,
+                budget,
+                start_time,
+            ) {
+                break;
+            }
         }
     }
-
-    make_program(buffers, workgroup_size, current_entry, op_id)
+    program
 }
 
 fn shrink_literals<F>(
-    program: &Program,
+    mut program: Program,
     predicate: &F,
     steps: &mut usize,
     budget: MinimizationBudget,
@@ -511,83 +505,73 @@ fn shrink_literals<F>(
 where
     F: Fn(&Program) -> bool,
 {
-    let mut current_entry = program.entry().to_vec();
-    let buffers = program.buffers();
-    let workgroup_size = program.workgroup_size;
-    let op_id = program.entry_op_id.as_deref();
-
-    for node_idx in 0..current_entry.len() {
+    for node_idx in 0..program.entry().len() {
         if budget_exceeded(*steps, budget, start_time) {
             break;
         }
-        let node = &current_entry[node_idx];
-        match node {
+        let replacements: Vec<Node> = match &program.entry()[node_idx] {
             Node::Let {
                 name,
                 value: Expr::LitU32(val),
             } if *val > 1 => {
-                for &smaller in &[0, 1, val / 2] {
-                    let mut candidate_entry = current_entry.clone();
-                    candidate_entry[node_idx] = Node::Let {
+                let name = name.clone();
+                let half = val / 2;
+                [0, 1, half]
+                    .into_iter()
+                    .map(|smaller| Node::Let {
                         name: name.clone(),
                         value: Expr::LitU32(smaller),
-                    };
-                    let candidate = make_program(buffers, workgroup_size, candidate_entry, op_id);
-                    if let Some(accepted) =
-                        try_candidate(candidate, predicate, steps, budget, start_time)
-                    {
-                        current_entry = accepted.entry().to_vec();
-                        break;
-                    }
-                }
+                    })
+                    .collect()
             }
             Node::Let {
                 name,
                 value: Expr::LitI32(val),
             } if *val != 0 && *val != 1 => {
-                for &smaller in &[0, 1, val / 2] {
-                    let mut candidate_entry = current_entry.clone();
-                    candidate_entry[node_idx] = Node::Let {
+                let name = name.clone();
+                let half = val / 2;
+                [0, 1, half]
+                    .into_iter()
+                    .map(|smaller| Node::Let {
                         name: name.clone(),
                         value: Expr::LitI32(smaller),
-                    };
-                    let candidate = make_program(buffers, workgroup_size, candidate_entry, op_id);
-                    if let Some(accepted) =
-                        try_candidate(candidate, predicate, steps, budget, start_time)
-                    {
-                        current_entry = accepted.entry().to_vec();
-                        break;
-                    }
-                }
+                    })
+                    .collect()
             }
             Node::Let {
                 name,
                 value: Expr::LitF32(val),
             } if *val != 0.0 && *val != 1.0 => {
-                for &smaller in &[0.0, 1.0] {
-                    let mut candidate_entry = current_entry.clone();
-                    candidate_entry[node_idx] = Node::Let {
+                let name = name.clone();
+                [0.0_f32, 1.0_f32]
+                    .into_iter()
+                    .map(|smaller| Node::Let {
                         name: name.clone(),
                         value: Expr::LitF32(smaller),
-                    };
-                    let candidate = make_program(buffers, workgroup_size, candidate_entry, op_id);
-                    if let Some(accepted) =
-                        try_candidate(candidate, predicate, steps, budget, start_time)
-                    {
-                        current_entry = accepted.entry().to_vec();
-                        break;
-                    }
-                }
+                    })
+                    .collect()
             }
-            _ => {}
+            _ => Vec::new(),
+        };
+        for replacement in replacements {
+            if try_entry_replacement(
+                &mut program,
+                node_idx,
+                replacement,
+                predicate,
+                steps,
+                budget,
+                start_time,
+            ) {
+                break;
+            }
         }
     }
-
-    make_program(buffers, workgroup_size, current_entry, op_id)
+    program
 }
 
 fn shrink_buffers<F>(
-    program: &Program,
+    mut program: Program,
     predicate: &F,
     steps: &mut usize,
     budget: MinimizationBudget,
@@ -596,32 +580,25 @@ fn shrink_buffers<F>(
 where
     F: Fn(&Program) -> bool,
 {
-    let mut current_buffers = program.buffers().to_vec();
-    let entry = program.entry().to_vec();
-    let workgroup_size = program.workgroup_size;
-    let op_id = program.entry_op_id.as_deref();
-
     let mut i = 0;
-    while i < current_buffers.len() {
+    while i < program.buffers().len() {
         if budget_exceeded(*steps, budget, start_time) {
             break;
         }
-        let mut candidate_buffers = current_buffers.clone();
+        let mut candidate_buffers = program.buffers().to_vec();
         candidate_buffers.remove(i);
-
-        let candidate = make_program(&candidate_buffers, workgroup_size, entry.clone(), op_id);
+        let candidate = program.with_rewritten_buffers(candidate_buffers);
         if let Some(accepted) = try_candidate(candidate, predicate, steps, budget, start_time) {
-            current_buffers = accepted.buffers().to_vec();
+            program = accepted;
         } else {
             i += 1;
         }
     }
-
-    make_program(&current_buffers, workgroup_size, entry, op_id)
+    program
 }
 
 fn shrink_workgroup_size<F>(
-    program: &Program,
+    mut program: Program,
     predicate: &F,
     steps: &mut usize,
     budget: MinimizationBudget,
@@ -630,16 +607,16 @@ fn shrink_workgroup_size<F>(
 where
     F: Fn(&Program) -> bool,
 {
-    let buffers = program.buffers();
-    let entry = program.entry().to_vec();
-    let op_id = program.entry_op_id.as_deref();
-
-    if program.workgroup_size != [1, 1, 1] {
-        let candidate = make_program(buffers, [1, 1, 1], entry.clone(), op_id);
-        if let Some(accepted) = try_candidate(candidate, predicate, steps, budget, start_time) {
-            return accepted;
+    let orig = program.workgroup_size;
+    if orig != [1, 1, 1] {
+        program.workgroup_size = [1, 1, 1];
+        *steps += 1;
+        if budget_exceeded(*steps, budget, start_time)
+            || !validate(&program).is_empty()
+            || !predicate(&program)
+        {
+            program.workgroup_size = orig;
         }
     }
-
-    program.clone()
+    program
 }
