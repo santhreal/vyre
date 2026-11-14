@@ -2726,13 +2726,14 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   (`eigenvector_column_sign`), and diagonal extraction
   (`matrix_diagonal_extract`) across declared workgroup lanes (`LANES = 64`),
   preserving sequential Givens rotation on lane 0 behind workgroup barriers.
-- `reasoning::finite_category` states each construction once. Left and right
-  Kan extension were four functions differing in whether the fold summed or
-  multiplied and whether it ran per object or over a table; they are now
-  `kan_extension_at` and `kan_extension_table` taking a `KanDirection`, over
-  one shared fold. `is_adjoint_pair` is `adjoint_pair`, because it returns the
-  pair and its witness rather than a bool, and `yoneda_natural_iso` is
-  `natural_transformation_count`, because a count is what it returns.
+- `vyre_reference::composition_witness` states each finite-category
+  construction once. Left and right Kan extension were four functions differing
+  in whether the fold summed or multiplied and whether it ran per object or
+  over a table; they are now `kan_extension_at_witness` and
+  `kan_extension_table_witness` taking a `KanDirection`, over one shared fold.
+  `adjoint_pair_witness` returns the pair and its witness rather than a bool,
+  and `natural_transformation_count_witness` returns the count of natural
+  transformations.
 - `KernelOpKind` is enumerated in exactly one place.
   `vyre-lower/src/op_facts.rs` owns an exhaustive match with no wildcard arm
   answering both per-kind questions the workspace asks: which operand names the
@@ -4601,15 +4602,16 @@ Backend crates carried at that version: `vyre-driver-cuda@0.8.0`, `vyre-driver-w
   c11_enclosing_function_lparen_for_row and
   c11_builtin_declaration_kind_for_row are registered operations with reference
   oracles, and one shared owner emits the phase program buffer contract.
-- Five domains left `vyre-primitives` for `vyre-libs`, because an operation
-  belongs in `vyre-primitives` only when it cannot be composed, meaning it
-  needs its own backend emitter arm and its own reference-interpreter arm. None
-  of these did: `cat` is now `reasoning::finite_category`, `zx` is
-  `reasoning::zx_diagram`, `dnnf` is `reasoning::dnnf`, `types::linear_check`
-  and `types::shape_smt` and the whole `effects` domain collapse into
-  `analysis`. The `cat`, `zx`, `dnnf`, `types` and `effects` features are gone
-  with them, and `vyre-libs` reasoning now depends on `vyre-primitives/graph`
-  alone.
+- Five domains left `vyre-primitives`, because an operation belongs in
+  `vyre-primitives` only when it cannot be composed, meaning it needs its own
+  backend emitter arm and its own reference-interpreter arm. None of these did:
+  the `cat`, `zx` and `dnnf` host constructions are witnesses in
+  `vyre_reference::composition_witness`, the d-DNNF device evaluator is
+  `vyre_libs_graph::graph::knowledge_compile::ddnnf_evaluate`, and
+  `types::linear_check`, `types::shape_smt` and the whole `effects` domain
+  collapse into `analysis`. The `cat`, `zx`, `dnnf`, `types` and `effects`
+  features are gone with them, and `vyre-libs` reasoning now depends on
+  `vyre-primitives/graph` alone.
 - `vyre-runtime/src/uring/` exposes its flat parent re-exports and nothing
   else. Its six submodules were public alongside those re-exports, giving every
   type two paths, and the io_uring ABI structures and opcodes were public from

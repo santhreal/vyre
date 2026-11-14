@@ -215,3 +215,189 @@ fn adjustment_set_safety_and_descendants() {
     ));
     assert!(adjustment_set_pass_descendants_witness(&[], 0).is_empty());
 }
+
+fn z(phase_num: u32) -> ZxSpider {
+    ZxSpider {
+        color: ZxColor::Z,
+        phase_num,
+    }
+}
+
+fn x(phase_num: u32) -> ZxSpider {
+    ZxSpider {
+        color: ZxColor::X,
+        phase_num,
+    }
+}
+
+fn zx(spiders: Vec<ZxSpider>, edges: Vec<(u32, u32)>) -> ZxDiagram {
+    ZxDiagram {
+        phase_denom: 8,
+        spiders,
+        edges,
+    }
+}
+
+#[test]
+fn dnnf_count_matches_brute_force_enumeration() {
+    let clauses = vec![vec![(0, true), (1, false)], vec![(1, true), (2, true)]];
+    let dag = compile_dnnf_witness(&clauses, 3, 8);
+    let brute_force = (0u8..8)
+        .filter(|assignment| {
+            let bits = [
+                assignment & 1 != 0,
+                assignment & 2 != 0,
+                assignment & 4 != 0,
+            ];
+            (bits[0] || !bits[1]) && (bits[1] || bits[2])
+        })
+        .count() as u64;
+    assert_eq!(dnnf_model_count_witness(&dag), brute_force);
+}
+
+#[test]
+fn dnnf_count_smooths_every_free_variable() {
+    for (num_vars, models) in [(0, 1), (1, 2), (5, 32)] {
+        let dag = compile_dnnf_witness(&[], num_vars, 4);
+        assert_eq!(
+            dnnf_model_count_witness(&dag),
+            models,
+            "{num_vars} free vars"
+        );
+    }
+}
+
+#[test]
+fn dnnf_count_saturates_instead_of_wrapping() {
+    let dag = compile_dnnf_witness(&[], 64, 4);
+    assert_eq!(dnnf_model_count_witness(&dag), u64::MAX);
+    assert!(!dnnf_is_tautology_witness(&dag, 64));
+}
+
+#[test]
+fn adjoint_pair_rejects_a_partial_adjunction() {
+    let cat = FiniteCategory::discrete(2);
+    let swap = FiniteFunctor {
+        object_map: vec![1, 0],
+    };
+    let result = adjoint_pair_witness(&cat, &cat, &FiniteFunctor::identity(2), &swap);
+    assert!(!result.is_adjoint);
+    assert!(result.witness.is_some());
+}
+
+#[test]
+fn identity_is_self_adjoint_at_every_size() {
+    for n in [1, 2, 4, 8] {
+        let cat = FiniteCategory::discrete(n);
+        let id = FiniteFunctor::identity(n);
+        assert!(
+            adjoint_pair_witness(&cat, &cat, &id, &id).is_adjoint,
+            "n = {n}"
+        );
+    }
+}
+
+#[test]
+fn kan_extension_table_matches_pointwise_in_both_directions() {
+    let k = FiniteFunctor {
+        object_map: vec![0, 0, 1],
+    };
+    let f = [3, 5, 7];
+    for direction in [KanDirection::Left, KanDirection::Right] {
+        let table = kan_extension_table_witness(direction, &k, &f, 3);
+        let pointwise: Vec<u32> = (0..3)
+            .map(|c| kan_extension_at_witness(direction, &k, &f, c))
+            .collect();
+        assert_eq!(table, pointwise);
+    }
+}
+
+#[test]
+fn kan_extension_along_identity_is_pointwise_no_op() {
+    let k = FiniteFunctor::identity(4);
+    let f = [11, 22, 33, 44];
+    for direction in [KanDirection::Left, KanDirection::Right] {
+        for c in 0..4 {
+            assert_eq!(
+                kan_extension_at_witness(direction, &k, &f, c),
+                f[c as usize]
+            );
+        }
+    }
+}
+
+#[test]
+fn kan_extension_fold_saturates_instead_of_wrapping() {
+    let k = FiniteFunctor {
+        object_map: vec![0, 0, 0],
+    };
+    let f = [u32::MAX; 3];
+    assert_eq!(
+        kan_extension_at_witness(KanDirection::Left, &k, &f, 0),
+        u32::MAX
+    );
+    assert_eq!(
+        kan_extension_at_witness(KanDirection::Right, &k, &f, 0),
+        u32::MAX
+    );
+}
+
+#[test]
+fn natural_transformation_count_is_the_image_cardinality() {
+    let discrete = FiniteCategory::discrete(3);
+    for f_at_x in [0, 1, 2, 5, 100, u32::MAX] {
+        assert_eq!(
+            natural_transformation_count_witness(&discrete, 0, f_at_x),
+            f_at_x
+        );
+    }
+    let rich = FiniteCategory {
+        n: 2,
+        hom_size: vec![3, 5, 2, 4],
+    };
+    assert_eq!(natural_transformation_count_witness(&rich, 1, 7), 7);
+}
+
+#[test]
+fn zx_fusion_leaves_a_cross_color_edge_intact() {
+    let d = zx(vec![z(1), x(3)], vec![(0, 1)]);
+    assert_eq!(zx_spider_fusion_witness(d.clone()), d);
+}
+
+#[test]
+fn zx_fusion_wraps_phase_modulo_denominator() {
+    let fused = zx_spider_fusion_witness(zx(vec![z(5), z(5)], vec![(0, 1)]));
+    assert_eq!(fused.spiders, vec![z(2)]);
+}
+
+#[test]
+fn zx_fusion_collapses_a_chain() {
+    let fused = zx_spider_fusion_witness(zx(vec![z(1), z(2), z(3)], vec![(0, 1), (1, 2)]));
+    assert_eq!(fused.spiders, vec![z(6)]);
+    assert!(fused.edges.is_empty());
+}
+
+#[test]
+fn zx_identity_removal_keeps_non_zero_phase_and_self_loops() {
+    let phased = zx(vec![z(1), z(1), z(2)], vec![(0, 1), (1, 2)]);
+    assert_eq!(zx_identity_removal_witness(phased.clone()), phased);
+    let looped = zx(vec![z(0)], vec![(0, 0), (0, 0)]);
+    assert_eq!(zx_identity_removal_witness(looped.clone()), looped);
+}
+
+#[test]
+fn zx_color_change_is_an_involution_preserving_phase() {
+    let mut d = zx(vec![z(3)], vec![]);
+    zx_color_change_witness(&mut d, 0);
+    assert_eq!(d.spiders, vec![x(3)]);
+    zx_color_change_witness(&mut d, 0);
+    assert_eq!(d.spiders, vec![z(3)]);
+}
+
+#[test]
+fn zx_simplification_reaches_a_single_spider() {
+    let simplified =
+        zx_simplified_diagram_witness(zx(vec![z(1), z(0), z(2)], vec![(0, 1), (1, 2)]));
+    assert_eq!(simplified.spiders, vec![z(3)]);
+    assert!(simplified.edges.is_empty());
+}

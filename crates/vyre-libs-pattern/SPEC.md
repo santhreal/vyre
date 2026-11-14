@@ -21,7 +21,6 @@ Out of this crate, into:
 
 - `vyre-foundation` over the `foundation-ir` seam.
 - `vyre-libs-builder` over the `libs-builder` seam.
-- `vyre-libs-hash` over the `libs-hash` seam.
 - `vyre-libs-math` over the `libs-math` seam.
 - `vyre-primitives` over the `primitive-library` seam.
 
