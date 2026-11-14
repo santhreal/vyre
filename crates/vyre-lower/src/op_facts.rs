@@ -138,19 +138,6 @@ pub fn facts_for(kind: &KernelOpKind) -> OpFacts {
     }
 }
 
-/// Return true when a result-producing op can be removed if all of its result
-/// ids are unused.
-///
-/// Stricter than "writes memory": structural control ops, async protocol ops,
-/// calls, regions, and opaque nodes are kept even when they expose no directly
-/// used result id, because their nested bodies or backend contracts may carry
-/// observable behavior. Descriptor-level side-effect reporting is a different
-/// question and lives on `KernelDescriptor`.
-#[must_use]
-pub(crate) fn kernel_op_kind_is_dce_pure(kind: &KernelOpKind) -> bool {
-    !facts_for(kind).retained_effect
-}
-
 /// True when the op kind represents an ambient thread ID, subgroup property, or constant literal.
 #[must_use]
 pub(crate) fn is_ambient_or_literal(kind: &KernelOpKind) -> bool {
@@ -165,7 +152,7 @@ pub(crate) fn is_ambient_or_literal(kind: &KernelOpKind) -> bool {
     )
 }
 
-// Inline: covers the crate-private `kernel_op_kind_is_dce_pure`, which no integration test can reach.
+// Inline: covers `facts_for` across the retained/removable split.
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -173,39 +160,37 @@ mod tests {
     use vyre_foundation::ir::MemoryOrdering;
     use vyre_foundation::ir::{AtomicOp, BinOp};
 
+    fn retained(kind: &KernelOpKind) -> bool {
+        facts_for(kind).retained_effect
+    }
+
     #[test]
     fn arithmetic_and_literals_are_dead_eliminable_when_unused() {
-        assert!(kernel_op_kind_is_dce_pure(&KernelOpKind::Literal));
-        assert!(kernel_op_kind_is_dce_pure(&KernelOpKind::BinOpKind(
-            BinOp::Add
-        )));
+        assert!(!retained(&KernelOpKind::Literal));
+        assert!(!retained(&KernelOpKind::BinOpKind(BinOp::Add)));
     }
 
     #[test]
     fn side_effecting_and_structural_ops_are_not_dead_eliminable() {
-        assert!(!kernel_op_kind_is_dce_pure(&KernelOpKind::StoreGlobal));
-        assert!(!kernel_op_kind_is_dce_pure(&KernelOpKind::Atomic {
+        assert!(retained(&KernelOpKind::StoreGlobal));
+        assert!(retained(&KernelOpKind::Atomic {
             op: AtomicOp::Add,
             ordering: MemoryOrdering::SeqCst,
         }));
-        assert!(!kernel_op_kind_is_dce_pure(&KernelOpKind::async_load(
-            "copy".into()
-        )));
-        assert!(!kernel_op_kind_is_dce_pure(&KernelOpKind::Barrier {
+        assert!(retained(&KernelOpKind::async_load("copy".into())));
+        assert!(retained(&KernelOpKind::Barrier {
             ordering: MemoryOrdering::SeqCst,
         }));
-        assert!(!kernel_op_kind_is_dce_pure(&KernelOpKind::Return));
-        assert!(!kernel_op_kind_is_dce_pure(
-            &KernelOpKind::StructuredForLoop {
-                loop_var: "i".into(),
-            }
-        ));
-        assert!(!kernel_op_kind_is_dce_pure(&KernelOpKind::OpaqueNode(
-            Box::new(OpaqueNodeData {
+        assert!(retained(&KernelOpKind::Return));
+        assert!(retained(&KernelOpKind::StructuredForLoop {
+            loop_var: "i".into(),
+        }));
+        assert!(retained(&KernelOpKind::OpaqueNode(Box::new(
+            OpaqueNodeData {
                 extension_kind: "backend-specific".into(),
                 payload: Vec::new(),
-            })
-        )));
+            }
+        ))));
     }
 
     /// Every kind that names a child body is also retained.

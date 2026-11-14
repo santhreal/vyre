@@ -5,13 +5,7 @@
 //! binary for the whole set. A test that cannot share a process stays its own
 //! target and states why in `tools/xtask/test-harness-isolation.toml`.
 
-/// Integration tests from `tests/analysis_fixture_corpuses.rs`.
-#[path = "analysis_fixture_corpuses.rs"]
-pub mod analysis_fixture_corpuses;
 
-/// Integration tests from `tests/analysis_representation_boundary.rs`.
-#[path = "analysis_representation_boundary.rs"]
-pub mod analysis_representation_boundary;
 
 /// Integration tests from `tests/async_transaction_contracts.rs`.
 #[path = "async_transaction_contracts.rs"]
@@ -21,9 +15,6 @@ pub mod async_transaction_contracts;
 #[path = "bank_conflict_strategy_contracts.rs"]
 pub mod bank_conflict_strategy_contracts;
 
-/// Integration tests from `tests/device_fact_boundary.rs`.
-#[path = "device_fact_boundary.rs"]
-pub mod device_fact_boundary;
 
 /// Integration tests from `tests/level_stage_verdict.rs`.
 #[path = "level_stage_verdict.rs"]

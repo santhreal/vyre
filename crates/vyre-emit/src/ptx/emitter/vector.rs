@@ -393,9 +393,9 @@ fn is_vector_load_op(kind: &KernelOpKind) -> bool {
     // exactly `"global"`/`"global.nc"`, so a fused `LoadConstant` chain emits a
     // correct `ld.global[.nc].vN`.
     //
-    // Excluding it was an active Law-7 pessimization: `const_buffer_promote`
-    // rewrites read-only-global `LoadGlobal` → `LoadConstant` BEFORE emission, so
-    // every promoted read-only buffer fell out of fusion and emitted 4× scalar
+    // Excluding it was an active Law-7 pessimization: lowering emits
+    // `LoadConstant` for every read-only buffer, so each one fell out of
+    // fusion and emitted 4× scalar
     // `ld.global.u32` instead of one `ld.global.v4.u32`. It also desynced the
     // emitter from `vec_memory_fusion::MemoryFusionKind::Load::matches`, which
     // already counts `LoadConstant` as a fusion candidate.

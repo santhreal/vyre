@@ -18,4 +18,4 @@ public_reexport = "crates/vyre-emit/src/naga/emitter/mod.rs"
 schedule_config = "crates/vyre-lower/rules/schedules/emit_naga.toml"
 evidence_writer = "crates/vyre-emit/src/naga/mod.rs"
 forbid_section_dividers = true
-forbidden_private_import_prefixes = ["vyre_lower::rewrites::", "vyre_lower::analyses::"]
+forbidden_private_import_prefixes = ["vyre_lower::analyses::"]

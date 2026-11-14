@@ -23,15 +23,13 @@ fn emit_fuses_four_adjacent_u32_loads_to_ptx_vector_load() {
 
 #[test]
 fn emit_fuses_four_adjacent_load_constant_ops_to_ptx_vector_load() {
-    // Reproduces the post-`const_buffer_promote` shape: that rewrite turns a
-    // read-only-global buffer's `LoadGlobal` ops into `LoadConstant` and flips
-    // the binding to `MemoryClass::Constant` BEFORE PTX emission. This backend
+    // Reproduces the read-only buffer shape: lowering emits `LoadConstant` ops
+    // against a `MemoryClass::Constant` binding. This backend
     // has no `.const` state-space path: `load_space_for` maps Constant to the
     // global address space, so the four consecutive `LoadConstant` ops MUST
     // still fuse to one vector load. Before the fix, the emit-side
     // `is_vector_load_op` excluded `LoadConstant`, silently emitting 4x scalar
-    // loads, a 4x memory-transaction pessimization on exactly the buffers the
-    // promote pass targets.
+    // loads, a 4x memory-transaction pessimization on every read-only buffer.
     let mut ops = four_load_chain(KernelOpKind::LoadConstant);
     ops.extend([
         op(KernelOpKind::BinOpKind(BinOp::Add), [2, 4], 9),
@@ -188,7 +186,7 @@ fn vector_fusion_alignment_fallback_emits_diagnostic_comment() {
 /// What decides `.nc` is the declaration: `BindingVisibility::ReadOnly` states
 /// that the kernel does not write the slot, a store to such a slot is refused
 /// at emission, and a dispatch that binds one allocation to a read-only slot
-/// and to a writable slot is refused by `vyre_driver::ReadOnlyAliasCheck`.
+/// and to a writable slot is refused by `vyre_runtime::ReadOnlyAliasCheck`.
 ///
 /// Vectorization is orthogonal: a provably-aligned unit-stride chain of
 /// `LoadConstant` ops fuses into one 16-byte transaction rather than four

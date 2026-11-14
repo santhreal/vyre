@@ -49,8 +49,8 @@ fn empty_child_body() -> KernelBody {
 /// The op chain a four-way vector load fuses from: literal 0 is the base index
 /// and literal 1 the stride, then four loads land on result ids 2, 4, 6 and 8,
 /// each preceded by the add that steps the index. `load` selects the load kind,
-/// so the `LoadConstant` shape `const_buffer_promote` leaves behind is the same
-/// chain. Callers append their own tail ops.
+/// so the `LoadConstant` shape lowering emits for a read-only buffer is the
+/// same chain. Callers append their own tail ops.
 pub(crate) fn four_load_chain(load: KernelOpKind) -> Vec<KernelOp> {
     vec![
         lit(0, 0),

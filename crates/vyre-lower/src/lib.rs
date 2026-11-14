@@ -50,7 +50,6 @@ pub mod operand_class;
 /// Test-only, like `descriptor_builder`: enable `test-fixtures` to reach it.
 #[cfg(any(test, feature = "test-fixtures"))]
 pub mod program_stability_corpus;
-pub mod rewrites;
 pub(crate) mod target;
 /// The physical-IR variant space every emitter contract suite enumerates.
 /// Test-only, like `descriptor_builder`: enable `test-fixtures` to reach it.

@@ -6,13 +6,8 @@
 //! owning emitter or driver.
 
 pub(crate) mod access_kind;
-pub mod alias_facts;
 pub(crate) mod bank_conflict;
-pub(crate) mod const_buffer_promote;
-pub(crate) mod facts;
-pub(crate) mod load_counts;
 pub mod structured_walk;
-pub mod vec_pack;
 
 use crate::{KernelBody, KernelOp, KernelOpKind};
 use rustc_hash::FxHashMap;
@@ -117,5 +112,3 @@ pub use bank_conflict::{
     MitigationEvaluation, PhaseConflictReport, SharedBindingAccessProfile, SharedPermutationBlock,
     TargetBankGeometry, CANDIDATE_MITIGATIONS,
 };
-pub use const_buffer_promote::analyze as analyze_const_buffer_promote;
-pub use facts::AnalysisFacts;
