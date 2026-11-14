@@ -115,12 +115,12 @@ impl Value {
     #[must_use]
     pub fn to_bytes(&self) -> Vec<u8> {
         match self {
-            Self::U32(value) => value.to_le_bytes().to_vec(),
-            Self::I32(value) => value.to_le_bytes().to_vec(),
-            Self::U64(value) => value.to_le_bytes().to_vec(),
-            Self::Bool(value) => u32::from(*value).to_le_bytes().to_vec(),
-            Self::Bytes(bytes) => bytes.to_vec(),
-            Self::Float(value) => value.to_le_bytes().to_vec(),
+            Self::U32(value) => value.to_le_bytes().into(),
+            Self::I32(value) => value.to_le_bytes().into(),
+            Self::U64(value) => value.to_le_bytes().into(),
+            Self::Bool(value) => u32::from(*value).to_le_bytes().into(),
+            Self::Bytes(bytes) => bytes.as_ref().into(),
+            Self::Float(value) => value.to_le_bytes().into(),
             Self::Array(values) => values.iter().flat_map(Self::to_bytes).collect(),
         }
     }
@@ -296,8 +296,8 @@ impl Value {
             vyre_foundation::ir::DataType::Bytes => Some(Self::Bytes(Arc::from([]))),
             vyre_foundation::ir::DataType::F32 => Some(Self::Float(0.0)),
             vyre_foundation::ir::DataType::F64 => Some(Self::Float(0.0)),
-            vyre_foundation::ir::DataType::Vec2U32 => Some(Self::Bytes(Arc::from(vec![0; 8]))),
-            vyre_foundation::ir::DataType::Vec4U32 => Some(Self::Bytes(Arc::from(vec![0; 16]))),
+            vyre_foundation::ir::DataType::Vec2U32 => Some(Self::Bytes(Arc::from([0u8; 8]))),
+            vyre_foundation::ir::DataType::Vec4U32 => Some(Self::Bytes(Arc::from([0u8; 16]))),
             // Every remaining declared `DataType` is named rather than
             // absorbed, so adding a variant to the spec fails to compile here
             // instead of silently taking the storage-width fallback.
@@ -338,67 +338,38 @@ impl Value {
         bytes: &[u8],
     ) -> Result<Self, String> {
         match ty {
-            vyre_foundation::ir::DataType::U32 => {
-                if bytes.len() < 4 {
-                    return Err("u32 requires 4 bytes".to_string());
-                }
-                Ok(Self::U32(u32::from_le_bytes([
-                    bytes[0], bytes[1], bytes[2], bytes[3],
-                ])))
-            }
-            vyre_foundation::ir::DataType::I32 => {
-                if bytes.len() < 4 {
-                    return Err("i32 requires 4 bytes".to_string());
-                }
-                Ok(Self::I32(i32::from_le_bytes([
-                    bytes[0], bytes[1], bytes[2], bytes[3],
-                ])))
-            }
-            vyre_foundation::ir::DataType::U64 => {
-                if bytes.len() < 8 {
-                    return Err("u64 requires 8 bytes".to_string());
-                }
-                Ok(Self::U64(u64::from_le_bytes([
-                    bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
-                ])))
-            }
-            vyre_foundation::ir::DataType::Bool => {
-                if bytes.len() < 4 {
-                    return Err("bool requires 4 bytes".to_string());
-                }
-                Ok(Self::Bool(
-                    u32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]) != 0,
-                ))
-            }
+            vyre_foundation::ir::DataType::U32 => Ok(Self::U32(u32::from_le_bytes(require_bytes(
+                bytes,
+                "u32 requires 4 bytes",
+            )?))),
+            vyre_foundation::ir::DataType::I32 => Ok(Self::I32(i32::from_le_bytes(require_bytes(
+                bytes,
+                "i32 requires 4 bytes",
+            )?))),
+            vyre_foundation::ir::DataType::U64 => Ok(Self::U64(u64::from_le_bytes(require_bytes(
+                bytes,
+                "u64 requires 8 bytes",
+            )?))),
+            vyre_foundation::ir::DataType::Bool => Ok(Self::Bool(
+                u32::from_le_bytes(require_bytes(bytes, "bool requires 4 bytes")?) != 0,
+            )),
             vyre_foundation::ir::DataType::Vec2U32 => {
-                if bytes.len() < 8 {
-                    return Err("vec2u32 requires 8 bytes".to_string());
-                }
-                Ok(Self::Bytes(Arc::from(&bytes[..8])))
+                let arr: [u8; 8] = require_bytes(bytes, "vec2u32 requires 8 bytes")?;
+                Ok(Self::Bytes(Arc::from(arr)))
             }
             vyre_foundation::ir::DataType::Vec4U32 => {
-                if bytes.len() < 16 {
-                    return Err("vec4u32 requires 16 bytes".to_string());
-                }
-                Ok(Self::Bytes(Arc::from(&bytes[..16])))
+                let arr: [u8; 16] = require_bytes(bytes, "vec4u32 requires 16 bytes")?;
+                Ok(Self::Bytes(Arc::from(arr)))
             }
             vyre_foundation::ir::DataType::F32 => {
-                if bytes.len() < 4 {
-                    return Err("f32 requires 4 bytes".to_string());
-                }
-                let value = f32::from_le_bytes([bytes[0], bytes[1], bytes[2], bytes[3]]);
+                let value = f32::from_le_bytes(require_bytes(bytes, "f32 requires 4 bytes")?);
                 Ok(Self::Float(f64::from(
                     crate::execution::typed_ops::canonical_f32(value),
                 )))
             }
-            vyre_foundation::ir::DataType::F64 => {
-                if bytes.len() < 8 {
-                    return Err("f64 requires 8 bytes".to_string());
-                }
-                Ok(Self::Float(f64::from_le_bytes([
-                    bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
-                ])))
-            }
+            vyre_foundation::ir::DataType::F64 => Ok(Self::Float(f64::from_le_bytes(
+                require_bytes(bytes, "f64 requires 8 bytes")?,
+            ))),
             vyre_foundation::ir::DataType::Bytes => Ok(Self::Bytes(Arc::from(bytes))),
             // Every remaining declared `DataType` is named rather than
             // absorbed, so adding a variant to the spec fails to compile here
@@ -438,6 +409,13 @@ impl Value {
             }
         }
     }
+}
+
+fn require_bytes<const N: usize>(bytes: &[u8], msg: &'static str) -> Result<[u8; N], String> {
+    bytes
+        .get(..N)
+        .and_then(|s| <[u8; N]>::try_from(s).ok())
+        .ok_or_else(|| String::from(msg))
 }
 
 fn fixed_scalar_storage_width(ty: &vyre_foundation::ir::DataType) -> Option<usize> {

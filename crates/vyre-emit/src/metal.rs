@@ -160,6 +160,21 @@ impl EmitError {
     }
 }
 
+fn binding_err(group: u32, binding: u32, reason: impl Into<String>) -> EmitError {
+    EmitError::BindingMap {
+        group,
+        binding,
+        reason: reason.into(),
+    }
+}
+
+fn entry_err(entry_point: &str, reason: impl Into<String>) -> EmitError {
+    EmitError::EntryPoint {
+        entry_point: entry_point.into(),
+        reason: reason.into(),
+    }
+}
+
 /// Maximum direct buffer arguments supported per shader stage in Metal (indices 0..=30).
 const MAX_DIRECT_BUFFERS_PER_STAGE: usize = 31;
 
@@ -255,7 +270,7 @@ pub fn emit_artifact(desc: &KernelDescriptor) -> Result<MetalArtifact, EmitError
     let msl_blake3 = hex_encode(blake3::hash(msl.as_bytes()).as_bytes());
     Ok(MetalArtifact {
         schema: METAL_ARTIFACT_SCHEMA,
-        target: "native_module".to_string(),
+        target: "native_module".into(),
         emitter: format!("vyre-emit/{}", env!("CARGO_PKG_VERSION")),
         msl_version: format!("{}.{}", DEFAULT_MSL_VERSION.0, DEFAULT_MSL_VERSION.1),
         entry_point,
@@ -308,17 +323,20 @@ fn emit_from_naga_module_with_resource_indices(
             .map_err(|error| EmitError::MslWriter(format!("{error:?}")))?;
     let entry_point = translation
         .entry_point_names
-        .get(entry_index)
-        .ok_or_else(|| EmitError::EntryPoint {
-            entry_point: entry_point_name.to_string(),
-            reason: "MSL translation omitted the entry point name mapping".to_string(),
+        .into_iter()
+        .nth(entry_index)
+        .ok_or_else(|| {
+            entry_err(
+                entry_point_name,
+                "MSL translation omitted the entry point name mapping",
+            )
         })?
-        .as_ref()
-        .map_err(|error| EmitError::EntryPoint {
-            entry_point: entry_point_name.to_string(),
-            reason: format!("MSL writer rejected the entry point name: {error:?}"),
-        })?
-        .clone();
+        .map_err(|error| {
+            entry_err(
+                entry_point_name,
+                format!("MSL writer rejected the entry point name: {error:?}"),
+            )
+        })?;
     Ok((source, entry_point, resource_map.sizes_buffer_index))
 }
 
@@ -332,16 +350,16 @@ fn ensure_compute_entry_point(
         .enumerate()
         .find(|(_index, ep)| ep.name == entry_point)
     else {
-        return Err(EmitError::EntryPoint {
-            entry_point: entry_point.to_string(),
-            reason: "entry point name was not present in the Naga module".to_string(),
-        });
+        return Err(entry_err(
+            entry_point,
+            "entry point name was not present in the Naga module",
+        ));
     };
     if ep.stage != naga::ShaderStage::Compute {
-        return Err(EmitError::EntryPoint {
-            entry_point: entry_point.to_string(),
-            reason: format!("stage was {:?}, not Compute", ep.stage),
-        });
+        return Err(entry_err(
+            entry_point,
+            format!("stage was {:?}, not Compute", ep.stage),
+        ));
     }
     Ok(index)
 }
@@ -365,11 +383,12 @@ fn metal_entry_point_resource_map(
         let buffer = resource_indices
             .get(&(binding.group, binding.binding))
             .copied()
-            .ok_or_else(|| EmitError::BindingMap {
-                group: binding.group,
-                binding: binding.binding,
-                reason: "resource binding was not present in the dense Metal buffer index map"
-                    .to_string(),
+            .ok_or_else(|| {
+                binding_err(
+                    binding.group,
+                    binding.binding,
+                    "resource binding was not present in the dense Metal buffer index map",
+                )
             })?;
         // Naga MSL backend uses `mutable` to choose between `const device T*`
         // (read-only) and `device T*` (read-write). We derive the flag from
@@ -392,21 +411,29 @@ fn metal_entry_point_resource_map(
     }
     let sizes_buffer_index = max_buffer
         .map(|max| {
-            max.checked_add(1).ok_or_else(|| EmitError::BindingMap {
-                group: 0,
-                binding: u32::from(max),
-                reason: "no free Metal buffer slot remains for Naga's _buffer_sizes sidecar"
-                    .to_string(),
+            max.checked_add(1).ok_or_else(|| {
+                binding_err(
+                    0,
+                    u32::from(max),
+                    "no free Metal buffer slot remains for Naga's _buffer_sizes sidecar",
+                )
             })
         })
         .transpose()?;
     resources.sizes_buffer = sizes_buffer_index;
-    let map = module
+    let compute_names: Vec<&str> = module
         .entry_points
         .iter()
         .filter(|ep| ep.stage == naga::ShaderStage::Compute)
-        .map(|ep| (ep.name.clone(), resources.clone()))
+        .map(|ep| ep.name.as_str())
         .collect();
+    let mut map = BTreeMap::new();
+    if let Some((&last, prior)) = compute_names.split_last() {
+        for &name in prior {
+            map.insert(String::from(name), resources.clone());
+        }
+        map.insert(String::from(last), resources);
+    }
     Ok(MetalResourceMap {
         per_entry_point: map,
         sizes_buffer_index,
@@ -431,32 +458,32 @@ fn metal_binding_indices(desc: &KernelDescriptor) -> Result<MetalBindingIndexMap
             continue;
         };
         if by_slot.len() >= MAX_DIRECT_BUFFERS_PER_STAGE {
-            return Err(EmitError::BindingMap {
+            return Err(binding_err(
                 group,
-                binding: slot.slot,
-                reason: format!(
+                slot.slot,
+                format!(
                     "Metal direct buffer limit exceeded: descriptor declares {} buffers, exceeding the per-stage limit of {MAX_DIRECT_BUFFERS_PER_STAGE} (indices 0..=30, reserving 1 for Naga sizes sidecar)",
                     by_slot.len() + 1
                 ),
-            });
+            ));
         }
         let metal_buffer_index = by_slot.len() as u8;
         if by_slot.insert(slot.slot, metal_buffer_index).is_some() {
-            return Err(EmitError::BindingMap {
+            return Err(binding_err(
                 group,
-                binding: slot.slot,
-                reason: "duplicate descriptor slot in Metal resource binding map".to_string(),
-            });
+                slot.slot,
+                "duplicate descriptor slot in Metal resource binding map",
+            ));
         }
         if by_resource
             .insert((group, slot.slot), metal_buffer_index)
             .is_some()
         {
-            return Err(EmitError::BindingMap {
+            return Err(binding_err(
                 group,
-                binding: slot.slot,
-                reason: "duplicate resource binding in Metal resource binding map".to_string(),
-            });
+                slot.slot,
+                "duplicate resource binding in Metal resource binding map",
+            ));
         }
     }
     Ok(MetalBindingIndexMap {
@@ -474,21 +501,23 @@ fn metal_resource_indices_from_module(
             continue;
         };
         if keys.insert((binding.group, binding.binding), ()).is_some() {
-            return Err(EmitError::BindingMap {
-                group: binding.group,
-                binding: binding.binding,
-                reason: "duplicate Naga resource binding in Metal resource map".to_string(),
-            });
+            return Err(binding_err(
+                binding.group,
+                binding.binding,
+                "duplicate Naga resource binding in Metal resource map",
+            ));
         }
     }
     let mut indices = BTreeMap::new();
     for (index, key) in keys.keys().copied().enumerate() {
-        let metal_buffer_index = u8::try_from(index).map_err(|error| EmitError::BindingMap {
-            group: key.0,
-            binding: key.1,
-            reason: format!(
-                "too many Naga resource bindings for Metal's flat buffer namespace: {error}"
-            ),
+        let metal_buffer_index = u8::try_from(index).map_err(|error| {
+            binding_err(
+                key.0,
+                key.1,
+                format!(
+                    "too many Naga resource bindings for Metal's flat buffer namespace: {error}"
+                ),
+            )
         })?;
         indices.insert(key, metal_buffer_index);
     }
@@ -512,16 +541,13 @@ fn metal_bindings(
         let Some(group) = metal_resource_group(slot) else {
             continue;
         };
-        let metal_buffer_index =
-            slot_indices
-                .get(&slot.slot)
-                .copied()
-                .ok_or_else(|| EmitError::BindingMap {
-                    group,
-                    binding: slot.slot,
-                    reason: "descriptor slot was missing from the dense Metal buffer index map"
-                        .to_string(),
-                })?;
+        let metal_buffer_index = slot_indices.get(&slot.slot).copied().ok_or_else(|| {
+            binding_err(
+                group,
+                slot.slot,
+                "descriptor slot was missing from the dense Metal buffer index map",
+            )
+        })?;
         out.push(MetalBindingMetadata {
             name: slot.name.clone(),
             slot: slot.slot,
@@ -544,33 +570,31 @@ fn metal_threadgroup_memories(
             continue;
         }
         let threadgroup_index =
-            u8::try_from(out.len()).map_err(|error| EmitError::BindingMap {
-                group: 0,
-                binding: slot.slot,
-                reason: format!(
-                    "too many threadgroup-memory bindings for Metal's flat threadgroup namespace: {error}"
-                ),
+            u8::try_from(out.len()).map_err(|error| {
+                binding_err(
+                    0,
+                    slot.slot,
+                    format!("too many threadgroup-memory bindings for Metal's flat threadgroup namespace: {error}"),
+                )
             })?;
-        let element_count = slot.element_count.ok_or_else(|| EmitError::BindingMap {
-            group: 0,
-            binding: slot.slot,
-            reason: "threadgroup memory requires static element_count metadata".to_string(),
+        let element_count = slot.element_count.ok_or_else(|| {
+            binding_err(
+                0,
+                slot.slot,
+                "threadgroup memory requires static element_count metadata",
+            )
         })?;
         let element_size =
             u64::try_from(slot.element_type.min_bytes().max(4)).map_err(|error| {
-                EmitError::BindingMap {
-                    group: 0,
-                    binding: slot.slot,
-                    reason: format!("threadgroup element byte size does not fit u64: {error}"),
-                }
+                binding_err(
+                    0,
+                    slot.slot,
+                    format!("threadgroup element byte size does not fit u64: {error}"),
+                )
             })?;
         let byte_length = u64::from(element_count)
             .checked_mul(element_size)
-            .ok_or_else(|| EmitError::BindingMap {
-                group: 0,
-                binding: slot.slot,
-                reason: "threadgroup byte length overflows u64".to_string(),
-            })?;
+            .ok_or_else(|| binding_err(0, slot.slot, "threadgroup byte length overflows u64"))?;
         out.push(MetalThreadgroupMemoryMetadata {
             name: slot.name.clone(),
             slot: slot.slot,
@@ -586,16 +610,18 @@ fn align_u64(value: u64, alignment: u64) -> Result<u64, EmitError> {
     value
         .checked_add(alignment - 1)
         .map(|rounded| rounded / alignment * alignment)
-        .ok_or_else(|| EmitError::BindingMap {
-            group: 0,
-            binding: 0,
-            reason: format!("Metal alignment to {alignment} bytes overflows u64"),
+        .ok_or_else(|| {
+            binding_err(
+                0,
+                0,
+                format!("Metal alignment to {alignment} bytes overflows u64"),
+            )
         })
 }
 
 fn descriptor_blake3(desc: &KernelDescriptor) -> Result<String, EmitError> {
     let bytes = bincode::serde::encode_to_vec(desc, bincode::config::standard())
-        .map_err(|error| EmitError::DescriptorHash(error.to_string()))?;
+        .map_err(|error| EmitError::DescriptorHash(format!("{error}")))?;
     Ok(hex_encode(blake3::hash(&bytes).as_bytes()))
 }
 

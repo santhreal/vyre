@@ -203,129 +203,103 @@ const EXPECTED_INT4_DOT_SCALED_OUTPUT_BYTES: [u8; 4] = [0x00, 0x00, 0xA0, 0x40];
 const EXPECTED_INT4_MATVEC_SCALED_OUTPUT_BYTES: [u8; 8] = [0u8; 8];
 const EXPECTED_INT4_4F32_ZEROS_OUTPUT_BYTES: [u8; 16] = [0u8; 16];
 
-inventory::submit! {
+const fn register_int4_op(
+    op_id: &'static str,
+    build: fn() -> Program,
+    inputs: fn() -> Vec<Vec<Vec<u8>>>,
+    outputs: fn() -> Vec<Vec<Vec<u8>>>,
+) -> vyre_foundation::operation::OperationRegistration {
     vyre_foundation::operation::OperationRegistration::library_unconstrained(
-        DOT_OP_ID,
-        || int4_dot_i32("lhs", "rhs", "out", 8),
-        Some(|| {
-            vec![vec![
-                vyre_primitives::wire::pack_u32_slice(&[0xCDEF_4321]),
-                vyre_primitives::wire::pack_u32_slice(&[0xFEDC_1234]),
-            ]]
-        }),
-        Some(|| vec![vec![EXPECTED_INT4_DOT_OUTPUT_BYTES.to_vec()]]),
+        op_id,
+        build,
+        Some(inputs),
+        Some(outputs),
     )
     .with_category("nn")
+}
+
+inventory::submit! {
+    register_int4_op(
+        DOT_OP_ID,
+        || int4_dot_i32("lhs", "rhs", "out", 8),
+        || vec![vec![
+            vyre_primitives::wire::pack_u32_slice(&[0xCDEF_4321]),
+            vyre_primitives::wire::pack_u32_slice(&[0xFEDC_1234]),
+        ]],
+        || vec![vec![EXPECTED_INT4_DOT_OUTPUT_BYTES.into()]],
+    )
     .with_no_legal_rewrite()
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+    register_int4_op(
         DOT_SCALED_OP_ID,
         || int4_dot_f32_scaled("lhs", "rhs", "lhs_scale", "rhs_scale", "out", 8),
-        Some(|| {
-            vec![vec![
-                vyre_primitives::wire::pack_u32_slice(&[0xCDEF_4321]),
-                vyre_primitives::wire::pack_u32_slice(&[0xFEDC_1234]),
-                vyre_primitives::wire::pack_f32_slice(&[0.5]),
-                vyre_primitives::wire::pack_f32_slice(&[0.25]),
-            ]]
-        }),
-        Some(|| vec![vec![EXPECTED_INT4_DOT_SCALED_OUTPUT_BYTES.to_vec()]]),
+        || vec![vec![
+            vyre_primitives::wire::pack_u32_slice(&[0xCDEF_4321]),
+            vyre_primitives::wire::pack_u32_slice(&[0xFEDC_1234]),
+            vyre_primitives::wire::pack_f32_slice(&[0.5]),
+            vyre_primitives::wire::pack_f32_slice(&[0.25]),
+        ]],
+        || vec![vec![EXPECTED_INT4_DOT_SCALED_OUTPUT_BYTES.into()]],
     )
-    .with_category("nn")
     .with_uncharacterized()
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+    register_int4_op(
         MATVEC_SCALED_OP_ID,
         || int4_matvec_f32_scaled("weights", "x", "scales", "out", 2, 8),
-        Some(|| {
-            vec![vec![
-                vyre_primitives::wire::pack_u32_slice(&[0xCDEF_4321, 0xFEDC_1234]),
-                vyre_primitives::wire::pack_f32_slice(&[1.0; 8]),
-                vyre_primitives::wire::pack_f32_slice(&[0.5, 0.25]),
-            ]]
-        }),
-        Some(|| vec![vec![EXPECTED_INT4_MATVEC_SCALED_OUTPUT_BYTES.to_vec()]]),
+        || vec![vec![
+            vyre_primitives::wire::pack_u32_slice(&[0xCDEF_4321, 0xFEDC_1234]),
+            vyre_primitives::wire::pack_f32_slice(&[1.0; 8]),
+            vyre_primitives::wire::pack_f32_slice(&[0.5, 0.25]),
+        ]],
+        || vec![vec![EXPECTED_INT4_MATVEC_SCALED_OUTPUT_BYTES.into()]],
     )
-    .with_category("nn")
     .with_uncharacterized()
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+    register_int4_op(
         BATCHED_MATVEC_SCALED_OP_ID,
         || int4_batched_matvec_f32_scaled("weights", "x", "scales", "out", 2, 2, 8),
-        Some(|| {
-            vec![vec![
-                vyre_primitives::wire::pack_u32_slice(&[0xCDEF_4321, 0xFEDC_1234]),
-                vyre_primitives::wire::pack_f32_slice(&[1.0; 16]),
-                vyre_primitives::wire::pack_f32_slice(&[0.5, 0.25]),
-            ]]
-        }),
-        Some(|| vec![vec![EXPECTED_INT4_4F32_ZEROS_OUTPUT_BYTES.to_vec()]]),
+        || vec![vec![
+            vyre_primitives::wire::pack_u32_slice(&[0xCDEF_4321, 0xFEDC_1234]),
+            vyre_primitives::wire::pack_f32_slice(&[1.0; 16]),
+            vyre_primitives::wire::pack_f32_slice(&[0.5, 0.25]),
+        ]],
+        || vec![vec![EXPECTED_INT4_4F32_ZEROS_OUTPUT_BYTES.into()]],
     )
-    .with_category("nn")
     .with_uncharacterized()
 }
 
+fn zero_2x2x8_matmul_inputs() -> Vec<Vec<Vec<u8>>> {
+    vec![vec![
+        vyre_primitives::wire::pack_u32_slice(&[0, 0]),
+        vyre_primitives::wire::pack_u32_slice(&[0, 0]),
+        vyre_primitives::wire::pack_f32_slice(&[0.5, 0.25]),
+        vyre_primitives::wire::pack_f32_slice(&[0.125, 0.25]),
+    ]]
+}
+
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+    register_int4_op(
         BATCHED_MATMUL_SCALED_OP_ID,
-        || {
-            int4_batched_matmul_f32_scaled(
-                "weights",
-                "activations",
-                "row_scales",
-                "batch_scales",
-                "out",
-                2,
-                2,
-                8,
-            )
-        },
-        Some(|| {
-            vec![vec![
-                vyre_primitives::wire::pack_u32_slice(&[0, 0]),
-                vyre_primitives::wire::pack_u32_slice(&[0, 0]),
-                vyre_primitives::wire::pack_f32_slice(&[0.5, 0.25]),
-                vyre_primitives::wire::pack_f32_slice(&[0.125, 0.25]),
-            ]]
-        }),
-        Some(|| vec![vec![EXPECTED_INT4_4F32_ZEROS_OUTPUT_BYTES.to_vec()]]),
+        || int4_batched_matmul_f32_scaled("weights", "activations", "row_scales", "batch_scales", "out", 2, 2, 8),
+        zero_2x2x8_matmul_inputs,
+        || vec![vec![EXPECTED_INT4_4F32_ZEROS_OUTPUT_BYTES.into()]],
     )
-    .with_category("nn")
     .with_uncharacterized()
 }
 
 inventory::submit! {
-    vyre_foundation::operation::OperationRegistration::library_unconstrained(
+    register_int4_op(
         BATCHED_MATMUL_TOP1_SCALED_OP_ID,
-        || {
-            int4_batched_matmul_top1_f32_scaled(
-                "weights",
-                "activations",
-                "row_scales",
-                "batch_scales",
-                "out",
-                2,
-                2,
-                8,
-            )
-        },
-        Some(|| {
-            vec![vec![
-                vyre_primitives::wire::pack_u32_slice(&[0, 0]),
-                vyre_primitives::wire::pack_u32_slice(&[0, 0]),
-                vyre_primitives::wire::pack_f32_slice(&[0.5, 0.25]),
-                vyre_primitives::wire::pack_f32_slice(&[0.125, 0.25]),
-            ]]
-        }),
-        Some(|| vec![vec![EXPECTED_INT4_4F32_ZEROS_OUTPUT_BYTES.to_vec()]]),
+        || int4_batched_matmul_top1_f32_scaled("weights", "activations", "row_scales", "batch_scales", "out", 2, 2, 8),
+        zero_2x2x8_matmul_inputs,
+        || vec![vec![EXPECTED_INT4_4F32_ZEROS_OUTPUT_BYTES.into()]],
     )
-    .with_category("nn")
     .with_uncharacterized()
 }
 
@@ -381,9 +355,9 @@ mod tests {
                 vyre_primitives::wire::pack_f32_slice(&[rhs_scale]),
             ],
         );
-        let raw = outputs[0].clone();
         f32::from_le_bytes(
-            raw.get(0..4)
+            outputs[0]
+                .get(0..4)
                 .expect("Fix: scaled packed INT4 dot must emit one f32.")
                 .try_into()
                 .expect("Fix: one f32 output must be exactly four bytes."),
@@ -402,22 +376,50 @@ mod tests {
         out
     }
 
+    fn eval_f32_rows(
+        program: &Program,
+        inputs: Vec<Vec<u8>>,
+        len: usize,
+        label: &'static str,
+    ) -> Vec<f32> {
+        let outputs = eval_bytes("int4", program, inputs);
+        vyre_primitives::wire::unpack_f32_slice(&outputs[0], len, label)
+            .expect("Fix: packed INT4 output must decode as f32 rows.")
+    }
+
+    fn to_bits_vec(xs: &[f32]) -> Vec<u32> {
+        xs.iter().map(|v| v.to_bits()).collect()
+    }
+
+    fn sample_weights_3x9() -> Vec<Vec<i32>> {
+        vec![
+            vec![1, 2, 3, 4, -1, -2, -3, -4, 5],
+            vec![4, 3, 2, 1, -4, -3, -2, -1, -5],
+            vec![-8, -7, -6, -5, -4, -3, -2, -1, 0],
+        ]
+    }
+
+    fn sample_activations_2x9() -> Vec<Vec<i32>> {
+        vec![
+            vec![1, -1, 2, -2, 3, -3, 4, -4, 5],
+            vec![-5, 4, -4, 3, -3, 2, -2, 1, -1],
+        ]
+    }
+
     fn run_matvec(weights: &[Vec<i32>], x: &[f32], scales: &[f32]) -> Vec<f32> {
         let rows = weights.len() as u32;
-        let cols = x.len() as u32;
         let packed = pack_i4_matrix_rows(weights);
-        let program = int4_matvec_f32_scaled("weights", "x", "scales", "out", rows, cols);
-        let outputs = eval_bytes(
-            "int4",
+        let program = int4_matvec_f32_scaled("weights", "x", "scales", "out", rows, x.len() as u32);
+        eval_f32_rows(
             &program,
             vec![
                 vyre_primitives::wire::pack_u32_slice(&packed),
                 vyre_primitives::wire::pack_f32_slice(x),
                 vyre_primitives::wire::pack_f32_slice(scales),
             ],
-        );
-        vyre_primitives::wire::unpack_f32_slice(&outputs[0], rows as usize, "int4 matvec output")
-            .expect("Fix: fused INT4 matvec output must decode as f32 rows.")
+            rows as usize,
+            "int4 matvec output",
+        )
     }
 
     fn run_batched_matvec(
@@ -431,24 +433,20 @@ mod tests {
         let packed = pack_i4_matrix_rows(weights);
         let program =
             int4_batched_matvec_f32_scaled("weights", "x", "scales", "out", batch, rows, cols);
-        let outputs = eval_bytes(
-            "int4",
+        eval_f32_rows(
             &program,
             vec![
                 vyre_primitives::wire::pack_u32_slice(&packed),
                 vyre_primitives::wire::pack_f32_slice(x_batches),
                 vyre_primitives::wire::pack_f32_slice(scales),
             ],
-        );
-        vyre_primitives::wire::unpack_f32_slice(
-            &outputs[0],
             (batch * rows) as usize,
             "batched int4 matvec output",
         )
-        .expect("Fix: batched fused INT4 matvec output must decode as f32 rows.")
     }
 
-    fn run_batched_matmul(
+    fn run_batched_matmul_common(
+        top1: bool,
         weights: &[Vec<i32>],
         activation_batches: &[Vec<i32>],
         row_scales: &[f32],
@@ -457,10 +455,12 @@ mod tests {
         let batch = activation_batches.len() as u32;
         let rows = weights.len() as u32;
         let cols = weights.first().map_or(0, Vec::len) as u32;
-
-        let weights_packed = pack_i4_matrix_rows(weights);
-        let activations_packed = pack_i4_matrix_rows(activation_batches);
-        let program = int4_batched_matmul_f32_scaled(
+        let build = if top1 {
+            int4_batched_matmul_top1_f32_scaled
+        } else {
+            int4_batched_matmul_f32_scaled
+        };
+        let program = build(
             "weights",
             "activations",
             "row_scales",
@@ -470,22 +470,31 @@ mod tests {
             rows,
             cols,
         );
-        let outputs = eval_bytes(
-            "int4",
+        let out_len = if top1 {
+            (batch * 2) as usize
+        } else {
+            (batch * rows) as usize
+        };
+        eval_f32_rows(
             &program,
             vec![
-                vyre_primitives::wire::pack_u32_slice(&weights_packed),
-                vyre_primitives::wire::pack_u32_slice(&activations_packed),
+                vyre_primitives::wire::pack_u32_slice(&pack_i4_matrix_rows(weights)),
+                vyre_primitives::wire::pack_u32_slice(&pack_i4_matrix_rows(activation_batches)),
                 vyre_primitives::wire::pack_f32_slice(row_scales),
                 vyre_primitives::wire::pack_f32_slice(batch_scales),
             ],
-        );
-        vyre_primitives::wire::unpack_f32_slice(
-            &outputs[0],
-            (batch * rows) as usize,
+            out_len,
             "batched int4 matmul output",
         )
-        .expect("Fix: packed-activation batched INT4 matmul output must decode as f32 rows.")
+    }
+
+    fn run_batched_matmul(
+        weights: &[Vec<i32>],
+        activation_batches: &[Vec<i32>],
+        row_scales: &[f32],
+        batch_scales: &[f32],
+    ) -> Vec<f32> {
+        run_batched_matmul_common(false, weights, activation_batches, row_scales, batch_scales)
     }
 
     fn run_batched_matmul_top1(
@@ -494,42 +503,11 @@ mod tests {
         row_scales: &[f32],
         batch_scales: &[f32],
     ) -> (Vec<f32>, Vec<u32>) {
-        let batch = activation_batches.len() as u32;
-        let rows = weights.len() as u32;
-        let cols = weights.first().map_or(0, Vec::len) as u32;
-        let weights_packed = pack_i4_matrix_rows(weights);
-        let activations_packed = pack_i4_matrix_rows(activation_batches);
-        let program = int4_batched_matmul_top1_f32_scaled(
-            "weights",
-            "activations",
-            "row_scales",
-            "batch_scales",
-            "out",
-            batch,
-            rows,
-            cols,
-        );
-        let outputs = eval_bytes(
-            "int4",
-            &program,
-            vec![
-                vyre_primitives::wire::pack_u32_slice(&weights_packed),
-                vyre_primitives::wire::pack_u32_slice(&activations_packed),
-                vyre_primitives::wire::pack_f32_slice(row_scales),
-                vyre_primitives::wire::pack_f32_slice(batch_scales),
-            ],
-        );
-        let packed = vyre_primitives::wire::unpack_f32_slice(
-            &outputs[0],
-            (batch * 2) as usize,
-            "batched int4 top1 packed output",
-        )
-        .expect("Fix: packed-activation INT4 top1 output must decode as f32 rows.");
-        let scores = packed[..batch as usize].to_vec();
-        let indices = packed[batch as usize..]
-            .iter()
-            .map(|index| *index as u32)
-            .collect::<Vec<_>>();
+        let batch = activation_batches.len();
+        let packed =
+            run_batched_matmul_common(true, weights, activation_batches, row_scales, batch_scales);
+        let scores = packed[..batch].iter().copied().collect();
+        let indices = packed[batch..].iter().map(|index| *index as u32).collect();
         (scores, indices)
     }
 
@@ -565,15 +543,10 @@ mod tests {
 
     #[test]
     fn scaled_matvec_matches_reference_oracle() {
-        let weights = vec![
-            vec![1, 2, 3, 4, -1, -2, -3, -4, 5],
-            vec![4, 3, 2, 1, -4, -3, -2, -1, -5],
-            vec![-8, -7, -6, -5, -4, -3, -2, -1, 0],
-        ];
+        let weights = sample_weights_3x9();
         let x = [1.0_f32, -0.5, 0.25, 2.0, -1.5, 0.75, 1.25, -2.0, 0.5];
         let scales = [0.5_f32, 0.25, 0.125];
         let packed = pack_i4_matrix_rows(&weights);
-
         let actual = run_matvec(&weights, &x, &scales);
         let expected = i4x8_matvec_f32_scaled_witness(
             &packed,
@@ -582,27 +555,18 @@ mod tests {
             weights.len() as u32,
             x.len() as u32,
         );
-
-        assert_eq!(
-            actual.iter().map(|v| v.to_bits()).collect::<Vec<_>>(),
-            expected.iter().map(|v| v.to_bits()).collect::<Vec<_>>()
-        );
+        assert_eq!(to_bits_vec(&actual), to_bits_vec(&expected));
     }
 
     #[test]
     fn batched_scaled_matvec_matches_reference_oracle() {
-        let weights = vec![
-            vec![1, 2, 3, 4, -1, -2, -3, -4, 5],
-            vec![4, 3, 2, 1, -4, -3, -2, -1, -5],
-            vec![-8, -7, -6, -5, -4, -3, -2, -1, 0],
-        ];
+        let weights = sample_weights_3x9();
         let x_batches = [
             1.0_f32, -0.5, 0.25, 2.0, -1.5, 0.75, 1.25, -2.0, 0.5, -1.0, 0.5, -0.25, -2.0, 1.5,
             -0.75, -1.25, 2.0, -0.5,
         ];
         let scales = [0.5_f32, 0.25, 0.125];
         let packed = pack_i4_matrix_rows(&weights);
-
         let actual = run_batched_matvec(&weights, &x_batches, &scales, 2);
         let expected = i4x8_batched_matvec_f32_scaled_witness(
             &packed,
@@ -612,85 +576,47 @@ mod tests {
             weights.len() as u32,
             weights[0].len() as u32,
         );
-
-        assert_eq!(
-            actual.iter().map(|v| v.to_bits()).collect::<Vec<_>>(),
-            expected.iter().map(|v| v.to_bits()).collect::<Vec<_>>()
-        );
+        assert_eq!(to_bits_vec(&actual), to_bits_vec(&expected));
     }
 
     #[test]
     fn batched_scaled_matmul_matches_reference_oracle() {
-        let weights = vec![
-            vec![1, 2, 3, 4, -1, -2, -3, -4, 5],
-            vec![4, 3, 2, 1, -4, -3, -2, -1, -5],
-            vec![-8, -7, -6, -5, -4, -3, -2, -1, 0],
-        ];
-        let activation_batches = vec![
-            vec![1, -1, 2, -2, 3, -3, 4, -4, 5],
-            vec![-5, 4, -4, 3, -3, 2, -2, 1, -1],
-        ];
+        let weights = sample_weights_3x9();
+        let activation_batches = sample_activations_2x9();
         let row_scales = [0.5_f32, 0.25, 0.125];
         let batch_scales = [0.75_f32, 0.375];
-        let weights_packed = pack_i4_matrix_rows(&weights);
-        let activations_packed = pack_i4_matrix_rows(&activation_batches);
-
         let actual = run_batched_matmul(&weights, &activation_batches, &row_scales, &batch_scales);
         let expected = i4x8_batched_matmul_f32_scaled_witness(
-            &weights_packed,
-            &activations_packed,
+            &pack_i4_matrix_rows(&weights),
+            &pack_i4_matrix_rows(&activation_batches),
             &row_scales,
             &batch_scales,
             activation_batches.len() as u32,
             weights.len() as u32,
             weights[0].len() as u32,
         );
-
-        assert_eq!(
-            actual.iter().map(|v| v.to_bits()).collect::<Vec<_>>(),
-            expected.iter().map(|v| v.to_bits()).collect::<Vec<_>>()
-        );
+        assert_eq!(to_bits_vec(&actual), to_bits_vec(&expected));
     }
 
     #[test]
     fn batched_scaled_matmul_top1_matches_reference_oracle() {
-        let weights = vec![
-            vec![1, 2, 3, 4, -1, -2, -3, -4, 5],
-            vec![4, 3, 2, 1, -4, -3, -2, -1, -5],
-            vec![-8, -7, -6, -5, -4, -3, -2, -1, 0],
-        ];
-        let activation_batches = vec![
-            vec![1, -1, 2, -2, 3, -3, 4, -4, 5],
-            vec![-5, 4, -4, 3, -3, 2, -2, 1, -1],
-        ];
+        let weights = sample_weights_3x9();
+        let activation_batches = sample_activations_2x9();
         let row_scales = [0.5_f32, 0.25, 0.125];
         let batch_scales = [0.75_f32, 0.375];
-        let weights_packed = pack_i4_matrix_rows(&weights);
-        let activations_packed = pack_i4_matrix_rows(&activation_batches);
-
         let (actual_scores, actual_indices) =
             run_batched_matmul_top1(&weights, &activation_batches, &row_scales, &batch_scales);
         let (expected_scores, expected_indices) = i4x8_batched_matmul_top1_f32_scaled_witness(
-            &weights_packed,
-            &activations_packed,
+            &pack_i4_matrix_rows(&weights),
+            &pack_i4_matrix_rows(&activation_batches),
             &row_scales,
             &batch_scales,
             activation_batches.len() as u32,
             weights.len() as u32,
             weights[0].len() as u32,
         );
-
         assert_eq!(actual_indices, expected_indices);
-        assert_eq!(
-            actual_scores
-                .iter()
-                .map(|v| v.to_bits())
-                .collect::<Vec<_>>(),
-            expected_scores
-                .iter()
-                .map(|v| v.to_bits())
-                .collect::<Vec<_>>()
-        );
+        assert_eq!(to_bits_vec(&actual_scores), to_bits_vec(&expected_scores));
     }
 
     #[test]

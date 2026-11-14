@@ -1,5 +1,65 @@
 //! Sequential Algebraic Multigrid (AMG) and Jacobi solver witnesses.
 
+fn reserve_at_least(buf: &mut Vec<f64>, target: usize) {
+    if buf.capacity() < target {
+        buf.reserve(target.saturating_sub(buf.len()));
+    }
+}
+
+fn check_slice_len(slice: &[f64], expected: usize, label: &str) -> Result<(), String> {
+    if slice.len() < expected {
+        return Err(format!("{label}: expected {expected}, got {}", slice.len()));
+    }
+    Ok(())
+}
+
+fn validate_amg_buffers(
+    fine_matrix: &[f64],
+    fine_rhs: &[f64],
+    initial: &[f64],
+    restriction: &[f64],
+    prolongation: &[f64],
+    coarse_matrix: &[f64],
+    nf: usize,
+    nc: usize,
+) -> Result<(), String> {
+    check_slice_len(fine_matrix, nf * nf, "buffer `a` is too short")?;
+    check_slice_len(fine_rhs, nf, "buffer `b` is too short")?;
+    check_slice_len(initial, nf, "buffer `x` is too short")?;
+    check_slice_len(restriction, nc * nf, "buffer `r_mat` is too short")?;
+    check_slice_len(prolongation, nf * nc, "buffer `p_mat` is too short")?;
+    check_slice_len(coarse_matrix, nc * nc, "buffer `a_c` is too short")
+}
+
+fn jacobi_sweep(
+    matrix: &[f64],
+    rhs: &[f64],
+    current: &[f64],
+    omega: f64,
+    n: usize,
+    dest: &mut Vec<f64>,
+) {
+    dest.clear();
+    reserve_at_least(dest, n);
+    for row in 0..n {
+        let off_diagonal: f64 = (0..n)
+            .filter(|&col| col != row)
+            .map(|col| matrix[row * n + col] * current[col])
+            .sum();
+        let target = (rhs[row] - off_diagonal) / matrix[row * n + row];
+        dest.push(current[row] + omega * (target - current[row]));
+    }
+}
+
+fn max_abs_residual(matrix: &[f64], rhs: &[f64], x: &[f64], n: usize) -> f64 {
+    let mut max_resid = 0.0_f64;
+    for i in 0..n {
+        let row_dot: f64 = (0..n).map(|j| matrix[i * n + j] * x[j]).sum();
+        max_resid = max_resid.max((row_dot - rhs[i]).abs());
+    }
+    max_resid
+}
+
 /// Compute the residual `b - A * x` into caller storage.
 pub fn amg_residual_witness_into(
     matrix: &[f64],
@@ -9,15 +69,12 @@ pub fn amg_residual_witness_into(
     out: &mut Vec<f64>,
 ) {
     let n = n as usize;
-    if out.capacity() < n {
-        out.reserve(n.saturating_sub(out.len()));
-    }
+    reserve_at_least(out, n);
     out.clear();
     for row in 0..n {
-        let mut ax = 0.0;
-        for col in 0..n {
-            ax += matrix[row * n + col] * solution[col];
-        }
+        let ax: f64 = (0..n)
+            .map(|col| matrix[row * n + col] * solution[col])
+            .sum();
         out.push(rhs[row] - ax);
     }
 }
@@ -46,26 +103,11 @@ impl AmgVcycleScratchWitness {
 
     /// Pre-reserve capacity for `fine_count` fine nodes and `coarse_count` coarse nodes.
     pub fn reserve(&mut self, fine_count: usize, coarse_count: usize) {
-        if self.fine.capacity() < fine_count {
-            self.fine
-                .reserve(fine_count.saturating_sub(self.fine.len()));
-        }
-        if self.residual.capacity() < fine_count {
-            self.residual
-                .reserve(fine_count.saturating_sub(self.residual.len()));
-        }
-        if self.coarse_rhs.capacity() < coarse_count {
-            self.coarse_rhs
-                .reserve(coarse_count.saturating_sub(self.coarse_rhs.len()));
-        }
-        if self.coarse.capacity() < coarse_count {
-            self.coarse
-                .reserve(coarse_count.saturating_sub(self.coarse.len()));
-        }
-        if self.coarse_next.capacity() < coarse_count {
-            self.coarse_next
-                .reserve(coarse_count.saturating_sub(self.coarse_next.len()));
-        }
+        reserve_at_least(&mut self.fine, fine_count);
+        reserve_at_least(&mut self.residual, fine_count);
+        reserve_at_least(&mut self.coarse_rhs, coarse_count);
+        reserve_at_least(&mut self.coarse, coarse_count);
+        reserve_at_least(&mut self.coarse_next, coarse_count);
     }
 }
 
@@ -88,12 +130,10 @@ impl AmgSolveScratchWitness {
     /// Pre-reserve capacity for `fine_count` fine nodes and `coarse_count` coarse nodes.
     pub fn reserve(&mut self, fine_count: usize, coarse_count: usize) {
         self.v_cycle.reserve(fine_count, coarse_count);
-        if self.next_iterate.capacity() < fine_count {
-            self.next_iterate
-                .reserve(fine_count.saturating_sub(self.next_iterate.len()));
-        }
+        reserve_at_least(&mut self.next_iterate, fine_count);
     }
 }
+
 /// Fallible two-level algebraic-multigrid V-cycle writing into caller storage using reusable scratch.
 #[allow(clippy::too_many_arguments)]
 pub fn try_amg_v_cycle_witness_with_scratch_into(
@@ -111,108 +151,49 @@ pub fn try_amg_v_cycle_witness_with_scratch_into(
 ) -> Result<(), String> {
     let nf = fine_count as usize;
     let nc = coarse_count as usize;
-    if fine_matrix.len() < nf * nf {
-        return Err(format!(
-            "buffer `a` is too short: expected {}, got {}",
-            nf * nf,
-            fine_matrix.len()
-        ));
-    }
-    if fine_rhs.len() < nf {
-        return Err(format!(
-            "buffer `b` is too short: expected {}, got {}",
-            nf,
-            fine_rhs.len()
-        ));
-    }
-    if initial.len() < nf {
-        return Err(format!(
-            "buffer `x` is too short: expected {}, got {}",
-            nf,
-            initial.len()
-        ));
-    }
-    if restriction.len() < nc * nf {
-        return Err(format!(
-            "buffer `r_mat` is too short: expected {}, got {}",
-            nc * nf,
-            restriction.len()
-        ));
-    }
-    if prolongation.len() < nf * nc {
-        return Err(format!(
-            "buffer `p_mat` is too short: expected {}, got {}",
-            nf * nc,
-            prolongation.len()
-        ));
-    }
-    if coarse_matrix.len() < nc * nc {
-        return Err(format!(
-            "buffer `a_c` is too short: expected {}, got {}",
-            nc * nc,
-            coarse_matrix.len()
-        ));
-    }
+    validate_amg_buffers(
+        fine_matrix,
+        fine_rhs,
+        initial,
+        restriction,
+        prolongation,
+        coarse_matrix,
+        nf,
+        nc,
+    )?;
 
-    if out.capacity() < nf {
-        out.reserve(nf.saturating_sub(out.len()));
-    }
+    reserve_at_least(out, nf);
     out.clear();
-
     if nf == 0 {
         return Ok(());
     }
 
-    let jacobi = |matrix: &[f64], rhs: &[f64], current: &[f64], n: usize, dest: &mut Vec<f64>| {
-        dest.clear();
-        if dest.capacity() < n {
-            dest.reserve(n.saturating_sub(dest.len()));
-        }
-        for row in 0..n {
-            let off_diagonal = (0..n)
-                .filter(|&column| column != row)
-                .map(|column| matrix[row * n + column] * current[column])
-                .sum::<f64>();
-            let target = (rhs[row] - off_diagonal) / matrix[row * n + row];
-            dest.push(current[row] + omega * (target - current[row]));
-        }
-    };
-
-    jacobi(fine_matrix, fine_rhs, initial, nf, &mut scratch.fine);
-
-    scratch.residual.clear();
-    if scratch.residual.capacity() < nf {
-        scratch
-            .residual
-            .reserve(nf.saturating_sub(scratch.residual.len()));
-    }
-    for row in 0..nf {
-        let ax_row = (0..nf)
-            .map(|col| fine_matrix[row * nf + col] * scratch.fine[col])
-            .sum::<f64>();
-        scratch.residual.push(fine_rhs[row] - ax_row);
-    }
+    jacobi_sweep(fine_matrix, fine_rhs, initial, omega, nf, &mut scratch.fine);
+    amg_residual_witness_into(
+        fine_matrix,
+        fine_rhs,
+        &scratch.fine,
+        fine_count,
+        &mut scratch.residual,
+    );
 
     scratch.coarse_rhs.clear();
-    if scratch.coarse_rhs.capacity() < nc {
-        scratch
-            .coarse_rhs
-            .reserve(nc.saturating_sub(scratch.coarse_rhs.len()));
-    }
+    reserve_at_least(&mut scratch.coarse_rhs, nc);
     for row in 0..nc {
-        let val = (0..nf)
+        let val: f64 = (0..nf)
             .map(|col| restriction[row * nf + col] * scratch.residual[col])
-            .sum::<f64>();
+            .sum();
         scratch.coarse_rhs.push(val);
     }
 
     scratch.coarse.clear();
     scratch.coarse.resize(nc, 0.0_f64);
     for _ in 0..4 {
-        jacobi(
+        jacobi_sweep(
             coarse_matrix,
             &scratch.coarse_rhs,
             &scratch.coarse,
+            omega,
             nc,
             &mut scratch.coarse_next,
         );
@@ -225,7 +206,7 @@ pub fn try_amg_v_cycle_witness_with_scratch_into(
             .sum::<f64>();
     }
 
-    jacobi(fine_matrix, fine_rhs, &scratch.fine, nf, out);
+    jacobi_sweep(fine_matrix, fine_rhs, &scratch.fine, omega, nf, out);
     Ok(())
 }
 
@@ -380,48 +361,16 @@ pub fn try_amg_solve_to_tolerance_witness_with_scratch_into(
 ) -> Result<u32, String> {
     let nf = fine_count as usize;
     let nc = coarse_count as usize;
-    if fine_matrix.len() < nf * nf {
-        return Err(format!(
-            "buffer `a` is too short: expected {}, got {}",
-            nf * nf,
-            fine_matrix.len()
-        ));
-    }
-    if fine_rhs.len() < nf {
-        return Err(format!(
-            "buffer `b` is too short: expected {}, got {}",
-            nf,
-            fine_rhs.len()
-        ));
-    }
-    if initial.len() < nf {
-        return Err(format!(
-            "buffer `x` is too short: expected {}, got {}",
-            nf,
-            initial.len()
-        ));
-    }
-    if restriction.len() < nc * nf {
-        return Err(format!(
-            "buffer `r_mat` is too short: expected {}, got {}",
-            nc * nf,
-            restriction.len()
-        ));
-    }
-    if prolongation.len() < nf * nc {
-        return Err(format!(
-            "buffer `p_mat` is too short: expected {}, got {}",
-            nf * nc,
-            prolongation.len()
-        ));
-    }
-    if coarse_matrix.len() < nc * nc {
-        return Err(format!(
-            "buffer `a_c` is too short: expected {}, got {}",
-            nc * nc,
-            coarse_matrix.len()
-        ));
-    }
+    validate_amg_buffers(
+        fine_matrix,
+        fine_rhs,
+        initial,
+        restriction,
+        prolongation,
+        coarse_matrix,
+        nf,
+        nc,
+    )?;
     if tolerance <= 0.0 || !tolerance.is_finite() {
         return Err(format!(
             "tolerance must be finite positive, got {tolerance}"
@@ -434,15 +383,8 @@ pub fn try_amg_solve_to_tolerance_witness_with_scratch_into(
         return Ok(0);
     }
 
-    if out.capacity() < nf {
-        out.reserve(nf.saturating_sub(out.len()));
-    }
-    if scratch.next_iterate.capacity() < nf {
-        scratch
-            .next_iterate
-            .reserve(nf.saturating_sub(scratch.next_iterate.len()));
-    }
-
+    reserve_at_least(out, nf);
+    reserve_at_least(&mut scratch.next_iterate, nf);
     out.clear();
     out.extend_from_slice(&initial[..nf]);
     scratch.next_iterate.clear();
@@ -463,16 +405,7 @@ pub fn try_amg_solve_to_tolerance_witness_with_scratch_into(
         )?;
         out.clear();
         out.extend_from_slice(&scratch.next_iterate);
-
-        let mut max_resid: f64 = 0.0;
-        for i in 0..nf {
-            let row_dot: f64 = (0..nf).map(|j| fine_matrix[i * nf + j] * out[j]).sum();
-            let r = (row_dot - fine_rhs[i]).abs();
-            if r > max_resid {
-                max_resid = r;
-            }
-        }
-        if max_resid < tolerance {
+        if max_abs_residual(fine_matrix, fine_rhs, out, nf) < tolerance {
             return Ok(cycle + 1);
         }
     }
@@ -647,22 +580,9 @@ pub fn try_jacobi_solve_to_tolerance_witness_into(
     scratch: &mut Vec<f64>,
 ) -> Result<u32, String> {
     let n_us = n as usize;
-    if matrix.len() < n_us * n_us {
-        return Err(format!(
-            "matrix too short: expected {}, got {}",
-            n_us * n_us,
-            matrix.len()
-        ));
-    }
-    if rhs.len() < n_us {
-        return Err(format!("rhs too short: expected {n_us}, got {}", rhs.len()));
-    }
-    if initial.len() < n_us {
-        return Err(format!(
-            "initial vector too short: expected {n_us}, got {}",
-            initial.len()
-        ));
-    }
+    check_slice_len(matrix, n_us * n_us, "matrix too short")?;
+    check_slice_len(rhs, n_us, "rhs too short")?;
+    check_slice_len(initial, n_us, "initial vector too short")?;
     if tolerance <= 0.0 || !tolerance.is_finite() {
         return Err(format!(
             "tolerance must be finite positive, got {tolerance}"
@@ -675,40 +595,17 @@ pub fn try_jacobi_solve_to_tolerance_witness_into(
         return Ok(0);
     }
 
-    if out.capacity() < n_us {
-        out.reserve(n_us.saturating_sub(out.len()));
-    }
-    if scratch.capacity() < n_us {
-        scratch.reserve(n_us.saturating_sub(scratch.len()));
-    }
-
+    reserve_at_least(out, n_us);
+    reserve_at_least(scratch, n_us);
     out.clear();
     out.extend_from_slice(&initial[..n_us]);
     scratch.clear();
 
     for iter in 0..max_iters {
-        scratch.clear();
-        scratch.reserve(n_us);
-        for row in 0..n_us {
-            let off_diag: f64 = (0..n_us)
-                .filter(|&col| col != row)
-                .map(|col| matrix[row * n_us + col] * out[col])
-                .sum();
-            let diag = matrix[row * n_us + row];
-            let target = (rhs[row] - off_diag) / diag;
-            scratch.push(out[row] + omega * (target - out[row]));
-        }
-        out.copy_from_slice(scratch);
-
-        let mut max_resid: f64 = 0.0;
-        for i in 0..n_us {
-            let row_dot: f64 = (0..n_us).map(|j| matrix[i * n_us + j] * out[j]).sum();
-            let r = (row_dot - rhs[i]).abs();
-            if r > max_resid {
-                max_resid = r;
-            }
-        }
-        if max_resid < tolerance {
+        jacobi_sweep(matrix, rhs, out, omega, n_us, scratch);
+        out.clear();
+        out.extend_from_slice(scratch);
+        if max_abs_residual(matrix, rhs, out, n_us) < tolerance {
             return Ok(iter + 1);
         }
     }

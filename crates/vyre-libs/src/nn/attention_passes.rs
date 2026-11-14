@@ -1,8 +1,9 @@
 //! Reusable attention passes built from the shared `dot_partial` primitive.
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::Ident;
-use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program, UnOp};
+use vyre_foundation::ir::{
+    BinOp, BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program, UnOp,
+};
 
 use crate::math::dot_partial::{dot_partial, OP_ID as DOT_PARTIAL_OP_ID};
 use crate::nn::attention_stability::{
@@ -16,6 +17,31 @@ pub const ATTENTION_MAX_PASS_OP_ID: &str = "vyre-libs::nn::attention_max_pass";
 pub const ATTENTION_SUM_PASS_OP_ID: &str = "vyre-libs::nn::attention_sum_pass";
 /// Stable op id for the weighted-value write pass.
 pub const ATTENTION_WRITE_PASS_OP_ID: &str = "vyre-libs::nn::attention_write_pass";
+
+fn dot_score_prefix(
+    q: &str,
+    k: &str,
+    d: u32,
+    query_base: Expr,
+    key_base: Expr,
+    scale_expr: Expr,
+) -> Vec<Node> {
+    vec![
+        Node::let_bind("dot_val", Expr::f32(0.0)),
+        dot_partial(
+            q,
+            k,
+            "dot_val",
+            query_base,
+            Expr::add(key_base, Expr::mul(Expr::var("j"), Expr::u32(d))),
+            d,
+        ),
+        Node::let_bind(
+            "score",
+            bounded_score(Expr::mul(Expr::var("dot_val"), scale_expr)),
+        ),
+    ]
+}
 
 /// Emit the attention max-reduction pass for one contiguous query row `i`.
 #[must_use]
@@ -42,45 +68,31 @@ pub fn attention_max_pass_bounded(
     query_base: Expr,
     key_base: Expr,
 ) -> Vec<Node> {
-    let parent = Ident::from(ATTENTION_MAX_PASS_OP_ID);
+    let mut inner = dot_score_prefix(q, k, d, query_base, key_base, scale_expr);
+    inner.push(Node::let_bind(
+        "finite_score",
+        finite_or(Expr::var("score"), Expr::f32(f32::MIN)),
+    ));
+    inner.push(Node::assign(
+        "max_val",
+        Expr::select(
+            Expr::BinOp {
+                op: BinOp::Gt,
+                left: Box::new(Expr::var("finite_score")),
+                right: Box::new(Expr::var("max_val")),
+            },
+            Expr::var("finite_score"),
+            Expr::var("max_val"),
+        ),
+    ));
     vec![Node::loop_for(
         "j",
         Expr::u32(0),
         key_limit,
         vec![wrap_child_region(
             DOT_PARTIAL_OP_ID,
-            parent,
-            vec![
-                Node::let_bind("dot_val", Expr::f32(0.0)),
-                dot_partial(
-                    q,
-                    k,
-                    "dot_val",
-                    query_base,
-                    Expr::add(key_base, Expr::mul(Expr::var("j"), Expr::u32(d))),
-                    d,
-                ),
-                Node::let_bind(
-                    "score",
-                    bounded_score(Expr::mul(Expr::var("dot_val"), scale_expr)),
-                ),
-                Node::let_bind(
-                    "finite_score",
-                    finite_or(Expr::var("score"), Expr::f32(f32::MIN)),
-                ),
-                Node::assign(
-                    "max_val",
-                    Expr::select(
-                        Expr::BinOp {
-                            op: BinOp::Gt,
-                            left: Box::new(Expr::var("finite_score")),
-                            right: Box::new(Expr::var("max_val")),
-                        },
-                        Expr::var("finite_score"),
-                        Expr::var("max_val"),
-                    ),
-                ),
-            ],
+            Ident::from(ATTENTION_MAX_PASS_OP_ID),
+            inner,
         )],
     )]
 }
@@ -89,7 +101,13 @@ pub fn attention_max_pass_bounded(
 #[must_use]
 pub fn attention_max_pass_program(q: &str, k: &str, out: &str, s: u32, d: u32) -> Program {
     let scale_expr = Expr::f32(1.0f32 / (d as f32).sqrt());
-    if s <= 8 && d <= 16 {
+    let buffers = vec![
+        BufferDecl::storage(q, 0, BufferAccess::ReadOnly, DataType::F32).with_count(d),
+        BufferDecl::storage(k, 1, BufferAccess::ReadOnly, DataType::F32)
+            .with_count(s.saturating_mul(d)),
+        BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::F32).with_count(1),
+    ];
+    let region_body = if s <= 8 && d <= 16 {
         let mut max_val = Expr::f32(f32::MIN);
         for col in 0..s {
             let score = finite_or(
@@ -98,37 +116,19 @@ pub fn attention_max_pass_program(q: &str, k: &str, out: &str, s: u32, d: u32) -
             );
             max_val = Expr::select(Expr::gt(score.clone(), max_val.clone()), score, max_val);
         }
-        return Program::wrapped(
-            vec![
-                BufferDecl::storage(q, 0, BufferAccess::ReadOnly, DataType::F32).with_count(d),
-                BufferDecl::storage(k, 1, BufferAccess::ReadOnly, DataType::F32)
-                    .with_count(s.saturating_mul(d)),
-                BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::F32).with_count(1),
-            ],
-            [1, 1, 1],
-            vec![wrap_anonymous_region(
-                ATTENTION_MAX_PASS_OP_ID,
-                vec![Node::store(out, Expr::u32(0), max_val)],
-            )],
-        );
-    }
-    Program::wrapped(
+        vec![Node::store(out, Expr::u32(0), max_val)]
+    } else {
         vec![
-            BufferDecl::storage(q, 0, BufferAccess::ReadOnly, DataType::F32).with_count(d),
-            BufferDecl::storage(k, 1, BufferAccess::ReadOnly, DataType::F32)
-                .with_count(s.saturating_mul(d)),
-            BufferDecl::storage(out, 2, BufferAccess::ReadWrite, DataType::F32).with_count(1),
-        ],
+            Node::let_bind("i", Expr::u32(0)),
+            Node::let_bind("max_val", Expr::f32(f32::MIN)),
+            Node::Block(attention_max_pass(q, k, d, s, scale_expr)),
+            Node::store(out, Expr::u32(0), Expr::var("max_val")),
+        ]
+    };
+    Program::wrapped(
+        buffers,
         [1, 1, 1],
-        vec![wrap_anonymous_region(
-            ATTENTION_MAX_PASS_OP_ID,
-            vec![
-                Node::let_bind("i", Expr::u32(0)),
-                Node::let_bind("max_val", Expr::f32(f32::MIN)),
-                Node::Block(attention_max_pass(q, k, d, s, scale_expr)),
-                Node::store(out, Expr::u32(0), Expr::var("max_val")),
-            ],
-        )],
+        vec![wrap_anonymous_region(ATTENTION_MAX_PASS_OP_ID, region_body)],
     )
 }
 
@@ -157,43 +157,29 @@ pub fn attention_sum_pass_bounded(
     query_base: Expr,
     key_base: Expr,
 ) -> Vec<Node> {
-    let parent = Ident::from(ATTENTION_SUM_PASS_OP_ID);
+    let mut inner = dot_score_prefix(q, k, d, query_base, key_base, scale_expr);
+    inner.push(Node::let_bind(
+        "exp_arg",
+        bounded_exp_arg(Expr::sub(Expr::var("score"), Expr::var("max_val"))),
+    ));
+    inner.push(Node::assign(
+        "sum_val",
+        Expr::add(
+            Expr::var("sum_val"),
+            Expr::UnOp {
+                op: UnOp::Exp,
+                operand: Box::new(Expr::var("exp_arg")),
+            },
+        ),
+    ));
     vec![Node::loop_for(
         "j",
         Expr::u32(0),
         key_limit,
         vec![wrap_child_region(
             DOT_PARTIAL_OP_ID,
-            parent,
-            vec![
-                Node::let_bind("dot_val", Expr::f32(0.0)),
-                dot_partial(
-                    q,
-                    k,
-                    "dot_val",
-                    query_base,
-                    Expr::add(key_base, Expr::mul(Expr::var("j"), Expr::u32(d))),
-                    d,
-                ),
-                Node::let_bind(
-                    "score",
-                    bounded_score(Expr::mul(Expr::var("dot_val"), scale_expr)),
-                ),
-                Node::let_bind(
-                    "exp_arg",
-                    bounded_exp_arg(Expr::sub(Expr::var("score"), Expr::var("max_val"))),
-                ),
-                Node::assign(
-                    "sum_val",
-                    Expr::add(
-                        Expr::var("sum_val"),
-                        Expr::UnOp {
-                            op: UnOp::Exp,
-                            operand: Box::new(Expr::var("exp_arg")),
-                        },
-                    ),
-                ),
-            ],
+            Ident::from(ATTENTION_SUM_PASS_OP_ID),
+            inner,
         )],
     )]
 }
@@ -209,7 +195,14 @@ pub fn attention_sum_pass_program(
     d: u32,
 ) -> Program {
     let scale_expr = Expr::f32(1.0f32 / (d as f32).sqrt());
-    if s <= 8 && d <= 16 {
+    let buffers = vec![
+        BufferDecl::storage(q, 0, BufferAccess::ReadOnly, DataType::F32).with_count(d),
+        BufferDecl::storage(k, 1, BufferAccess::ReadOnly, DataType::F32)
+            .with_count(s.saturating_mul(d)),
+        BufferDecl::storage(max_in, 2, BufferAccess::ReadOnly, DataType::F32).with_count(1),
+        BufferDecl::storage(out, 3, BufferAccess::ReadWrite, DataType::F32).with_count(1),
+    ];
+    let region_body = if s <= 8 && d <= 16 {
         let max_val = Expr::load(max_in, Expr::u32(0));
         let mut sum_val = Expr::f32(0.0);
         for col in 0..s {
@@ -223,40 +216,20 @@ pub fn attention_sum_pass_program(
                 },
             );
         }
-        return Program::wrapped(
-            vec![
-                BufferDecl::storage(q, 0, BufferAccess::ReadOnly, DataType::F32).with_count(d),
-                BufferDecl::storage(k, 1, BufferAccess::ReadOnly, DataType::F32)
-                    .with_count(s.saturating_mul(d)),
-                BufferDecl::storage(max_in, 2, BufferAccess::ReadOnly, DataType::F32).with_count(1),
-                BufferDecl::storage(out, 3, BufferAccess::ReadWrite, DataType::F32).with_count(1),
-            ],
-            [1, 1, 1],
-            vec![wrap_anonymous_region(
-                ATTENTION_SUM_PASS_OP_ID,
-                vec![Node::store(out, Expr::u32(0), sum_val)],
-            )],
-        );
-    }
-    Program::wrapped(
+        vec![Node::store(out, Expr::u32(0), sum_val)]
+    } else {
         vec![
-            BufferDecl::storage(q, 0, BufferAccess::ReadOnly, DataType::F32).with_count(d),
-            BufferDecl::storage(k, 1, BufferAccess::ReadOnly, DataType::F32)
-                .with_count(s.saturating_mul(d)),
-            BufferDecl::storage(max_in, 2, BufferAccess::ReadOnly, DataType::F32).with_count(1),
-            BufferDecl::storage(out, 3, BufferAccess::ReadWrite, DataType::F32).with_count(1),
-        ],
+            Node::let_bind("i", Expr::u32(0)),
+            Node::let_bind("max_val", Expr::load(max_in, Expr::u32(0))),
+            Node::let_bind("sum_val", Expr::f32(0.0)),
+            Node::Block(attention_sum_pass(q, k, d, s, scale_expr)),
+            Node::store(out, Expr::u32(0), Expr::var("sum_val")),
+        ]
+    };
+    Program::wrapped(
+        buffers,
         [1, 1, 1],
-        vec![wrap_anonymous_region(
-            ATTENTION_SUM_PASS_OP_ID,
-            vec![
-                Node::let_bind("i", Expr::u32(0)),
-                Node::let_bind("max_val", Expr::load(max_in, Expr::u32(0))),
-                Node::let_bind("sum_val", Expr::f32(0.0)),
-                Node::Block(attention_sum_pass(q, k, d, s, scale_expr)),
-                Node::store(out, Expr::u32(0), Expr::var("sum_val")),
-            ],
-        )],
+        vec![wrap_anonymous_region(ATTENTION_SUM_PASS_OP_ID, region_body)],
     )
 }
 
@@ -336,7 +309,12 @@ pub fn attention_write_pass_bounded_typed(
     output_base: Expr,
     output_dtype: DataType,
 ) -> Vec<Node> {
-    let parent = Ident::from(ATTENTION_WRITE_PASS_OP_ID);
+    let mut inner =
+        dot_score_nodes_with_value(q, k, v, d, query_base, key_base, value_base, scale_expr);
+    inner.push(Node::assign(
+        "accum",
+        Expr::fma(Expr::var("weight"), Expr::var("value"), Expr::var("accum")),
+    ));
     vec![Node::loop_for(
         "t",
         Expr::u32(0),
@@ -349,69 +327,65 @@ pub fn attention_write_pass_bounded_typed(
                 key_limit,
                 vec![wrap_child_region(
                     DOT_PARTIAL_OP_ID,
-                    parent,
-                    vec![
-                        Node::let_bind("dot_val", Expr::f32(0.0)),
-                        dot_partial(
-                            q,
-                            k,
-                            "dot_val",
-                            query_base,
-                            Expr::add(key_base, Expr::mul(Expr::var("j"), Expr::u32(d))),
-                            d,
-                        ),
-                        Node::let_bind(
-                            "score",
-                            bounded_score(Expr::mul(Expr::var("dot_val"), scale_expr)),
-                        ),
-                        Node::let_bind(
-                            "exp_arg",
-                            bounded_exp_arg(Expr::sub(Expr::var("score"), Expr::var("max_val"))),
-                        ),
-                        Node::let_bind(
-                            "weight",
-                            Expr::BinOp {
-                                op: BinOp::Div,
-                                left: Box::new(Expr::UnOp {
-                                    op: UnOp::Exp,
-                                    operand: Box::new(Expr::var("exp_arg")),
-                                }),
-                                right: Box::new(Expr::var("denom")),
-                            },
-                        ),
-                        Node::let_bind(
-                            "value",
-                            finite_or(
-                                Expr::cast(
-                                    DataType::F32,
-                                    Expr::load(
-                                        v,
-                                        Expr::add(
-                                            Expr::add(
-                                                value_base,
-                                                Expr::mul(Expr::var("j"), Expr::u32(d)),
-                                            ),
-                                            Expr::var("t"),
-                                        ),
-                                    ),
-                                ),
-                                Expr::f32(0.0),
-                            ),
-                        ),
-                        Node::assign(
-                            "accum",
-                            Expr::fma(Expr::var("weight"), Expr::var("value"), Expr::var("accum")),
-                        ),
-                    ],
+                    Ident::from(ATTENTION_WRITE_PASS_OP_ID),
+                    inner,
                 )],
             ),
             Node::Store {
                 buffer: out.into(),
                 index: Expr::add(output_base, Expr::var("t")),
-                value: Expr::cast(output_dtype.clone(), flush_tiny(Expr::var("accum"))),
+                value: Expr::cast(output_dtype, flush_tiny(Expr::var("accum"))),
             },
         ],
     )]
+}
+
+#[allow(clippy::too_many_arguments)]
+fn dot_score_nodes_with_value(
+    q: &str,
+    k: &str,
+    v: &str,
+    d: u32,
+    query_base: Expr,
+    key_base: Expr,
+    value_base: Expr,
+    scale_expr: Expr,
+) -> Vec<Node> {
+    let mut inner = dot_score_prefix(q, k, d, query_base, key_base, scale_expr);
+    inner.extend([
+        Node::let_bind(
+            "exp_arg",
+            bounded_exp_arg(Expr::sub(Expr::var("score"), Expr::var("max_val"))),
+        ),
+        Node::let_bind(
+            "weight",
+            Expr::BinOp {
+                op: BinOp::Div,
+                left: Box::new(Expr::UnOp {
+                    op: UnOp::Exp,
+                    operand: Box::new(Expr::var("exp_arg")),
+                }),
+                right: Box::new(Expr::var("denom")),
+            },
+        ),
+        Node::let_bind(
+            "value",
+            finite_or(
+                Expr::cast(
+                    DataType::F32,
+                    Expr::load(
+                        v,
+                        Expr::add(
+                            Expr::add(value_base, Expr::mul(Expr::var("j"), Expr::u32(d))),
+                            Expr::var("t"),
+                        ),
+                    ),
+                ),
+                Expr::f32(0.0),
+            ),
+        ),
+    ]);
+    inner
 }
 
 /// Buffer names and dimensions for a standalone weighted-value write pass.
@@ -449,7 +423,15 @@ pub fn attention_write_pass_program(spec: AttentionWritePassProgramSpec<'_>) -> 
     } = spec;
     let scale_expr = Expr::f32(1.0f32 / (d as f32).sqrt());
     let elements = s.saturating_mul(d);
-    if s <= 8 && d <= 16 {
+    let buffers = vec![
+        BufferDecl::storage(q, 0, BufferAccess::ReadOnly, DataType::F32).with_count(d),
+        BufferDecl::storage(k, 1, BufferAccess::ReadOnly, DataType::F32).with_count(elements),
+        BufferDecl::storage(v, 2, BufferAccess::ReadOnly, DataType::F32).with_count(elements),
+        BufferDecl::storage(max_in, 3, BufferAccess::ReadOnly, DataType::F32).with_count(1),
+        BufferDecl::storage(sum_in, 4, BufferAccess::ReadOnly, DataType::F32).with_count(1),
+        BufferDecl::storage(out, 5, BufferAccess::ReadWrite, DataType::F32).with_count(d),
+    ];
+    let region_body = if s <= 8 && d <= 16 {
         let max_val = Expr::load(max_in, Expr::u32(0));
         let denom = positive_denominator(Expr::load(sum_in, Expr::u32(0)));
         let mut stores = Vec::with_capacity(d as usize);
@@ -469,40 +451,22 @@ pub fn attention_write_pass_program(spec: AttentionWritePassProgramSpec<'_>) -> 
             }
             stores.push(Node::store(out, Expr::u32(dim), flush_tiny(accum)));
         }
-        return Program::wrapped(
-            vec![
-                BufferDecl::storage(q, 0, BufferAccess::ReadOnly, DataType::F32).with_count(d),
-                BufferDecl::storage(k, 1, BufferAccess::ReadOnly, DataType::F32)
-                    .with_count(elements),
-                BufferDecl::storage(v, 2, BufferAccess::ReadOnly, DataType::F32)
-                    .with_count(elements),
-                BufferDecl::storage(max_in, 3, BufferAccess::ReadOnly, DataType::F32).with_count(1),
-                BufferDecl::storage(sum_in, 4, BufferAccess::ReadOnly, DataType::F32).with_count(1),
-                BufferDecl::storage(out, 5, BufferAccess::ReadWrite, DataType::F32).with_count(d),
-            ],
-            [1, 1, 1],
-            vec![wrap_anonymous_region(ATTENTION_WRITE_PASS_OP_ID, stores)],
-        );
-    }
-    Program::wrapped(
+        stores
+    } else {
         vec![
-            BufferDecl::storage(q, 0, BufferAccess::ReadOnly, DataType::F32).with_count(d),
-            BufferDecl::storage(k, 1, BufferAccess::ReadOnly, DataType::F32).with_count(elements),
-            BufferDecl::storage(v, 2, BufferAccess::ReadOnly, DataType::F32).with_count(elements),
-            BufferDecl::storage(max_in, 3, BufferAccess::ReadOnly, DataType::F32).with_count(1),
-            BufferDecl::storage(sum_in, 4, BufferAccess::ReadOnly, DataType::F32).with_count(1),
-            BufferDecl::storage(out, 5, BufferAccess::ReadWrite, DataType::F32).with_count(d),
-        ],
+            Node::let_bind("i", Expr::u32(0)),
+            Node::let_bind("max_val", Expr::load(max_in, Expr::u32(0))),
+            Node::let_bind("sum_val", Expr::load(sum_in, Expr::u32(0))),
+            Node::let_bind("denom", positive_denominator(Expr::var("sum_val"))),
+            Node::Block(attention_write_pass(q, k, v, d, s, scale_expr, out)),
+        ]
+    };
+    Program::wrapped(
+        buffers,
         [1, 1, 1],
         vec![wrap_anonymous_region(
             ATTENTION_WRITE_PASS_OP_ID,
-            vec![
-                Node::let_bind("i", Expr::u32(0)),
-                Node::let_bind("max_val", Expr::load(max_in, Expr::u32(0))),
-                Node::let_bind("sum_val", Expr::load(sum_in, Expr::u32(0))),
-                Node::let_bind("denom", positive_denominator(Expr::var("sum_val"))),
-                Node::Block(attention_write_pass(q, k, v, d, s, scale_expr, out)),
-            ],
+            region_body,
         )],
     )
 }
@@ -516,16 +480,10 @@ inventory::submit! {
         ATTENTION_MAX_PASS_OP_ID,
         || attention_max_pass_program("q", "k", "out", 2, 2),
         Some(|| {
-            let to_f32_bytes = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
-            vec![vec![
-                to_f32_bytes(&[0.0, 0.0]),
-                to_f32_bytes(&[1.0, 0.0, 2.0, 0.0]),
-                vec![0u8; 4],
-            ]]
+            let f = vyre_primitives::wire::pack_f32_slice;
+            vec![vec![f(&[0.0, 0.0]), f(&[1.0, 0.0, 2.0, 0.0]), vec![0u8; 4]]]
         }),
-        Some(|| {
-            vec![vec![EXPECTED_ATTENTION_MAX_PASS_OUTPUT_BYTES.to_vec()]]
-        }),
+        Some(|| vec![vec![Vec::from(EXPECTED_ATTENTION_MAX_PASS_OUTPUT_BYTES)]]),
     )
     .with_uncharacterized()
 }
@@ -535,17 +493,10 @@ inventory::submit! {
         ATTENTION_SUM_PASS_OP_ID,
         || attention_sum_pass_program("q", "k", "max", "out", 2, 2),
         Some(|| {
-            let to_f32_bytes = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
-            vec![vec![
-                to_f32_bytes(&[0.0, 0.0]),
-                to_f32_bytes(&[1.0, 0.0, 2.0, 0.0]),
-                to_f32_bytes(&[0.0]),
-                vec![0u8; 4],
-            ]]
+            let f = vyre_primitives::wire::pack_f32_slice;
+            vec![vec![f(&[0.0, 0.0]), f(&[1.0, 0.0, 2.0, 0.0]), f(&[0.0]), vec![0u8; 4]]]
         }),
-        Some(|| {
-            vec![vec![EXPECTED_ATTENTION_SUM_PASS_OUTPUT_BYTES.to_vec()]]
-        }),
+        Some(|| vec![vec![Vec::from(EXPECTED_ATTENTION_SUM_PASS_OUTPUT_BYTES)]]),
     )
     .with_uncharacterized()
 }
@@ -566,19 +517,10 @@ inventory::submit! {
             })
         },
         Some(|| {
-            let to_f32_bytes = |w: &[f32]| vyre_primitives::wire::pack_f32_slice(w);
-            vec![vec![
-                to_f32_bytes(&[0.0]),
-                to_f32_bytes(&[1.0, 1.0]),
-                to_f32_bytes(&[20.0, 20.0]),
-                to_f32_bytes(&[0.0]),
-                to_f32_bytes(&[2.0]),
-                vec![0u8; 4],
-            ]]
+            let f = vyre_primitives::wire::pack_f32_slice;
+            vec![vec![f(&[0.0]), f(&[1.0, 1.0]), f(&[20.0, 20.0]), f(&[0.0]), f(&[2.0]), vec![0u8; 4]]]
         }),
-        Some(|| {
-            vec![vec![EXPECTED_ATTENTION_WRITE_PASS_OUTPUT_BYTES.to_vec()]]
-        }),
+        Some(|| vec![vec![Vec::from(EXPECTED_ATTENTION_WRITE_PASS_OUTPUT_BYTES)]]),
     )
     .with_uncharacterized()
 }

@@ -3,16 +3,97 @@
 //! Full 3-pass softmax (max, sum, weighted-write) with KV-head broadcasting.
 
 use crate::nn::attention_passes::{
-    attention_max_pass_bounded, attention_sum_pass_bounded, attention_write_pass_bounded,
-    attention_write_pass_bounded_typed, ATTENTION_MAX_PASS_OP_ID, ATTENTION_SUM_PASS_OP_ID,
-    ATTENTION_WRITE_PASS_OP_ID,
+    attention_max_pass_bounded, attention_sum_pass_bounded, attention_write_pass_bounded_typed,
+    ATTENTION_MAX_PASS_OP_ID, ATTENTION_SUM_PASS_OP_ID, ATTENTION_WRITE_PASS_OP_ID,
 };
 use crate::nn::attention_stability::positive_denominator;
 use vyre_foundation::composition::{trap_program, wrap_anonymous_region, wrap_child_region};
-use vyre_foundation::ir::Ident;
-use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BinOp, BufferAccess, BufferDecl, DataType, Expr, Ident, Node, Program};
 
 const OP_ID: &str = "vyre-libs::nn::gqa_attention";
+
+#[allow(clippy::too_many_arguments)]
+fn three_pass_softmax_row_nodes(
+    parent_op_id: &str,
+    q: &str,
+    k: &str,
+    v_buf: &str,
+    output: &str,
+    head_dim: u32,
+    key_limit: Expr,
+    scale: Expr,
+    query_base: Expr,
+    kv_base: Expr,
+    dtype: DataType,
+) -> Vec<Node> {
+    let parent = Ident::from(parent_op_id);
+    vec![
+        Node::let_bind("max_val", Expr::f32(f32::MIN)),
+        wrap_child_region(
+            ATTENTION_MAX_PASS_OP_ID,
+            parent.clone(),
+            attention_max_pass_bounded(
+                q,
+                k,
+                head_dim,
+                key_limit.clone(),
+                scale.clone(),
+                query_base.clone(),
+                kv_base.clone(),
+            ),
+        ),
+        Node::let_bind("sum_val", Expr::f32(0.0)),
+        wrap_child_region(
+            ATTENTION_SUM_PASS_OP_ID,
+            parent.clone(),
+            attention_sum_pass_bounded(
+                q,
+                k,
+                head_dim,
+                key_limit.clone(),
+                scale.clone(),
+                query_base.clone(),
+                kv_base.clone(),
+            ),
+        ),
+        Node::let_bind("denom", positive_denominator(Expr::var("sum_val"))),
+        wrap_child_region(
+            ATTENTION_WRITE_PASS_OP_ID,
+            parent,
+            attention_write_pass_bounded_typed(
+                q,
+                k,
+                v_buf,
+                head_dim,
+                key_limit,
+                scale,
+                output,
+                query_base.clone(),
+                kv_base.clone(),
+                kv_base,
+                query_base,
+                dtype,
+            ),
+        ),
+    ]
+}
+
+fn attention_buffers<'a>(
+    q: &'a str,
+    k: &'a str,
+    v_buf: &'a str,
+    output: &'a str,
+    q_total: u32,
+    kv_total: u32,
+    dtype: DataType,
+) -> Vec<BufferDecl> {
+    vec![
+        BufferDecl::storage(q, 0, BufferAccess::ReadOnly, dtype.clone()).with_count(q_total),
+        BufferDecl::storage(k, 1, BufferAccess::ReadOnly, dtype.clone()).with_count(kv_total),
+        BufferDecl::storage(v_buf, 2, BufferAccess::ReadOnly, dtype.clone()).with_count(kv_total),
+        BufferDecl::output(output, 3, dtype).with_count(q_total),
+    ]
+}
 
 /// Build GQA attention (F32). n_q_heads must be a multiple of n_kv_heads.
 ///
@@ -37,25 +118,26 @@ pub fn gqa_attention(
     }
     let group_size = n_q_heads / n_kv_heads;
     let per_head = seq_len.checked_mul(head_dim).ok_or_else(|| {
-        "gqa_attention sequence and head dimensions overflow u32. Fix: shard the attention input"
-            .to_string()
+        String::from(
+            "gqa_attention sequence and head dimensions overflow u32. Fix: shard the attention input",
+        )
     })?;
     let q_rows = n_q_heads.checked_mul(seq_len).ok_or_else(|| {
-        "gqa_attention query row count overflows u32. Fix: shard the query heads".to_string()
+        String::from("gqa_attention query row count overflows u32. Fix: shard the query heads")
     })?;
     let q_total = n_q_heads.checked_mul(per_head).ok_or_else(|| {
-        "gqa_attention query element count overflows u32. Fix: shard the query heads".to_string()
+        String::from("gqa_attention query element count overflows u32. Fix: shard the query heads")
     })?;
     let kv_total = n_kv_heads.checked_mul(per_head).ok_or_else(|| {
-        "gqa_attention key/value element count overflows u32. Fix: shard the key/value heads"
-            .to_string()
+        String::from(
+            "gqa_attention key/value element count overflows u32. Fix: shard the key/value heads",
+        )
     })?;
     let scale_expr = Expr::f32(1.0f32 / (head_dim as f32).sqrt());
 
-    let row_index = Expr::var("i");
     let q_head = Expr::BinOp {
         op: BinOp::Div,
-        left: Box::new(row_index.clone()),
+        left: Box::new(Expr::var("i")),
         right: Box::new(Expr::u32(seq_len)),
     };
     let kv_head = Expr::BinOp {
@@ -63,73 +145,31 @@ pub fn gqa_attention(
         left: Box::new(q_head),
         right: Box::new(Expr::u32(group_size)),
     };
-    let query_base = Expr::mul(row_index.clone(), Expr::u32(head_dim));
+    let query_base = Expr::mul(Expr::var("i"), Expr::u32(head_dim));
     let kv_base = Expr::mul(kv_head, Expr::u32(per_head));
-    let parent = Ident::from(OP_ID);
 
     let body = vec![
         Node::let_bind("i", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
-            Expr::lt(row_index, Expr::u32(q_rows)),
-            vec![
-                Node::let_bind("max_val", Expr::f32(f32::MIN)),
-                wrap_child_region(
-                    ATTENTION_MAX_PASS_OP_ID,
-                    parent.clone(),
-                    attention_max_pass_bounded(
-                        q,
-                        k,
-                        head_dim,
-                        Expr::u32(seq_len),
-                        scale_expr.clone(),
-                        query_base.clone(),
-                        kv_base.clone(),
-                    ),
-                ),
-                Node::let_bind("sum_val", Expr::f32(0.0)),
-                wrap_child_region(
-                    ATTENTION_SUM_PASS_OP_ID,
-                    parent.clone(),
-                    attention_sum_pass_bounded(
-                        q,
-                        k,
-                        head_dim,
-                        Expr::u32(seq_len),
-                        scale_expr.clone(),
-                        query_base.clone(),
-                        kv_base.clone(),
-                    ),
-                ),
-                Node::let_bind("denom", positive_denominator(Expr::var("sum_val"))),
-                wrap_child_region(
-                    ATTENTION_WRITE_PASS_OP_ID,
-                    parent,
-                    attention_write_pass_bounded(
-                        q,
-                        k,
-                        v_buf,
-                        head_dim,
-                        Expr::u32(seq_len),
-                        scale_expr,
-                        output,
-                        query_base.clone(),
-                        kv_base.clone(),
-                        kv_base,
-                        query_base,
-                    ),
-                ),
-            ],
+            Expr::lt(Expr::var("i"), Expr::u32(q_rows)),
+            three_pass_softmax_row_nodes(
+                OP_ID,
+                q,
+                k,
+                v_buf,
+                output,
+                head_dim,
+                Expr::u32(seq_len),
+                scale_expr,
+                query_base,
+                kv_base,
+                DataType::F32,
+            ),
         ),
     ];
 
     Ok(Program::wrapped(
-        vec![
-            BufferDecl::storage(q, 0, BufferAccess::ReadOnly, DataType::F32).with_count(q_total),
-            BufferDecl::storage(k, 1, BufferAccess::ReadOnly, DataType::F32).with_count(kv_total),
-            BufferDecl::storage(v_buf, 2, BufferAccess::ReadOnly, DataType::F32)
-                .with_count(kv_total),
-            BufferDecl::output(output, 3, DataType::F32).with_count(q_total),
-        ],
+        attention_buffers(q, k, v_buf, output, q_total, kv_total, DataType::F32),
         [64, 1, 1],
         vec![wrap_anonymous_region(OP_ID, body)],
     ))
@@ -220,24 +260,16 @@ pub fn gqa_attention_causal_typed(
     let q_total = checked(&[batch, n_q_heads, query_len, head_dim], "query")?;
     let kv_total = checked(&[batch, n_kv_heads, kv_len, head_dim], "KV")?;
     let rows = checked(&[batch, n_q_heads, query_len], "row")?;
-    let q_head_span = query_len
-        .checked_mul(head_dim)
-        .ok_or_else(|| "Fix: causal GQA query head span overflows u32".to_string())?;
-    let kv_head_span = kv_len
-        .checked_mul(head_dim)
-        .ok_or_else(|| "Fix: causal GQA KV head span overflows u32".to_string())?;
-    let q_batch_span = n_q_heads
-        .checked_mul(q_head_span)
-        .ok_or_else(|| "Fix: causal GQA query batch span overflows u32".to_string())?;
-    let kv_batch_span = n_kv_heads
-        .checked_mul(kv_head_span)
-        .ok_or_else(|| "Fix: causal GQA KV batch span overflows u32".to_string())?;
+    let q_head_span = checked(&[query_len, head_dim], "query head span")?;
+    let kv_head_span = checked(&[kv_len, head_dim], "KV head span")?;
+    let q_batch_span = checked(&[n_q_heads, q_head_span], "query batch span")?;
+    let kv_batch_span = checked(&[n_kv_heads, kv_head_span], "KV batch span")?;
     let group = n_q_heads / n_kv_heads;
-    let row = Expr::var("row");
-    let batch_index = Expr::div(row.clone(), Expr::u32(n_q_heads * query_len));
+    let q_rows_per_batch = n_q_heads * query_len;
+    let batch_index = Expr::div(Expr::var("row"), Expr::u32(q_rows_per_batch));
     let batch_row = Expr::sub(
-        row.clone(),
-        Expr::mul(batch_index.clone(), Expr::u32(n_q_heads * query_len)),
+        Expr::var("row"),
+        Expr::mul(batch_index.clone(), Expr::u32(q_rows_per_batch)),
     );
     let query_head = Expr::div(batch_row.clone(), Expr::u32(query_len));
     let query_token = Expr::sub(
@@ -261,70 +293,27 @@ pub fn gqa_attention_causal_typed(
         Expr::u32(1),
     );
     let scale = Expr::f32(1.0 / (head_dim as f32).sqrt());
-    let parent = Ident::from(OP_ID);
     let body = vec![
         Node::let_bind("row", Expr::LogicalIndex { axis: 0 }),
         Node::if_then(
-            Expr::lt(row, Expr::u32(rows)),
-            vec![
-                Node::let_bind("max_val", Expr::f32(f32::MIN)),
-                wrap_child_region(
-                    ATTENTION_MAX_PASS_OP_ID,
-                    parent.clone(),
-                    attention_max_pass_bounded(
-                        q,
-                        k,
-                        head_dim,
-                        key_limit.clone(),
-                        scale.clone(),
-                        query_base.clone(),
-                        kv_base.clone(),
-                    ),
-                ),
-                Node::let_bind("sum_val", Expr::f32(0.0)),
-                wrap_child_region(
-                    ATTENTION_SUM_PASS_OP_ID,
-                    parent.clone(),
-                    attention_sum_pass_bounded(
-                        q,
-                        k,
-                        head_dim,
-                        key_limit.clone(),
-                        scale.clone(),
-                        query_base.clone(),
-                        kv_base.clone(),
-                    ),
-                ),
-                Node::let_bind("denom", positive_denominator(Expr::var("sum_val"))),
-                wrap_child_region(
-                    ATTENTION_WRITE_PASS_OP_ID,
-                    parent,
-                    attention_write_pass_bounded_typed(
-                        q,
-                        k,
-                        v_buf,
-                        head_dim,
-                        key_limit,
-                        scale,
-                        output,
-                        query_base.clone(),
-                        kv_base.clone(),
-                        kv_base,
-                        query_base,
-                        dtype.clone(),
-                    ),
-                ),
-            ],
+            Expr::lt(Expr::var("row"), Expr::u32(rows)),
+            three_pass_softmax_row_nodes(
+                "vyre-libs::nn::gqa_attention_causal",
+                q,
+                k,
+                v_buf,
+                output,
+                head_dim,
+                key_limit,
+                scale,
+                query_base,
+                kv_base,
+                dtype.clone(),
+            ),
         ),
     ];
     Ok(Program::wrapped(
-        vec![
-            BufferDecl::storage(q, 0, BufferAccess::ReadOnly, dtype.clone()).with_count(q_total),
-            BufferDecl::storage(k, 1, BufferAccess::ReadOnly, dtype.clone()).with_count(kv_total),
-            BufferDecl::storage(v_buf, 2, BufferAccess::ReadOnly, dtype.clone())
-                .with_count(kv_total),
-            BufferDecl::output(output, 3, dtype).with_count(q_total),
-        ],
+        attention_buffers(q, k, v_buf, output, q_total, kv_total, dtype),
         [64, 1, 1],
         vec![wrap_anonymous_region(
             "vyre-libs::nn::gqa_attention_causal",
@@ -363,9 +352,22 @@ inventory::submit! {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use vyre_test_support::test_parity_oracles::decode_f32;
-    use vyre_test_support::test_parity_oracles::eval_bytes;
-    use vyre_test_support::test_parity_oracles::f32_bytes;
+    use vyre_test_support::test_parity_oracles::{decode_f32, eval_bytes, f32_bytes};
+
+    fn eval_gqa(n_q: u32, n_kv: u32, s: u32, d: u32, q: &[f32], k: &[f32], v: &[f32]) -> Vec<f32> {
+        let prog = gqa_attention("q", "k", "v", "out", n_q, n_kv, s, d).expect("Fix: build");
+        let outputs = eval_bytes(
+            "gqa_attention",
+            &prog,
+            vec![
+                f32_bytes(q),
+                f32_bytes(k),
+                f32_bytes(v),
+                vec![0u8; (n_q * s * d) as usize * 4],
+            ],
+        );
+        decode_f32(&outputs[0])
+    }
 
     #[test]
     fn gqa_attention_zero_sequence_length_rejected() {
@@ -376,26 +378,15 @@ mod tests {
 
     #[test]
     fn gqa_attention_single_token() {
-        let n_q = 2u32;
-        let n_kv = 1u32;
-        let s = 1u32;
-        let d = 2u32;
-        let q = [1.0f32, 0.0, 0.0, 1.0];
-        let k = [1.0f32, 0.0];
-        let v = [10.0f32, 20.0];
-        let prog = gqa_attention("q", "k", "v", "out", n_q, n_kv, s, d).expect("Fix: build");
-        let outputs = eval_bytes(
-            "gqa_attention",
-            &prog,
-            vec![
-                f32_bytes(&q),
-                f32_bytes(&k),
-                f32_bytes(&v),
-                vec![0u8; (n_q * s * d) as usize * 4],
-            ],
+        let out = eval_gqa(
+            2,
+            1,
+            1,
+            2,
+            &[1.0, 0.0, 0.0, 1.0],
+            &[1.0, 0.0],
+            &[10.0, 20.0],
         );
-        let out = decode_f32(&outputs[0]);
-        // With one token, softmax is [1.0], so output equals V broadcast.
         for (i, &v) in out.iter().enumerate() {
             let expected = if i % 2 == 0 { 10.0 } else { 20.0 };
             assert!(
@@ -407,25 +398,7 @@ mod tests {
 
     #[test]
     fn gqa_attention_very_large_qk_values_stay_finite() {
-        let n_q = 1u32;
-        let n_kv = 1u32;
-        let s = 2u32;
-        let d = 2u32;
-        let q = [1e20f32; 4];
-        let k = [1e20f32; 4];
-        let v = [1.0f32; 4];
-        let prog = gqa_attention("q", "k", "v", "out", n_q, n_kv, s, d).expect("Fix: build");
-        let outputs = eval_bytes(
-            "gqa_attention",
-            &prog,
-            vec![
-                f32_bytes(&q),
-                f32_bytes(&k),
-                f32_bytes(&v),
-                vec![0u8; (n_q * s * d) as usize * 4],
-            ],
-        );
-        let out = decode_f32(&outputs[0]);
+        let out = eval_gqa(1, 1, 2, 2, &[1e20; 4], &[1e20; 4], &[1.0; 4]);
         for (i, &v) in out.iter().enumerate() {
             assert!(
                 v.is_finite(),
@@ -436,29 +409,10 @@ mod tests {
 
     #[test]
     fn gqa_attention_nan_in_q_k_v_propagates() {
-        let n_q = 1u32;
-        let n_kv = 1u32;
-        let s = 1u32;
-        let d = 2u32;
-        let q = [f32::NAN, 0.0];
-        let k = [0.0f32, 0.0];
-        let v = [1.0f32, 2.0];
-        let prog = gqa_attention("q", "k", "v", "out", n_q, n_kv, s, d).expect("Fix: build");
-        let outputs = eval_bytes(
-            "gqa_attention",
-            &prog,
-            vec![
-                f32_bytes(&q),
-                f32_bytes(&k),
-                f32_bytes(&v),
-                vec![0u8; (n_q * s * d) as usize * 4],
-            ],
-        );
-        let out = decode_f32(&outputs[0]);
+        let out = eval_gqa(1, 1, 1, 2, &[f32::NAN, 0.0], &[0.0, 0.0], &[1.0, 2.0]);
         assert!(
             out.iter().any(|v| v.is_nan()),
-            "gqa_attention must propagate NaN in Q/K/V instead of silently producing finite output {:?}",
-            out
+            "gqa_attention must propagate NaN in Q/K/V instead of silently producing finite output {out:?}",
         );
     }
 }

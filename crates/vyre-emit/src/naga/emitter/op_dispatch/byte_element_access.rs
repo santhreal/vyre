@@ -9,6 +9,57 @@ use super::diagnostics::non_byte_load_route_message;
 use crate::naga::EmitError;
 
 impl BodyBuilder<'_> {
+    fn byte_lane_address(
+        &mut self,
+        raw_index: naga::Handle<Expression>,
+    ) -> (
+        naga::Handle<Expression>,
+        naga::Handle<Expression>,
+        naga::Handle<Expression>,
+        naga::Handle<Expression>,
+    ) {
+        let byte_index = self.coerce_value_to_type(raw_index, self.types.u32_ty);
+        let two = self.literal_u32(2);
+        let three = self.literal_u32(3);
+        let eight = self.literal_u32(8);
+        let mask_ff = self.literal_u32(0xff);
+        let word_index = self.append_expr(Expression::Binary {
+            op: BinaryOperator::ShiftRight,
+            left: byte_index,
+            right: two,
+        });
+        let lane_in_word = self.append_expr(Expression::Binary {
+            op: BinaryOperator::And,
+            left: byte_index,
+            right: three,
+        });
+        let shift_bits = self.append_expr(Expression::Binary {
+            op: BinaryOperator::Multiply,
+            left: lane_in_word,
+            right: eight,
+        });
+        (byte_index, word_index, shift_bits, mask_ff)
+    }
+
+    fn load_word_as_u32(
+        &mut self,
+        slot: u32,
+        word_index: naga::Handle<Expression>,
+        is_signed: bool,
+    ) -> Result<naga::Handle<Expression>, EmitError> {
+        let pointer = self.binding_element_pointer_by_slot(slot, word_index)?;
+        let word_bits = self.append_expr(Expression::Load { pointer });
+        Ok(if is_signed {
+            self.append_expr(Expression::As {
+                expr: word_bits,
+                kind: naga::ScalarKind::Uint,
+                convert: None,
+            })
+        } else {
+            word_bits
+        })
+    }
+
     /// Emit a Load on a byte-element binding (DataType::U8 / DataType::I8).
     ///
     /// Reference-eval treats U8/I8 buffers as byte-addressed; the WGSL
@@ -34,45 +85,8 @@ impl BodyBuilder<'_> {
         // The IR-level index is a byte address. Translate it to a word
         // index for naga's `array<u32>` Access expression.
         let raw_index = self.value_operand(op, 1)?;
-        let byte_index = self.coerce_value_to_type(raw_index, self.types.u32_ty);
-        let two = self.literal_u32(2);
-        let three = self.literal_u32(3);
-        let eight = self.literal_u32(8);
-        let mask_ff = self.literal_u32(0xff);
-        let word_index = self.append_expr(Expression::Binary {
-            op: BinaryOperator::ShiftRight,
-            left: byte_index,
-            right: two,
-        });
-        let lane_in_word = self.append_expr(Expression::Binary {
-            op: BinaryOperator::And,
-            left: byte_index,
-            right: three,
-        });
-        let shift_bits = self.append_expr(Expression::Binary {
-            op: BinaryOperator::Multiply,
-            left: lane_in_word,
-            right: eight,
-        });
-        let pointer = self.binding_element_pointer_by_slot(slot, word_index)?;
-        let word_bits = self.append_expr(Expression::Load { pointer });
-        // The byte-extract shift+mask is UNSIGNED bit manipulation. An `I8`
-        // buffer is backed by `array<i32>` (scalar_type maps I8 -> i32_ty), so
-        // the loaded word is Sint; masking it with the u32 `0xff`/shift literals
-        // would emit `And(i32, u32)` / `ShiftRight(i32, u32)` which naga rejects
-        // (InvalidBinaryOperandTypes) (the I8 byte-extract emitted invalid WGSL).
-        // Reinterpret the word's bits to u32 so the whole extraction is u32; the
-        // I8 case re-signs only at the final `(byte << 24) as i32 >> 24` step.
-        // `U8` is already `array<u32>`, so its word needs no reinterpret.
-        let word = if matches!(data_type, DataType::I8) {
-            self.append_expr(Expression::As {
-                expr: word_bits,
-                kind: naga::ScalarKind::Uint,
-                convert: None,
-            })
-        } else {
-            word_bits
-        };
+        let (_byte_index, word_index, shift_bits, mask_ff) = self.byte_lane_address(raw_index);
+        let word = self.load_word_as_u32(slot, word_index, matches!(data_type, DataType::I8))?;
         let shifted = self.append_expr(Expression::Binary {
             op: BinaryOperator::ShiftRight,
             left: word,
@@ -151,27 +165,8 @@ impl BodyBuilder<'_> {
     ) -> Result<(), EmitError> {
         let raw_index = self.value_operand(op, 1)?;
         let raw_value = self.value_operand(op, 2)?;
-        let byte_index = self.coerce_value_to_type(raw_index, self.types.u32_ty);
+        let (byte_index, word_index, shift_bits, mask_ff) = self.byte_lane_address(raw_index);
         let value_u32 = self.coerce_value_to_type(raw_value, self.types.u32_ty);
-        let two = self.literal_u32(2);
-        let three = self.literal_u32(3);
-        let eight = self.literal_u32(8);
-        let mask_ff = self.literal_u32(0xff);
-        let word_index = self.append_expr(Expression::Binary {
-            op: BinaryOperator::ShiftRight,
-            left: byte_index,
-            right: two,
-        });
-        let lane_in_word = self.append_expr(Expression::Binary {
-            op: BinaryOperator::And,
-            left: byte_index,
-            right: three,
-        });
-        let shift_bits = self.append_expr(Expression::Binary {
-            op: BinaryOperator::Multiply,
-            left: lane_in_word,
-            right: eight,
-        });
         // (0xff << shift)  -  the byte mask in u32-word position.
         let lane_mask = self.append_expr(Expression::Binary {
             op: BinaryOperator::ShiftLeft,
@@ -203,17 +198,7 @@ impl BodyBuilder<'_> {
         // already `array<u32>`, so it needs neither reinterpret.
         let is_signed_byte = matches!(self.binding_data_types.get(&slot), Some(DataType::I8));
         // Read-modify-write the u32 word.
-        let pointer = self.binding_element_pointer_by_slot(slot, word_index)?;
-        let word_bits = self.append_expr(Expression::Load { pointer });
-        let word = if is_signed_byte {
-            self.append_expr(Expression::As {
-                expr: word_bits,
-                kind: naga::ScalarKind::Uint,
-                convert: None,
-            })
-        } else {
-            word_bits
-        };
+        let word = self.load_word_as_u32(slot, word_index, is_signed_byte)?;
         let cleared = self.append_expr(Expression::Binary {
             op: BinaryOperator::And,
             left: word,

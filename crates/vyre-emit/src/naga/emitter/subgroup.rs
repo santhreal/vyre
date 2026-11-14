@@ -28,16 +28,48 @@ fn naga_subgroup_operation(op: SubgroupReduceOp) -> Result<naga::SubgroupOperati
 }
 
 impl BodyBuilder<'_> {
-    pub(super) fn emit_subgroup_ballot(&mut self, op: &KernelOp) -> Result<(), EmitError> {
-        let cond_id = *op
+    fn subgroup_operand(
+        &self,
+        op: &KernelOp,
+        index: usize,
+        op_name: &str,
+        field: &str,
+    ) -> Result<naga::Handle<Expression>, EmitError> {
+        let id = *op
             .operands
-            .first()
-            .ok_or_else(|| EmitError::InvalidDescriptor("SubgroupBallot missing cond".into()))?;
-        let cond = self.values.get(&cond_id).copied().ok_or_else(|| {
-            EmitError::InvalidDescriptor(format!(
-                "SubgroupBallot cond id {cond_id} not yet emitted"
-            ))
-        })?;
+            .get(index)
+            .ok_or_else(|| EmitError::InvalidDescriptor(format!("{op_name} missing {field}")))?;
+        self.values.get(&id).copied().ok_or_else(|| {
+            EmitError::InvalidDescriptor(format!("{op_name} {field} id {id} not yet emitted"))
+        })
+    }
+
+    fn emit_subgroup_gather(
+        &mut self,
+        op: &KernelOp,
+        op_name: &str,
+        make_mode: fn(naga::Handle<Expression>) -> naga::GatherMode,
+    ) -> Result<(), EmitError> {
+        let argument = self.subgroup_operand(op, 0, op_name, "value")?;
+        let lane = self.subgroup_operand(op, 1, op_name, "lane")?;
+        let ty = self.value_type_operand(op, 0)?;
+        let result = self
+            .function
+            .expressions
+            .append(Expression::SubgroupOperationResult { ty }, Span::UNDEFINED);
+        self.function.body.push(
+            Statement::SubgroupGather {
+                mode: make_mode(lane),
+                argument,
+                result,
+            },
+            Span::UNDEFINED,
+        );
+        self.bind_result_typed(op, result, ty)
+    }
+
+    pub(super) fn emit_subgroup_ballot(&mut self, op: &KernelOp) -> Result<(), EmitError> {
+        let cond = self.subgroup_operand(op, 0, "SubgroupBallot", "cond")?;
         // naga's `SubgroupBallot` requires a `bool` predicate, but the IR cond
         // is commonly an integer mask (e.g. the `BinOp::Ballot` spelling stores
         // to a u32 and passes a u32 predicate). Coerce non-bool predicates to
@@ -126,21 +158,12 @@ impl BodyBuilder<'_> {
                 )))
             }
         };
-        let value_id = *op
-            .operands
-            .first()
-            .ok_or_else(|| EmitError::InvalidDescriptor("SubgroupReduce missing value".into()))?;
-        let argument = self.values.get(&value_id).copied().ok_or_else(|| {
-            EmitError::InvalidDescriptor(format!(
-                "SubgroupReduce value id {value_id} not yet emitted"
-            ))
-        })?;
-        let result = self.function.expressions.append(
-            Expression::SubgroupOperationResult {
-                ty: self.value_type_operand(op, 0)?,
-            },
-            Span::UNDEFINED,
-        );
+        let argument = self.subgroup_operand(op, 0, "SubgroupReduce", "value")?;
+        let ty = self.value_type_operand(op, 0)?;
+        let result = self
+            .function
+            .expressions
+            .append(Expression::SubgroupOperationResult { ty }, Span::UNDEFINED);
         self.function.body.push(
             Statement::SubgroupCollectiveOperation {
                 op: reduce_op,
@@ -150,82 +173,14 @@ impl BodyBuilder<'_> {
             },
             Span::UNDEFINED,
         );
-        let ty = self.value_type_operand(op, 0)?;
         self.bind_result_typed(op, result, ty)
     }
 
     pub(super) fn emit_subgroup_shuffle(&mut self, op: &KernelOp) -> Result<(), EmitError> {
-        let value_id = *op
-            .operands
-            .first()
-            .ok_or_else(|| EmitError::InvalidDescriptor("SubgroupShuffle missing value".into()))?;
-        let lane_id = *op
-            .operands
-            .get(1)
-            .ok_or_else(|| EmitError::InvalidDescriptor("SubgroupShuffle missing lane".into()))?;
-        let argument = self.values.get(&value_id).copied().ok_or_else(|| {
-            EmitError::InvalidDescriptor(format!(
-                "SubgroupShuffle value id {value_id} not yet emitted"
-            ))
-        })?;
-        let lane = self.values.get(&lane_id).copied().ok_or_else(|| {
-            EmitError::InvalidDescriptor(format!(
-                "SubgroupShuffle lane id {lane_id} not yet emitted"
-            ))
-        })?;
-        let result = self.function.expressions.append(
-            Expression::SubgroupOperationResult {
-                ty: self.value_type_operand(op, 0)?,
-            },
-            Span::UNDEFINED,
-        );
-        self.function.body.push(
-            Statement::SubgroupGather {
-                mode: naga::GatherMode::Shuffle(lane),
-                argument,
-                result,
-            },
-            Span::UNDEFINED,
-        );
-        let ty = self.value_type_operand(op, 0)?;
-        self.bind_result_typed(op, result, ty)
+        self.emit_subgroup_gather(op, "SubgroupShuffle", naga::GatherMode::Shuffle)
     }
 
     pub(super) fn emit_subgroup_broadcast(&mut self, op: &KernelOp) -> Result<(), EmitError> {
-        let value_id = *op.operands.first().ok_or_else(|| {
-            EmitError::InvalidDescriptor("SubgroupBroadcast missing value".into())
-        })?;
-        let lane_id = *op
-            .operands
-            .get(1)
-            .ok_or_else(|| EmitError::InvalidDescriptor("SubgroupBroadcast missing lane".into()))?;
-        let argument = self.values.get(&value_id).copied().ok_or_else(|| {
-            EmitError::InvalidDescriptor(format!(
-                "SubgroupBroadcast value id {value_id} not yet emitted"
-            ))
-        })?;
-        let lane = self.values.get(&lane_id).copied().ok_or_else(|| {
-            EmitError::InvalidDescriptor(format!(
-                "SubgroupBroadcast lane id {lane_id} not yet emitted"
-            ))
-        })?;
-        let result = self.function.expressions.append(
-            Expression::SubgroupOperationResult {
-                ty: self.value_type_operand(op, 0)?,
-            },
-            Span::UNDEFINED,
-        );
-        // Broadcast = gather from one uniform source lane (vs Shuffle's per-lane
-        // source). naga lowers GatherMode::Broadcast to `subgroupBroadcast`.
-        self.function.body.push(
-            Statement::SubgroupGather {
-                mode: naga::GatherMode::Broadcast(lane),
-                argument,
-                result,
-            },
-            Span::UNDEFINED,
-        );
-        let ty = self.value_type_operand(op, 0)?;
-        self.bind_result_typed(op, result, ty)
+        self.emit_subgroup_gather(op, "SubgroupBroadcast", naga::GatherMode::Broadcast)
     }
 }

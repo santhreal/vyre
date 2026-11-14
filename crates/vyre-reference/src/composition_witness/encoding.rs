@@ -130,7 +130,7 @@ pub fn try_base64_decode_packed_witness_into(
     vyre_foundation::allocation::reserve_exact_cleared(out, decoded_words).map_err(|source| {
         Base64DecodeWitnessError::Allocation {
             requested: decoded_words,
-            source: source.to_string(),
+            source: format!("{source}"),
         }
     })?;
     out.resize(decoded_words, 0);
@@ -187,10 +187,10 @@ pub fn try_rle_segment_lengths_witness_into(
 ) -> Result<(), String> {
     lengths
         .try_reserve(packed.len().saturating_sub(lengths.len()))
-        .map_err(|error| error.to_string())?;
+        .map_err(|error| format!("{error}"))?;
     values
         .try_reserve(packed.len().saturating_sub(values.len()))
-        .map_err(|error| error.to_string())?;
+        .map_err(|error| format!("{error}"))?;
     lengths.clear();
     values.clear();
     lengths.extend(packed.iter().map(|segment| segment >> 8));
@@ -233,7 +233,7 @@ pub fn try_rle_segment_start_offsets_witness_into(
 ) -> Result<u32, String> {
     offsets
         .try_reserve(lengths.len().saturating_sub(offsets.len()))
-        .map_err(|error| error.to_string())?;
+        .map_err(|error| format!("{error}"))?;
     offsets.clear();
     let mut total = 0_u32;
     for &length in lengths {
@@ -272,10 +272,10 @@ pub fn try_rle_decode_witness_into(packed: &[u32], decoded: &mut Vec<u8>) -> Res
         .iter()
         .map(|segment| (segment >> 8) as usize)
         .try_fold(0_usize, usize::checked_add)
-        .ok_or_else(|| "RLE decoded length overflowed usize".to_string())?;
+        .ok_or_else(|| String::from("RLE decoded length overflowed usize"))?;
     decoded
         .try_reserve(decoded_len.saturating_sub(decoded.len()))
-        .map_err(|error| error.to_string())?;
+        .map_err(|error| format!("{error}"))?;
     decoded.clear();
     for &segment in packed {
         decoded.extend(std::iter::repeat_n(
@@ -345,13 +345,14 @@ pub fn ziftsieve_extract_literals_witness(
         if literal_len == 15 {
             loop {
                 let extension = *input.get(cursor).ok_or_else(|| {
-                    "truncated length encoding for LZ4 literal. Fix: provide the complete \
-                     extended literal length."
-                        .to_owned()
+                    String::from(
+                        "truncated length encoding for LZ4 literal. Fix: provide the complete \
+                         extended literal length.",
+                    )
                 })?;
                 literal_len = literal_len
                     .checked_add(usize::from(extension))
-                    .ok_or_else(|| "literal length overflow".to_owned())?;
+                    .ok_or_else(|| String::from("literal length overflow"))?;
                 if literal_len > MAX_BLOCK_SIZE {
                     return Err(format!(
                         "literal length {literal_len} exceeds MAX_BLOCK_SIZE"
@@ -364,13 +365,13 @@ pub fn ziftsieve_extract_literals_witness(
         }
         let literal_end = cursor
             .checked_add(literal_len)
-            .ok_or_else(|| "literal range overflow".to_owned())?;
+            .ok_or_else(|| String::from("literal range overflow"))?;
         let sequence_literals = input
             .get(cursor..literal_end)
-            .ok_or_else(|| "truncated literal payload".to_owned())?;
+            .ok_or_else(|| String::from("truncated literal payload"))?;
         decoded_len = decoded_len
             .checked_add(literal_len)
-            .ok_or_else(|| "decoded literal length overflow".to_owned())?;
+            .ok_or_else(|| String::from("decoded literal length overflow"))?;
         let remaining = max_output.saturating_sub(literals.len());
         literals.extend_from_slice(&sequence_literals[..sequence_literals.len().min(remaining)]);
         cursor = literal_end;
@@ -379,9 +380,9 @@ pub fn ziftsieve_extract_literals_witness(
         }
         let offset_end = cursor
             .checked_add(2)
-            .ok_or_else(|| "match offset range overflow".to_owned())?;
+            .ok_or_else(|| String::from("match offset range overflow"))?;
         if offset_end > input.len() {
-            return Err("truncated match offset".to_owned());
+            return Err(String::from("truncated match offset"));
         }
         cursor = offset_end;
     }
@@ -421,22 +422,22 @@ pub struct InflateStoredWitness {
 /// Decode one byte-per-word DEFLATE stored block.
 pub fn inflate_stored_witness(input: &[u32]) -> Result<InflateStoredWitness, String> {
     if input.len() < 5 {
-        return Err("stored block header requires five words".to_owned());
+        return Err(String::from("stored block header requires five words"));
     }
     if input[0] >> 1 & 0x3 != 0 {
-        return Err("DEFLATE block is not stored".to_owned());
+        return Err(String::from("DEFLATE block is not stored"));
     }
     let length = (input[1] & 0xFF) | ((input[2] & 0xFF) << 8);
     let complement = (input[3] & 0xFF) | ((input[4] & 0xFF) << 8);
     if complement != (!length & 0xFFFF) {
-        return Err("stored block LEN/NLEN mismatch".to_owned());
+        return Err(String::from("stored block LEN/NLEN mismatch"));
     }
     let end = 5_usize
         .checked_add(length as usize)
-        .ok_or_else(|| "stored block length overflow".to_owned())?;
+        .ok_or_else(|| String::from("stored block length overflow"))?;
     let payload = input
         .get(5..end)
-        .ok_or_else(|| "truncated stored block payload".to_owned())?;
+        .ok_or_else(|| String::from("truncated stored block payload"))?;
     Ok(InflateStoredWitness {
         data: payload.iter().map(|word| word & 0xFF).collect(),
         inflated_len: length,

@@ -127,7 +127,7 @@ fn push_builtin_arg(
 ) -> u32 {
     let index = function.arguments.len() as u32;
     function.arguments.push(FunctionArgument {
-        name: Some(name.to_owned()),
+        name: Some(String::from(name)),
         ty,
         binding: Some(Binding::BuiltIn(builtin)),
     });
@@ -162,58 +162,22 @@ impl ModuleBuilder {
         let f64_ty = insert_scalar(&mut module, ScalarKind::Float, 8);
         let u64_ty = insert_scalar(&mut module, ScalarKind::Uint, 8);
         let i64_ty = insert_scalar(&mut module, ScalarKind::Sint, 8);
-        let vec2_u32_ty = module.types.insert(
-            Type {
-                name: Some("__vyre_vec2_u32".to_owned()),
-                inner: TypeInner::Vector {
-                    size: VectorSize::Bi,
-                    scalar: Scalar {
-                        kind: ScalarKind::Uint,
-                        width: 4,
-                    },
-                },
-            },
-            Span::UNDEFINED,
-        );
-        let vec3_u32_ty = module.types.insert(
-            Type {
-                name: Some("__vyre_vec3_u32".to_owned()),
-                inner: TypeInner::Vector {
-                    size: VectorSize::Tri,
-                    scalar: Scalar {
-                        kind: ScalarKind::Uint,
-                        width: 4,
-                    },
-                },
-            },
-            Span::UNDEFINED,
-        );
-        let vec4_u32_ty = module.types.insert(
-            Type {
-                name: Some("__vyre_vec4_u32".to_owned()),
-                inner: TypeInner::Vector {
-                    size: VectorSize::Quad,
-                    scalar: Scalar {
-                        kind: ScalarKind::Uint,
-                        width: 4,
-                    },
-                },
-            },
-            Span::UNDEFINED,
-        );
+        let vec2_u32_ty = insert_u32_vec(&mut module, "__vyre_vec2_u32", VectorSize::Bi);
+        let vec3_u32_ty = insert_u32_vec(&mut module, "__vyre_vec3_u32", VectorSize::Tri);
+        let vec4_u32_ty = insert_u32_vec(&mut module, "__vyre_vec4_u32", VectorSize::Quad);
         let atomic_compare_exchange_u32_ty = module.types.insert(
             Type {
-                name: Some("__atomic_compare_exchange_result_u32".to_owned()),
+                name: Some(String::from("__atomic_compare_exchange_result_u32")),
                 inner: TypeInner::Struct {
                     members: vec![
                         naga::StructMember {
-                            name: Some("old_value".to_owned()),
+                            name: Some(String::from("old_value")),
                             ty: u32_ty,
                             binding: None,
                             offset: 0,
                         },
                         naga::StructMember {
-                            name: Some("exchanged".to_owned()),
+                            name: Some(String::from("exchanged")),
                             ty: bool_ty,
                             binding: None,
                             offset: 4,
@@ -260,9 +224,9 @@ impl ModuleBuilder {
         // other binding keeps its descriptor name. The numeric @group/@binding
         // (not this string) is what connects the global to the descriptor slot.
         let wgsl_name = if binding.name == TRAP_SIDECAR_NAME {
-            WGSL_TRAP_SIDECAR_GLOBAL.to_owned()
+            String::from(WGSL_TRAP_SIDECAR_GLOBAL)
         } else {
-            binding.name.clone()
+            String::from(binding.name.as_str())
         };
         let element_ty = if is_atomic {
             let scalar = match &self.module.types[scalar_ty].inner {
@@ -287,17 +251,14 @@ impl ModuleBuilder {
         let stride = binding.element_type.min_bytes().max(4) as u32;
         let size = match binding.memory_class {
             MemoryClass::Shared => {
-                let count = binding
-                    .element_count
-                    .ok_or_else(|| EmitError::InvalidBinding {
-                        slot: binding.slot,
-                        reason: "shared bindings require a static element_count".to_owned(),
-                    })?;
+                let count = binding.element_count.ok_or_else(|| {
+                    invalid_binding(
+                        binding.slot,
+                        "shared bindings require a static element_count",
+                    )
+                })?;
                 ArraySize::Constant(NonZeroU32::new(count).ok_or_else(|| {
-                    EmitError::InvalidBinding {
-                        slot: binding.slot,
-                        reason: "shared bindings require element_count > 0".to_owned(),
-                    }
+                    invalid_binding(binding.slot, "shared bindings require element_count > 0")
                 })?)
             }
             _ => ArraySize::Dynamic,
@@ -357,20 +318,18 @@ impl ModuleBuilder {
             // `Bytes` is NOT a 4-byte word: lowering it as `array<u32>` would
             // silently reinterpret packed bytes as words (a recall/correctness
             // hazard). Require the explicit pack-to-u32 pre-pass instead.
-            DataType::Bytes => Err(EmitError::InvalidBinding {
+            DataType::Bytes => Err(invalid_binding(
                 slot,
-                reason: "raw `Bytes` buffers must run the pack-to-u32 pre-pass before Naga \
-                         emission; lowering them directly as `array<u32>` would reinterpret \
-                         packed bytes as words. Fix: run the byte-packing pre-pass."
-                    .to_owned(),
-            }),
-            DataType::F16 => Err(EmitError::InvalidBinding {
+                "raw `Bytes` buffers must run the pack-to-u32 pre-pass before Naga \
+                 emission; lowering them directly as `array<u32>` would reinterpret \
+                 packed bytes as words. Fix: run the byte-packing pre-pass.",
+            )),
+            DataType::F16 => Err(invalid_binding(
                 slot,
-                reason: "`F16` buffers need WGSL `enable f16;`, which this Naga stack cannot \
-                         parse yet. Fix: keep half data packed as u32 until the f16 extension \
-                         is wired."
-                    .to_owned(),
-            }),
+                "`F16` buffers need WGSL `enable f16;`, which this Naga stack cannot \
+                 parse yet. Fix: keep half data packed as u32 until the f16 extension \
+                 is wired.",
+            )),
             // A 4-byte array element is just a u32 word; any other element size
             // needs a struct-backed array (WGSL `array<u32>` cannot represent a
             // non-word stride without silently truncating).
@@ -401,6 +360,29 @@ fn insert_scalar(module: &mut Module, kind: ScalarKind, width: u8) -> naga::Hand
         },
         Span::UNDEFINED,
     )
+}
+
+fn insert_u32_vec(module: &mut Module, name: &'static str, size: VectorSize) -> naga::Handle<Type> {
+    module.types.insert(
+        Type {
+            name: Some(String::from(name)),
+            inner: TypeInner::Vector {
+                size,
+                scalar: Scalar {
+                    kind: ScalarKind::Uint,
+                    width: 4,
+                },
+            },
+        },
+        Span::UNDEFINED,
+    )
+}
+
+fn invalid_binding(slot: u32, reason: impl Into<String>) -> EmitError {
+    EmitError::InvalidBinding {
+        slot,
+        reason: reason.into(),
+    }
 }
 
 fn address_space(binding: &BindingSlot) -> AddressSpace {
@@ -556,7 +538,7 @@ pub(crate) fn emit_uncached(
     if matches!(grid_index, GridIndexSpace::GridLinearized) && !desc.admits_grid_linearized_index()
     {
         return Err(EmitError::InvalidDescriptor(
-            "descriptor declares a grid-linearized index space but reads the grid's shape through the global invocation id on y or z, or through the workgroup id. Fix: plan this launch on one grid axis, or address it from the global invocation id x axis alone.".to_owned(),
+            "descriptor declares a grid-linearized index space but reads the grid's shape through the global invocation id on y or z, or through the workgroup id. Fix: plan this launch on one grid axis, or address it from the global invocation id x axis alone.".into(),
         ));
     }
     let mut builder = ModuleBuilder::new();
@@ -572,11 +554,18 @@ pub(crate) fn emit_uncached(
     // dispatch segment, submitted in order. A fence-free descriptor yields a
     // single segment and the same single `main` as before.
     let segments = vyre_compiler::lower::dispatch_segments(desc)
-        .map_err(|source| EmitError::InvalidDescriptor(source.to_string()))?;
+        .map_err(|source| EmitError::InvalidDescriptor(format!("{source}")))?;
+    let seg_count = segments.len();
+    let mut trap_codes_opt = Some(trap_tag_codes);
     for (index, segment) in segments.iter().enumerate() {
         let name = crate::naga::grid_segments::segment_entry_name(index);
         let mut function = Function::default();
-        function.name = Some(name.clone());
+        function.name = Some(String::from(name.as_str()));
+        let seg_trap_codes = if index + 1 == seg_count {
+            trap_codes_opt.take().unwrap_or_default()
+        } else {
+            trap_codes_opt.as_ref().cloned().unwrap_or_default()
+        };
         let builtins = Builtins::push(
             &mut function,
             builder.types,
@@ -606,7 +595,7 @@ pub(crate) fn emit_uncached(
             named_carrier_result_ids: FxHashMap::default(),
             vector_lanes: FxHashMap::default(),
             trap_sidecar_slot,
-            trap_tag_codes: trap_tag_codes.clone(),
+            trap_tag_codes: seg_trap_codes,
             op_dispatch_routes: Default::default(),
             float_lowering,
         };

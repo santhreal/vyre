@@ -5,6 +5,13 @@
 
 use super::*;
 
+fn io_err(path: &Path, source: impl std::fmt::Display) -> SafetensorError {
+    SafetensorError::Io {
+        path: path.to_path_buf(),
+        detail: format!("{source}"),
+    }
+}
+
 /// Validated `model.safetensors.index.json` plus every referenced shard header.
 #[derive(Debug, Clone)]
 pub struct ShardedSafetensorIndex {
@@ -25,21 +32,12 @@ impl ShardedSafetensorIndex {
     ) -> Result<Self, SafetensorError> {
         let checkpoint_root = checkpoint_root.as_ref();
         let canonical_root =
-            fs::canonicalize(checkpoint_root).map_err(|source| SafetensorError::Io {
-                path: checkpoint_root.to_path_buf(),
-                detail: source.to_string(),
-            })?;
+            fs::canonicalize(checkpoint_root).map_err(|s| io_err(checkpoint_root, s))?;
         let index_path = index_path.as_ref();
-        let mut index_file = File::open(index_path).map_err(|source| SafetensorError::Io {
-            path: index_path.to_path_buf(),
-            detail: source.to_string(),
-        })?;
+        let mut index_file = File::open(index_path).map_err(|s| io_err(index_path, s))?;
         let index_len = index_file
             .metadata()
-            .map_err(|source| SafetensorError::Io {
-                path: index_path.to_path_buf(),
-                detail: source.to_string(),
-            })?
+            .map_err(|s| io_err(index_path, s))?
             .len();
         if index_len > MAX_SHARD_INDEX_BYTES {
             return Err(SafetensorError::ShardIndexTooLarge {
@@ -56,10 +54,7 @@ impl ShardedSafetensorIndex {
         (&mut index_file)
             .take(MAX_SHARD_INDEX_BYTES + 1)
             .read_to_end(&mut bytes)
-            .map_err(|source| SafetensorError::Io {
-                path: index_path.to_path_buf(),
-                detail: source.to_string(),
-            })?;
+            .map_err(|s| io_err(index_path, s))?;
         if bytes.len() as u64 > MAX_SHARD_INDEX_BYTES {
             return Err(SafetensorError::ShardIndexTooLarge {
                 actual: bytes.len() as u64,
@@ -67,7 +62,7 @@ impl ShardedSafetensorIndex {
             });
         }
         let raw: RawShardIndex = serde_json::from_slice(&bytes)
-            .map_err(|error| SafetensorError::ShardIndex(error.to_string()))?;
+            .map_err(|error| SafetensorError::ShardIndex(format!("{error}")))?;
         if raw.weight_map.len() > MAX_TENSORS {
             return Err(SafetensorError::TooManyTensors {
                 actual: raw.weight_map.len(),
@@ -97,14 +92,9 @@ impl ShardedSafetensorIndex {
         for (shard, expected_names) in shard_names {
             let candidate = canonical_root.join(&shard);
             let canonical_shard =
-                fs::canonicalize(&candidate).map_err(|source| SafetensorError::Io {
-                    path: candidate,
-                    detail: source.to_string(),
-                })?;
+                fs::canonicalize(&candidate).map_err(|s| io_err(&candidate, s))?;
             if !canonical_shard.starts_with(&canonical_root) {
-                return Err(SafetensorError::UnsafeShardPath {
-                    path: shard.clone(),
-                });
+                return Err(SafetensorError::UnsafeShardPath { path: shard });
             }
             let index = SafetensorIndex::open(canonical_shard)?;
             for name in expected_names {
@@ -179,26 +169,26 @@ impl ShardedSafetensorIndex {
         for requirement in requirements {
             if names.insert(requirement.name, ()).is_some() {
                 return Err(SafetensorError::DuplicateRequirement {
-                    name: requirement.name.to_string(),
+                    name: String::from(requirement.name),
                 });
             }
             let actual = self.tensors.get(requirement.name).ok_or_else(|| {
                 SafetensorError::MissingRequiredTensor {
-                    name: requirement.name.to_string(),
+                    name: String::from(requirement.name),
                 }
             })?;
             if actual.tensor.dtype != requirement.dtype {
                 return Err(SafetensorError::RequiredDtype {
-                    name: requirement.name.to_string(),
+                    name: String::from(requirement.name),
                     actual: actual.tensor.dtype,
                     expected: requirement.dtype,
                 });
             }
             if actual.tensor.shape != requirement.shape {
                 return Err(SafetensorError::RequiredShape {
-                    name: requirement.name.to_string(),
+                    name: String::from(requirement.name),
                     actual: actual.tensor.shape.clone(),
-                    expected: requirement.shape.to_vec(),
+                    expected: requirement.shape.iter().copied().collect(),
                 });
             }
         }
@@ -257,17 +247,8 @@ impl ShardedSafetensorIndex {
         let mut tensor_content: BTreeMap<String, [u8; 32]> = BTreeMap::new();
         for (shard, index) in &self.shards {
             let expected_digest = expected_by_shard[shard];
-            let mut file = File::open(index.path()).map_err(|source| SafetensorError::Io {
-                path: index.path().to_path_buf(),
-                detail: source.to_string(),
-            })?;
-            let before_len = file
-                .metadata()
-                .map_err(|source| SafetensorError::Io {
-                    path: index.path().to_path_buf(),
-                    detail: source.to_string(),
-                })?
-                .len();
+            let mut file = File::open(index.path()).map_err(|s| io_err(index.path(), s))?;
+            let before_len = file.metadata().map_err(|s| io_err(index.path(), s))?.len();
             if before_len != index.identity.file_len {
                 return Err(SafetensorError::ShardLengthChanged {
                     shard: shard.clone(),
@@ -277,10 +258,7 @@ impl ShardedSafetensorIndex {
             }
             use std::io::Seek;
             file.seek(std::io::SeekFrom::Start(0))
-                .map_err(|source| SafetensorError::Io {
-                    path: index.path().to_path_buf(),
-                    detail: source.to_string(),
-                })?;
+                .map_err(|s| io_err(index.path(), s))?;
             // One sequential pass produces the whole-shard digest and every
             // tensor's content digest together. The per-tensor digests are what
             // let a later read prove the bytes it returns are the bytes that
@@ -304,10 +282,7 @@ impl ShardedSafetensorIndex {
             loop {
                 let read = file
                     .read(&mut buffer)
-                    .map_err(|source| SafetensorError::Io {
-                        path: index.path().to_path_buf(),
-                        detail: source.to_string(),
-                    })?;
+                    .map_err(|s| io_err(index.path(), s))?;
                 if read == 0 {
                     break;
                 }
@@ -341,7 +316,7 @@ impl ShardedSafetensorIndex {
             let shared_file = std::sync::Arc::new(std::sync::Mutex::new(file));
             let shard_handle = VerifiedShardHandle {
                 shard_path: shard.clone(),
-                file: shared_file.clone(),
+                file: shared_file,
                 identity: index.identity.clone(),
                 expected_digest: actual_digest,
             };
@@ -356,7 +331,7 @@ impl ShardedSafetensorIndex {
                 VerifiedTensorHandle {
                     shard_path: checkpoint_tensor.shard.clone(),
                     tensor: checkpoint_tensor.tensor.clone(),
-                    file: shard_handle.file.clone(),
+                    file: std::sync::Arc::clone(&shard_handle.file),
                     expected_shard_digest: shard_handle.expected_digest,
                     expected_file_len: shard_handle.identity.file_len,
                     expected_content_digest,

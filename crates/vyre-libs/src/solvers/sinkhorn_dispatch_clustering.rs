@@ -37,6 +37,57 @@ pub struct SinkhornDispatchGpuScratch {
     inputs: Vec<Vec<u8>>,
 }
 
+#[allow(clippy::too_many_arguments)]
+fn sinkhorn_kernel_weight_nodes(
+    d: u32,
+    eps: f32,
+    row_expr: Expr,
+    col_expr: Expr,
+    kk_var: &'static str,
+    cost_var: &'static str,
+    f_var: &'static str,
+    g_var: &'static str,
+    diff_var: &'static str,
+    k_var: &'static str,
+) -> Vec<Node> {
+    vec![
+        Node::let_bind(cost_var, Expr::f32(0.0)),
+        Node::loop_for(
+            kk_var,
+            Expr::u32(0),
+            Expr::u32(d),
+            vec![
+                Node::let_bind(
+                    f_var,
+                    Expr::load(
+                        "region_features",
+                        Expr::add(Expr::mul(row_expr, Expr::u32(d)), Expr::var(kk_var)),
+                    ),
+                ),
+                Node::let_bind(
+                    g_var,
+                    Expr::load(
+                        "cluster_centroids",
+                        Expr::add(Expr::mul(col_expr, Expr::u32(d)), Expr::var(kk_var)),
+                    ),
+                ),
+                Node::let_bind(diff_var, Expr::sub(Expr::var(f_var), Expr::var(g_var))),
+                Node::assign(
+                    cost_var,
+                    Expr::add(
+                        Expr::var(cost_var),
+                        Expr::mul(Expr::var(diff_var), Expr::var(diff_var)),
+                    ),
+                ),
+            ],
+        ),
+        Node::let_bind(
+            k_var,
+            Expr::exp(Expr::div(Expr::negate(Expr::var(cost_var)), Expr::f32(eps))),
+        ),
+    ]
+}
+
 /// Emit a Program that clusters `m` regions into `n` clusters.
 ///
 /// Features:
@@ -59,181 +110,86 @@ pub fn sinkhorn_clustering_program(m: u32, n: u32, d: u32, iters: u32, eps: f32)
     // We use one workgroup to cluster all regions.
     // Each thread handles some regions.
     let workgroup_size = 256;
-    let gid = Expr::logical_index(0);
+    let gid = || Expr::logical_index(0);
+    let mut body = vec![
+        Node::if_then(
+            Expr::lt(gid(), Expr::u32(n)),
+            vec![Node::store("v", gid(), Expr::f32(1.0))],
+        ),
+        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
+    ];
 
-    // Intermediate buffers for Sinkhorn vectors u (size m) and v (size n).
-    // In a real production substrate, these might be scratchpad / shared memory.
-    // For this primitive, we use dedicated internal buffers.
-
-    let mut body = vec![];
-
-    // 1. Initialize v = 1.0
-    body.push(Node::if_then(
-        Expr::lt(gid.clone(), Expr::u32(n)),
-        vec![Node::store("v", gid.clone(), Expr::f32(1.0))],
+    let mut u_inner = sinkhorn_kernel_weight_nodes(
+        d,
+        eps,
+        gid(),
+        Expr::var("jj"),
+        "kk",
+        "cost_ij",
+        "f_ik",
+        "g_jk",
+        "diff",
+        "k_ij",
+    );
+    u_inner.push(Node::assign(
+        "kv_sum",
+        Expr::add(
+            Expr::var("kv_sum"),
+            Expr::mul(Expr::var("k_ij"), Expr::load("v", Expr::var("jj"))),
+        ),
     ));
-    body.push(Node::logical_barrier(
-        vyre_foundation::ir::MemoryOrdering::SeqCst,
+
+    let mut v_inner = sinkhorn_kernel_weight_nodes(
+        d,
+        eps,
+        Expr::var("ii"),
+        gid(),
+        "kk_rev",
+        "cost_ij_rev",
+        "f_ik_rev",
+        "g_jk_rev",
+        "diff_rev",
+        "k_ij_rev",
+    );
+    v_inner.push(Node::assign(
+        "ku_sum",
+        Expr::add(
+            Expr::var("ku_sum"),
+            Expr::mul(Expr::var("k_ij_rev"), Expr::load("u", Expr::var("ii"))),
+        ),
     ));
 
-    // 2. Sinkhorn Loop
     body.push(Node::loop_for(
         "it",
         Expr::u32(0),
         Expr::u32(iters),
         vec![
-            // u_i = a_i / sum_j (K_ij * v_j)
             Node::if_then(
-                Expr::lt(gid.clone(), Expr::u32(m)),
+                Expr::lt(gid(), Expr::u32(m)),
                 vec![
                     Node::let_bind("kv_sum", Expr::f32(0.0)),
-                    Node::loop_for(
-                        "jj",
-                        Expr::u32(0),
-                        Expr::u32(n),
-                        vec![
-                            // Compute C_ij = sum_k (f_ik - g_jk)^2
-                            Node::let_bind("cost_ij", Expr::f32(0.0)),
-                            Node::loop_for(
-                                "kk",
-                                Expr::u32(0),
-                                Expr::u32(d),
-                                vec![
-                                    Node::let_bind(
-                                        "f_ik",
-                                        Expr::load(
-                                            "region_features",
-                                            Expr::add(
-                                                Expr::mul(gid.clone(), Expr::u32(d)),
-                                                Expr::var("kk"),
-                                            ),
-                                        ),
-                                    ),
-                                    Node::let_bind(
-                                        "g_jk",
-                                        Expr::load(
-                                            "cluster_centroids",
-                                            Expr::add(
-                                                Expr::mul(Expr::var("jj"), Expr::u32(d)),
-                                                Expr::var("kk"),
-                                            ),
-                                        ),
-                                    ),
-                                    Node::let_bind(
-                                        "diff",
-                                        Expr::sub(Expr::var("f_ik"), Expr::var("g_jk")),
-                                    ),
-                                    Node::assign(
-                                        "cost_ij",
-                                        Expr::add(
-                                            Expr::var("cost_ij"),
-                                            Expr::mul(Expr::var("diff"), Expr::var("diff")),
-                                        ),
-                                    ),
-                                ],
-                            ),
-                            // K_ij = exp(-cost_ij / eps)
-                            Node::let_bind(
-                                "k_ij",
-                                Expr::exp(Expr::div(
-                                    Expr::negate(Expr::var("cost_ij")),
-                                    Expr::f32(eps),
-                                )),
-                            ),
-                            Node::assign(
-                                "kv_sum",
-                                Expr::add(
-                                    Expr::var("kv_sum"),
-                                    Expr::mul(Expr::var("k_ij"), Expr::load("v", Expr::var("jj"))),
-                                ),
-                            ),
-                        ],
-                    ),
+                    Node::loop_for("jj", Expr::u32(0), Expr::u32(n), u_inner),
                     Node::store(
                         "u",
-                        gid.clone(),
+                        gid(),
                         Expr::div(
-                            Expr::load("region_weights", gid.clone()),
+                            Expr::load("region_weights", gid()),
                             Expr::max(Expr::var("kv_sum"), Expr::f32(1e-10)),
                         ),
                     ),
                 ],
             ),
             Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
-            // v_j = b_j / sum_i (K_ij * u_i)
             Node::if_then(
-                Expr::lt(gid.clone(), Expr::u32(n)),
+                Expr::lt(gid(), Expr::u32(n)),
                 vec![
                     Node::let_bind("ku_sum", Expr::f32(0.0)),
-                    Node::loop_for(
-                        "ii",
-                        Expr::u32(0),
-                        Expr::u32(m),
-                        vec![
-                            // Recompute K_ij (to save memory; in production we might cache K if m*n is small)
-                            Node::let_bind("cost_ij_rev", Expr::f32(0.0)),
-                            Node::loop_for(
-                                "kk_rev",
-                                Expr::u32(0),
-                                Expr::u32(d),
-                                vec![
-                                    Node::let_bind(
-                                        "f_ik_rev",
-                                        Expr::load(
-                                            "region_features",
-                                            Expr::add(
-                                                Expr::mul(Expr::var("ii"), Expr::u32(d)),
-                                                Expr::var("kk_rev"),
-                                            ),
-                                        ),
-                                    ),
-                                    Node::let_bind(
-                                        "g_jk_rev",
-                                        Expr::load(
-                                            "cluster_centroids",
-                                            Expr::add(
-                                                Expr::mul(gid.clone(), Expr::u32(d)),
-                                                Expr::var("kk_rev"),
-                                            ),
-                                        ),
-                                    ),
-                                    Node::let_bind(
-                                        "diff_rev",
-                                        Expr::sub(Expr::var("f_ik_rev"), Expr::var("g_jk_rev")),
-                                    ),
-                                    Node::assign(
-                                        "cost_ij_rev",
-                                        Expr::add(
-                                            Expr::var("cost_ij_rev"),
-                                            Expr::mul(Expr::var("diff_rev"), Expr::var("diff_rev")),
-                                        ),
-                                    ),
-                                ],
-                            ),
-                            Node::let_bind(
-                                "k_ij_rev",
-                                Expr::exp(Expr::div(
-                                    Expr::negate(Expr::var("cost_ij_rev")),
-                                    Expr::f32(eps),
-                                )),
-                            ),
-                            Node::assign(
-                                "ku_sum",
-                                Expr::add(
-                                    Expr::var("ku_sum"),
-                                    Expr::mul(
-                                        Expr::var("k_ij_rev"),
-                                        Expr::load("u", Expr::var("ii")),
-                                    ),
-                                ),
-                            ),
-                        ],
-                    ),
+                    Node::loop_for("ii", Expr::u32(0), Expr::u32(m), v_inner),
                     Node::store(
                         "v",
-                        gid.clone(),
+                        gid(),
                         Expr::div(
-                            Expr::load("cluster_capacities", gid.clone()),
+                            Expr::load("cluster_capacities", gid()),
                             Expr::max(Expr::var("ku_sum"), Expr::f32(1e-10)),
                         ),
                     ),
@@ -243,83 +199,44 @@ pub fn sinkhorn_clustering_program(m: u32, n: u32, d: u32, iters: u32, eps: f32)
         ],
     ));
 
-    // 3. Final assignment: argmax_j (K_ij * v_j)
+    let mut final_inner = sinkhorn_kernel_weight_nodes(
+        d,
+        eps,
+        gid(),
+        Expr::var("jj_final"),
+        "kk_final",
+        "cost_ij_final",
+        "f_ik_final",
+        "g_jk_final",
+        "diff_final",
+        "k_ij_final",
+    );
+    final_inner.extend([
+        Node::let_bind(
+            "val",
+            Expr::mul(
+                Expr::var("k_ij_final"),
+                Expr::load("v", Expr::var("jj_final")),
+            ),
+        ),
+        Node::if_then(
+            Expr::gt(Expr::var("val"), Expr::var("max_val")),
+            vec![
+                Node::assign("max_val", Expr::var("val")),
+                Node::assign("best_j", Expr::var("jj_final")),
+            ],
+        ),
+    ]);
+
     body.push(Node::if_then(
-        Expr::lt(gid.clone(), Expr::u32(m)),
+        Expr::lt(gid(), Expr::u32(m)),
         vec![
             Node::let_bind("best_j", Expr::u32(0)),
             Node::let_bind("max_val", Expr::f32(-1.0)),
-            Node::loop_for(
-                "jj_final",
-                Expr::u32(0),
-                Expr::u32(n),
-                vec![
-                    Node::let_bind("cost_ij_final", Expr::f32(0.0)),
-                    Node::loop_for(
-                        "kk_final",
-                        Expr::u32(0),
-                        Expr::u32(d),
-                        vec![
-                            Node::let_bind(
-                                "f_ik_final",
-                                Expr::load(
-                                    "region_features",
-                                    Expr::add(
-                                        Expr::mul(gid.clone(), Expr::u32(d)),
-                                        Expr::var("kk_final"),
-                                    ),
-                                ),
-                            ),
-                            Node::let_bind(
-                                "g_jk_final",
-                                Expr::load(
-                                    "cluster_centroids",
-                                    Expr::add(
-                                        Expr::mul(Expr::var("jj_final"), Expr::u32(d)),
-                                        Expr::var("kk_final"),
-                                    ),
-                                ),
-                            ),
-                            Node::let_bind(
-                                "diff_final",
-                                Expr::sub(Expr::var("f_ik_final"), Expr::var("g_jk_final")),
-                            ),
-                            Node::assign(
-                                "cost_ij_final",
-                                Expr::add(
-                                    Expr::var("cost_ij_final"),
-                                    Expr::mul(Expr::var("diff_final"), Expr::var("diff_final")),
-                                ),
-                            ),
-                        ],
-                    ),
-                    Node::let_bind(
-                        "k_ij_final",
-                        Expr::exp(Expr::div(
-                            Expr::negate(Expr::var("cost_ij_final")),
-                            Expr::f32(eps),
-                        )),
-                    ),
-                    Node::let_bind(
-                        "val",
-                        Expr::mul(
-                            Expr::var("k_ij_final"),
-                            Expr::load("v", Expr::var("jj_final")),
-                        ),
-                    ),
-                    Node::if_then(
-                        Expr::gt(Expr::var("val"), Expr::var("max_val")),
-                        vec![
-                            Node::assign("max_val", Expr::var("val")),
-                            Node::assign("best_j", Expr::var("jj_final")),
-                        ],
-                    ),
-                ],
-            ),
-            Node::store("out_assignments", gid.clone(), Expr::var("best_j")),
+            Node::loop_for("jj_final", Expr::u32(0), Expr::u32(n), final_inner),
+            Node::store("out_assignments", gid(), Expr::var("best_j")),
         ],
     ));
-
     Program::wrapped(
         vec![
             BufferDecl::storage("region_features", 0, BufferAccess::ReadOnly, DataType::F32)

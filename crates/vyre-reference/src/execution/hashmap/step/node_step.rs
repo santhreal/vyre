@@ -264,34 +264,15 @@ pub(crate) fn step_nodes_frame<'a>(
             op: _,
             group,
         } => {
-            if group.as_u32() != vyre_spec::CommGroup::WORLD.0 {
-                return Err(ReferenceError::incomplete_dispatch_semantics(format!(
-                    "single-rank reference interpreter supports only WORLD collective group, got group {}. Fix: run on distributed backend for non-WORLD groups.",
-                    group.as_u32()
-                )));
-            }
+            require_world_group(group)?;
         }
         Node::AllGather {
             input,
             output,
             group,
         } => {
-            if group.as_u32() != vyre_spec::CommGroup::WORLD.0 {
-                return Err(ReferenceError::incomplete_dispatch_semantics(format!(
-                    "single-rank reference interpreter supports only WORLD collective group, got group {}. Fix: run on distributed backend for non-WORLD groups.",
-                    group.as_u32()
-                )));
-            }
-            let src_bytes = {
-                let src = memory.storage.get(input.as_str()).ok_or_else(|| {
-                    ReferenceError::missing_value(format!(
-                        "AllGather input buffer `{input}` not found"
-                    ))
-                })?;
-                src.read_window(0, src.byte_len())
-            };
-            let dst = buffer_mut(memory, output.as_str())?;
-            dst.write_window(0, &src_bytes);
+            require_world_group(group)?;
+            copy_whole_buffer(memory, input.as_str(), output.as_str(), "AllGather")?;
         }
         Node::ReduceScatter {
             input,
@@ -299,34 +280,15 @@ pub(crate) fn step_nodes_frame<'a>(
             op: _,
             group,
         } => {
-            if group.as_u32() != vyre_spec::CommGroup::WORLD.0 {
-                return Err(ReferenceError::incomplete_dispatch_semantics(format!(
-                    "single-rank reference interpreter supports only WORLD collective group, got group {}. Fix: run on distributed backend for non-WORLD groups.",
-                    group.as_u32()
-                )));
-            }
-            let src_bytes = {
-                let src = memory.storage.get(input.as_str()).ok_or_else(|| {
-                    ReferenceError::missing_value(format!(
-                        "ReduceScatter input buffer `{input}` not found"
-                    ))
-                })?;
-                src.read_window(0, src.byte_len())
-            };
-            let dst = buffer_mut(memory, output.as_str())?;
-            dst.write_window(0, &src_bytes);
+            require_world_group(group)?;
+            copy_whole_buffer(memory, input.as_str(), output.as_str(), "ReduceScatter")?;
         }
         Node::Broadcast {
             buffer: _,
             root,
             group,
         } => {
-            if group.as_u32() != vyre_spec::CommGroup::WORLD.0 {
-                return Err(ReferenceError::incomplete_dispatch_semantics(format!(
-                    "single-rank reference interpreter supports only WORLD collective group, got group {}. Fix: run on distributed backend for non-WORLD groups.",
-                    group.as_u32()
-                )));
-            }
+            require_world_group(group)?;
             if *root != 0 {
                 return Err(ReferenceError::incomplete_dispatch_semantics(format!(
                     "single-rank reference interpreter requires Broadcast root 0, got root {root}."
@@ -357,19 +319,14 @@ pub(crate) fn step_nodes_frame<'a>(
             origin,
             layout,
         } => {
-            let mut origin_coords = Vec::with_capacity(origin.len());
-            for expr in origin {
-                let v = eval_expr(
-                    expr,
-                    invocation,
-                    memory,
-                    #[cfg(feature = "subgroup-ops")]
-                    snapshots,
-                )?;
-                origin_coords.push(v.try_as_u32().ok_or_else(|| {
-                    ReferenceError::new("tile load origin coord must be u32".to_string())
-                })?);
-            }
+            let origin_coords = eval_origin_coords(
+                origin,
+                "tile load origin coord must be u32",
+                invocation,
+                memory,
+                #[cfg(feature = "subgroup-ops")]
+                snapshots,
+            )?;
             let target = buffer_mut(memory, buffer.as_str())?;
             let elements =
                 crate::execution::tile::load_elements(target, &origin_coords, tile_type, layout)?;
@@ -385,20 +342,14 @@ pub(crate) fn step_nodes_frame<'a>(
             origin,
             tile,
         } => {
-            let mut origin_coords = Vec::with_capacity(origin.len());
-            for expr in origin {
-                let v = eval_expr(
-                    expr,
-                    invocation,
-                    memory,
-                    #[cfg(feature = "subgroup-ops")]
-                    snapshots,
-                )?;
-                let coord = v.try_as_u32().ok_or_else(|| {
-                    ReferenceError::new("tile store origin coord must be u32".to_string())
-                })?;
-                origin_coords.push(coord);
-            }
+            let origin_coords = eval_origin_coords(
+                origin,
+                "tile store origin coord must be u32",
+                invocation,
+                memory,
+                #[cfg(feature = "subgroup-ops")]
+                snapshots,
+            )?;
             let tile_val = invocation.locals.local(tile.as_str()).ok_or_else(|| {
                 ReferenceError::new(format!("tile `{tile}` not found in scope for tile store"))
             })?;
@@ -594,6 +545,53 @@ fn tile_operand(
     Ok((value, shape))
 }
 
+fn require_world_group(group: &vyre_foundation::ir::CommGroup) -> Result<(), ReferenceError> {
+    if group.as_u32() != vyre_spec::CommGroup::WORLD.0 {
+        return Err(ReferenceError::incomplete_dispatch_semantics(format!(
+            "single-rank reference interpreter supports only WORLD collective group, got group {}. Fix: run on distributed backend for non-WORLD groups.",
+            group.as_u32()
+        )));
+    }
+    Ok(())
+}
+
+fn copy_whole_buffer(
+    memory: &mut HashmapMemory,
+    input: &str,
+    output: &str,
+    op_name: &str,
+) -> Result<(), ReferenceError> {
+    let src_bytes = {
+        let src = memory.storage.get(input).ok_or_else(|| {
+            ReferenceError::missing_value(format!("{op_name} input buffer `{input}` not found"))
+        })?;
+        src.read_window(0, src.byte_len())
+    };
+    buffer_mut(memory, output)?.write_window(0, &src_bytes);
+    Ok(())
+}
+
+fn eval_origin_coords(
+    origin: &[Expr],
+    err_msg: &'static str,
+    invocation: &mut HashmapInvocation<'_>,
+    memory: &mut HashmapMemory,
+    #[cfg(feature = "subgroup-ops")] snapshots: &[HashmapInvocationSnapshot],
+) -> Result<Vec<u32>, ReferenceError> {
+    let mut coords = Vec::with_capacity(origin.len());
+    for expr in origin {
+        let v = eval_expr(
+            expr,
+            invocation,
+            memory,
+            #[cfg(feature = "subgroup-ops")]
+            snapshots,
+        )?;
+        coords.push(v.try_as_u32().ok_or_else(|| ReferenceError::new(err_msg))?);
+    }
+    Ok(coords)
+}
+
 pub(crate) fn step_loop_frame<'a>(
     invocation: &mut HashmapInvocation<'a>,
     var: &'a str,
@@ -769,29 +767,8 @@ mod tests {
     /// Before the VRH-001 fix this test would NOT panic (the recovery path
     /// returned a corrupt guard and the function returned `Ok`).  After the fix
     /// the call to `read_bytes` propagates the poison panic.
-    #[test]
-    fn read_bytes_fails_closed_on_poisoned_buffer_lock() {
-        let buffer = Buffer::new(vec![0xab_u8; 8], DataType::U32);
-        let poisoner = buffer.bytes.clone();
-        let _ = std::thread::spawn(move || {
-            let _guard = poisoner.write().unwrap();
-            panic!("VRH-001: poison read lock mid-write");
-        })
-        .join();
-
-        let mut storage = FxHashMap::default();
-        storage.insert("src".to_string(), buffer);
-        let memory = HashmapMemory::new(storage, crate::execution::hashmap::LaneOrder::Forward);
-
-        let result = std::panic::catch_unwind(|| {
-            // `read_bytes` acquires buffer.bytes.read(); it must panic, not recover.
-            super::read_bytes(&memory, "src", 0, 4)
-        });
-        assert!(
-            result.is_err(),
-            "Fix: read_bytes must panic on a poisoned buffer lock, not silently recover with into_inner()"
-        );
-        let payload = result.unwrap_err();
+    fn assert_poisoned_panic<T>(f: impl FnOnce() -> T + std::panic::UnwindSafe, label: &str) {
+        let payload = std::panic::catch_unwind(f).err().expect(label);
         let message = payload
             .downcast_ref::<String>()
             .map(String::as_str)
@@ -803,42 +780,42 @@ mod tests {
         );
     }
 
-    /// Mirrors `read_bytes_fails_closed_on_poisoned_buffer_lock` for the write
-    /// path inside `apply_async_transfer`.
+    fn poisoned_buffer(fill: u8) -> Buffer {
+        let buffer = Buffer::new(vec![fill; 8], DataType::U32);
+        let poisoner = std::sync::Arc::clone(&buffer.bytes);
+        let _ = std::thread::spawn(move || {
+            let _guard = poisoner.write().expect("fresh RwLock is unpoisoned");
+            panic!("VRH-001: poison buffer lock mid-write");
+        })
+        .join();
+        buffer
+    }
+
+    #[test]
+    fn read_bytes_fails_closed_on_poisoned_buffer_lock() {
+        let mut storage = FxHashMap::default();
+        storage.insert(String::from("src"), poisoned_buffer(0xab));
+        let memory = HashmapMemory::new(storage, crate::execution::hashmap::LaneOrder::Forward);
+        assert_poisoned_panic(
+            || super::read_bytes(&memory, "src", 0, 4),
+            "Fix: read_bytes must panic on a poisoned buffer lock, not silently recover with into_inner()",
+        );
+    }
+
     #[test]
     fn apply_async_transfer_fails_closed_on_poisoned_buffer_lock() {
         use super::AsyncTransfer;
-        let buffer = Buffer::new(vec![0xcd_u8; 8], DataType::U32);
-        let poisoner = buffer.bytes.clone();
-        let _ = std::thread::spawn(move || {
-            let _guard = poisoner.write().unwrap();
-            panic!("VRH-001: poison write lock mid-async-copy");
-        })
-        .join();
-
         let mut storage = FxHashMap::default();
-        storage.insert("dst".to_string(), buffer);
+        storage.insert(String::from("dst"), poisoned_buffer(0xcd));
         let mut memory = HashmapMemory::new(storage, crate::execution::hashmap::LaneOrder::Forward);
-
-        let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-            super::apply_async_transfer(
-                AsyncTransfer::store("dst", 0, vec![0x11, 0x22, 0x33, 0x44]),
-                &mut memory,
-            )
-        }));
-        assert!(
-            result.is_err(),
-            "Fix: apply_async_transfer must panic on a poisoned buffer lock, not silently recover with into_inner()"
-        );
-        let payload = result.unwrap_err();
-        let message = payload
-            .downcast_ref::<String>()
-            .map(String::as_str)
-            .or_else(|| payload.downcast_ref::<&'static str>().copied())
-            .unwrap_or("<non-string panic>");
-        assert!(
-            message.contains("reference Buffer byte lock was poisoned"),
-            "Fix: panic message must name the poisoned lock contract, got: {message}"
+        assert_poisoned_panic(
+            std::panic::AssertUnwindSafe(|| {
+                super::apply_async_transfer(
+                    AsyncTransfer::store("dst", 0, vec![0x11, 0x22, 0x33, 0x44]),
+                    &mut memory,
+                )
+            }),
+            "Fix: apply_async_transfer must panic on a poisoned buffer lock, not silently recover with into_inner()",
         );
     }
 }

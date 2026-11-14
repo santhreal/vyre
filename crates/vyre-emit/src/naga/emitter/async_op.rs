@@ -63,6 +63,27 @@ impl BodyBuilder<'_> {
         }))
     }
 
+    fn emit_leader_word_loop(
+        &mut self,
+        label: &'static str,
+        copy_words: naga::Handle<Expression>,
+        body: impl FnOnce(&mut Self, naga::Handle<Expression>) -> Result<(), EmitError>,
+    ) -> Result<(), EmitError> {
+        let is_leader = self.is_leader_invocation()?;
+        let outer = std::mem::replace(&mut self.function.body, Block::new());
+        self.emit_counted_u32_loop(label, copy_words, body)?;
+        let leader_block = std::mem::replace(&mut self.function.body, outer);
+        self.function.body.push(
+            Statement::If {
+                condition: is_leader,
+                accept: leader_block,
+                reject: Block::new(),
+            },
+            Span::UNDEFINED,
+        );
+        Ok(())
+    }
+
     pub(super) fn emit_async_load(&mut self, op: &KernelOp) -> Result<(), EmitError> {
         let source_slot = self.slot_operand(op, 0)?;
         let destination_slot = self.slot_operand(op, 1)?;
@@ -77,10 +98,7 @@ impl BodyBuilder<'_> {
         let destination_len = self.buffer_len_expr(destination_slot)?;
         let source_len = self.buffer_len_expr(source_slot)?;
         let copy_words = self.min_u32(requested_words, destination_len);
-        let is_leader = self.is_leader_invocation()?;
-
-        let outer = std::mem::replace(&mut self.function.body, Block::new());
-        self.emit_counted_u32_loop("async_load_word", copy_words, |this, index| {
+        self.emit_leader_word_loop("async_load_word", copy_words, |this, index| {
             let source_index = this.add_u32(span.word_start, index);
             let fetched = this.span_word(source_slot, source_index, source_len, &span)?;
             let value = if whole_words {
@@ -99,17 +117,7 @@ impl BodyBuilder<'_> {
                 Span::UNDEFINED,
             );
             Ok(())
-        })?;
-        let leader_block = std::mem::replace(&mut self.function.body, outer);
-        self.function.body.push(
-            Statement::If {
-                condition: is_leader,
-                accept: leader_block,
-                reject: Block::new(),
-            },
-            Span::UNDEFINED,
-        );
-        Ok(())
+        })
     }
 
     pub(super) fn emit_async_store(&mut self, op: &KernelOp) -> Result<(), EmitError> {
@@ -149,9 +157,7 @@ impl BodyBuilder<'_> {
         let copy_words = self.min_u32(spanned_words, destination_remaining);
         let masked = !(span.word_aligned && whole_words);
 
-        let is_leader = self.is_leader_invocation()?;
-        let outer = std::mem::replace(&mut self.function.body, Block::new());
-        self.emit_counted_u32_loop("async_store_word", copy_words, |this, index| {
+        self.emit_leader_word_loop("async_store_word", copy_words, |this, index| {
             let destination_index = this.add_u32(span.word_start, index);
             let payload = this.payload_word(source_slot, index, source_len, &span)?;
             let value = if masked {
@@ -171,17 +177,7 @@ impl BodyBuilder<'_> {
                 Span::UNDEFINED,
             );
             Ok(())
-        })?;
-        let leader_block = std::mem::replace(&mut self.function.body, outer);
-        self.function.body.push(
-            Statement::If {
-                condition: is_leader,
-                accept: leader_block,
-                reject: Block::new(),
-            },
-            Span::UNDEFINED,
-        );
-        Ok(())
+        })
     }
 
     /// Complete a transfer this backend performed as a scalar synchronous copy.
@@ -408,15 +404,28 @@ impl BodyBuilder<'_> {
         self.and_u32(below, above)
     }
 
+    fn shift_by_byte_count(
+        &mut self,
+        value: naga::Handle<Expression>,
+        bytes: naga::Handle<Expression>,
+        left: bool,
+    ) -> naga::Handle<Expression> {
+        let three = self.literal_u32(3);
+        let bits = self.shl_u32(bytes, three);
+        if left {
+            self.shl_u32(value, bits)
+        } else {
+            self.shr_u32(value, bits)
+        }
+    }
+
     /// `value` with its low `bytes` bytes cleared. `bytes` must be 0..=3.
     fn byte_mask_above(
         &mut self,
         value: naga::Handle<Expression>,
         bytes: naga::Handle<Expression>,
     ) -> naga::Handle<Expression> {
-        let three = self.literal_u32(3);
-        let bits = self.shl_u32(bytes, three);
-        self.shl_u32(value, bits)
+        self.shift_by_byte_count(value, bytes, true)
     }
 
     /// `value` with its high `bytes` bytes cleared. `bytes` must be 0..=3.
@@ -425,9 +434,7 @@ impl BodyBuilder<'_> {
         value: naga::Handle<Expression>,
         bytes: naga::Handle<Expression>,
     ) -> naga::Handle<Expression> {
-        let three = self.literal_u32(3);
-        let bits = self.shl_u32(bytes, three);
-        self.shr_u32(value, bits)
+        self.shift_by_byte_count(value, bytes, false)
     }
 
     /// Store `value` into `slot[index]`, preserving the bytes `keep` selects.

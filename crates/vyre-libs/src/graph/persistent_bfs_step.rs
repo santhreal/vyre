@@ -1,9 +1,7 @@
 //! One persistent-BFS workgroup step with coalesced change detection.
 
 use vyre_foundation::composition::{wrap_anonymous_region, wrap_child_region};
-
-use vyre_foundation::ir::Ident;
-use vyre_foundation::ir::{BufferDecl, DataType, Expr, Node, Program};
+use vyre_foundation::ir::{BufferDecl, DataType, Expr, Ident, Node, Program};
 
 use crate::graph::csr_forward_or_changed::csr_forward_or_changed_child_prefixed;
 use crate::graph::program_graph::{push_frontier_changed_buffers, ProgramGraphShape};
@@ -42,52 +40,15 @@ pub fn persistent_bfs_step_body_prefixed(
     edge_kind_mask: u32,
     local_prefix: &str,
 ) -> Vec<Node> {
-    let local_changed = format!("{local_prefix}_local_changed");
-    let any_changed = format!("{local_prefix}_any_changed");
-    let t = Expr::logical_index(0);
-    vec![
-        Node::let_bind(local_changed.as_str(), Expr::u32(0)),
-        Node::store(scratch, Expr::logical_within_tile_index(0), Expr::u32(0)),
-        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
-        Node::if_then(
-            Expr::lt(t, Expr::u32(shape.node_count)),
-            vec![csr_forward_or_changed_child_prefixed(
-                PERSISTENT_BFS_STEP_OP_ID,
-                shape,
-                frontier_out,
-                local_changed.as_str(),
-                edge_kind_mask,
-                &format!("{local_prefix}_csr"),
-            )],
-        ),
-        Node::store(
-            scratch,
-            Expr::logical_within_tile_index(0),
-            Expr::var(local_changed.as_str()),
-        ),
-        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
-        Node::if_then(
-            Expr::eq(Expr::logical_within_tile_index(0), Expr::u32(0)),
-            vec![
-                Node::let_bind(any_changed.as_str(), Expr::u32(0)),
-                workgroup_any_u32_child_prefixed(
-                    PERSISTENT_BFS_STEP_OP_ID,
-                    scratch,
-                    any_changed.as_str(),
-                    256,
-                    &format!("{local_prefix}_any_i"),
-                ),
-                Node::if_then(
-                    Expr::ne(Expr::var(any_changed.as_str()), Expr::u32(0)),
-                    vec![Node::let_bind(
-                        format!("{local_prefix}_atomic_old"),
-                        Expr::atomic_or(changed, Expr::u32(0), Expr::u32(1)),
-                    )],
-                ),
-            ],
-        ),
-        Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
-    ]
+    build_step_body(
+        shape,
+        frontier_out,
+        changed,
+        scratch,
+        None,
+        edge_kind_mask,
+        local_prefix,
+    )
 }
 
 /// Wrap the persistent-BFS step as a child of `parent_op_id`.
@@ -153,40 +114,68 @@ pub fn persistent_bfs_step_child_prefixed_with_active(
     wrap_child_region(
         PERSISTENT_BFS_STEP_OP_ID,
         Ident::from(parent_op_id),
-        persistent_bfs_step_body_prefixed_with_active(
+        build_step_body(
             shape,
             frontier_out,
             changed,
             scratch,
-            active_scratch,
+            Some(active_scratch),
             edge_kind_mask,
             local_prefix,
         ),
     )
 }
 
-#[must_use]
-fn persistent_bfs_step_body_prefixed_with_active(
+fn build_step_body(
     shape: ProgramGraphShape,
     frontier_out: &str,
     changed: &str,
     scratch: &str,
-    active_scratch: &str,
+    active_scratch: Option<&str>,
     edge_kind_mask: u32,
     local_prefix: &str,
 ) -> Vec<Node> {
     let local_changed = format!("{local_prefix}_local_changed");
     let any_changed = format!("{local_prefix}_any_changed");
-    let t = Expr::logical_index(0);
+    let in_bounds = Expr::lt(Expr::logical_index(0), Expr::u32(shape.node_count));
+    let guard = match active_scratch {
+        Some(active) => Expr::and(
+            Expr::ne(Expr::load(active, Expr::u32(0)), Expr::u32(0)),
+            in_bounds,
+        ),
+        None => in_bounds,
+    };
+    let mut leader_body = vec![
+        Node::let_bind(any_changed.as_str(), Expr::u32(0)),
+        workgroup_any_u32_child_prefixed(
+            PERSISTENT_BFS_STEP_OP_ID,
+            scratch,
+            any_changed.as_str(),
+            256,
+            &format!("{local_prefix}_any_i"),
+        ),
+    ];
+    if let Some(active) = active_scratch {
+        leader_body.push(Node::store(
+            active,
+            Expr::u32(0),
+            Expr::var(any_changed.as_str()),
+        ));
+    }
+    leader_body.push(Node::if_then(
+        Expr::ne(Expr::var(any_changed.as_str()), Expr::u32(0)),
+        vec![Node::let_bind(
+            format!("{local_prefix}_atomic_old"),
+            Expr::atomic_or(changed, Expr::u32(0), Expr::u32(1)),
+        )],
+    ));
+
     vec![
         Node::let_bind(local_changed.as_str(), Expr::u32(0)),
         Node::store(scratch, Expr::logical_within_tile_index(0), Expr::u32(0)),
         Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
         Node::if_then(
-            Expr::and(
-                Expr::ne(Expr::load(active_scratch, Expr::u32(0)), Expr::u32(0)),
-                Expr::lt(t, Expr::u32(shape.node_count)),
-            ),
+            guard,
             vec![csr_forward_or_changed_child_prefixed(
                 PERSISTENT_BFS_STEP_OP_ID,
                 shape,
@@ -204,28 +193,7 @@ fn persistent_bfs_step_body_prefixed_with_active(
         Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
         Node::if_then(
             Expr::eq(Expr::logical_within_tile_index(0), Expr::u32(0)),
-            vec![
-                Node::let_bind(any_changed.as_str(), Expr::u32(0)),
-                workgroup_any_u32_child_prefixed(
-                    PERSISTENT_BFS_STEP_OP_ID,
-                    scratch,
-                    any_changed.as_str(),
-                    256,
-                    &format!("{local_prefix}_any_i"),
-                ),
-                Node::store(
-                    active_scratch,
-                    Expr::u32(0),
-                    Expr::var(any_changed.as_str()),
-                ),
-                Node::if_then(
-                    Expr::ne(Expr::var(any_changed.as_str()), Expr::u32(0)),
-                    vec![Node::let_bind(
-                        format!("{local_prefix}_atomic_old"),
-                        Expr::atomic_or(changed, Expr::u32(0), Expr::u32(1)),
-                    )],
-                ),
-            ],
+            leader_body,
         ),
         Node::logical_barrier(vyre_foundation::ir::MemoryOrdering::SeqCst),
     ]
@@ -261,7 +229,7 @@ inventory::submit! {
         PERSISTENT_BFS_STEP_OP_ID,
         || persistent_bfs_step(ProgramGraphShape::new(4, 4), "frontier_out", "changed", 0xFFFF_FFFF),
         Some(|| {
-            let to_bytes = |w: &[u32]| vyre_primitives::wire::pack_u32_slice(w);
+            let to_bytes = vyre_primitives::wire::pack_u32_slice;
             vec![crate::graph::program_graph::sample_program_graph_inputs(&[
                 to_bytes(&[0b0001]),
                 to_bytes(&[0]),
@@ -269,8 +237,8 @@ inventory::submit! {
         }),
         Some(|| {
             vec![vec![
-                EXPECTED_PERSISTENT_BFS_STEP_FRONTIER_BYTES.to_vec(),
-                EXPECTED_PERSISTENT_BFS_STEP_CHANGED_BYTES.to_vec(),
+                Vec::from(EXPECTED_PERSISTENT_BFS_STEP_FRONTIER_BYTES),
+                Vec::from(EXPECTED_PERSISTENT_BFS_STEP_CHANGED_BYTES),
             ]]
         }),
     )

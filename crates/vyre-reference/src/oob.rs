@@ -381,7 +381,7 @@ pub(crate) fn load(buffer: &Buffer, index: u32) -> Result<Value, ReferenceError>
         if offset > bytes_guard.len() {
             drop(bytes_guard);
             record_oob(OobAccess::Load, buffer, index, extent)?;
-            return Ok(Value::from(Vec::new()));
+            return Ok(Value::Bytes(Arc::from([])));
         }
         return Ok(Value::from(&bytes_guard[offset..]));
     }
@@ -603,14 +603,14 @@ fn read_element(ty: DataType, bytes: &[u8]) -> Result<Value, String> {
     match ty {
         DataType::F16 => {
             if bytes.len() < 2 {
-                return Err("f16 requires 2 bytes".to_string());
+                return Err(String::from("f16 requires 2 bytes"));
             }
             let bits = u16::from_le_bytes([bytes[0], bytes[1]]);
             Ok(Value::Float(f64::from(crate::float16::f16_to_f32(bits))))
         }
         DataType::BF16 => {
             if bytes.len() < 2 {
-                return Err("bf16 requires 2 bytes".to_string());
+                return Err(String::from("bf16 requires 2 bytes"));
             }
             let bits = u16::from_le_bytes([bytes[0], bytes[1]]);
             Ok(Value::Float(f64::from(crate::float16::bf16_to_f32(bits))))

@@ -95,6 +95,37 @@ impl AdaptiveTraversalPlanCacheKey {
         }
     }
 
+    #[allow(clippy::too_many_arguments)]
+    const fn keyed(
+        node_count: u32,
+        edge_count: u32,
+        words: u32,
+        queue_capacity: u32,
+        allow_mask: u32,
+        dense_threshold_pct: u32,
+        device_features: u32_or_u64::U64,
+        kind: AdaptiveTraversalProgramKind,
+    ) -> Self {
+        let layout_hash = adaptive_traversal_program_layout_hash(
+            node_count,
+            edge_count,
+            words,
+            queue_capacity,
+            kind,
+        );
+        Self::new(
+            layout_hash,
+            node_count,
+            edge_count,
+            words,
+            queue_capacity,
+            allow_mask,
+            dense_threshold_pct,
+            device_features,
+            kind,
+        )
+    }
+
     /// Cache key for the frontier popcount Program.
     #[must_use]
     pub const fn popcount(
@@ -104,15 +135,7 @@ impl AdaptiveTraversalPlanCacheKey {
         words: u32,
         device_features: u64,
     ) -> Self {
-        let layout_hash = adaptive_traversal_program_layout_hash(
-            node_count,
-            edge_count,
-            words,
-            0,
-            AdaptiveTraversalProgramKind::Popcount,
-        );
-        Self::new(
-            layout_hash,
+        Self::keyed(
             node_count,
             edge_count,
             words,
@@ -133,15 +156,7 @@ impl AdaptiveTraversalPlanCacheKey {
         words: u32,
         device_features: u64,
     ) -> Self {
-        let layout_hash = adaptive_traversal_program_layout_hash(
-            node_count,
-            edge_count,
-            words,
-            0,
-            AdaptiveTraversalProgramKind::ClearFrontierOut,
-        );
-        Self::new(
-            layout_hash,
+        Self::keyed(
             node_count,
             edge_count,
             words,
@@ -164,15 +179,7 @@ impl AdaptiveTraversalPlanCacheKey {
         dense_threshold_pct: u32,
         device_features: u64,
     ) -> Self {
-        let layout_hash = adaptive_traversal_program_layout_hash(
-            node_count,
-            edge_count,
-            words,
-            0,
-            AdaptiveTraversalProgramKind::SparseDense,
-        );
-        Self::new(
-            layout_hash,
+        Self::keyed(
             node_count,
             edge_count,
             words,
@@ -194,15 +201,7 @@ impl AdaptiveTraversalPlanCacheKey {
         queue_capacity: u32,
         device_features: u64,
     ) -> Self {
-        let layout_hash = adaptive_traversal_program_layout_hash(
-            node_count,
-            edge_count,
-            words,
-            queue_capacity,
-            AdaptiveTraversalProgramKind::QueueLenInit,
-        );
-        Self::new(
-            layout_hash,
+        Self::keyed(
             node_count,
             edge_count,
             words,
@@ -224,15 +223,7 @@ impl AdaptiveTraversalPlanCacheKey {
         queue_capacity: u32,
         device_features: u64,
     ) -> Self {
-        let layout_hash = adaptive_traversal_program_layout_hash(
-            node_count,
-            edge_count,
-            words,
-            queue_capacity,
-            AdaptiveTraversalProgramKind::FrontierToQueue,
-        );
-        Self::new(
-            layout_hash,
+        Self::keyed(
             node_count,
             edge_count,
             words,
@@ -253,15 +244,7 @@ impl AdaptiveTraversalPlanCacheKey {
         words: u32,
         device_features: u64,
     ) -> Self {
-        let layout_hash = adaptive_traversal_program_layout_hash(
-            node_count,
-            edge_count,
-            words,
-            0,
-            AdaptiveTraversalProgramKind::FrontierWordCounts,
-        );
-        Self::new(
-            layout_hash,
+        Self::keyed(
             node_count,
             edge_count,
             words,
@@ -282,15 +265,7 @@ impl AdaptiveTraversalPlanCacheKey {
         words: u32,
         device_features: u64,
     ) -> Self {
-        let layout_hash = adaptive_traversal_program_layout_hash(
-            node_count,
-            edge_count,
-            words,
-            0,
-            AdaptiveTraversalProgramKind::FrontierWordBlockOffsets,
-        );
-        Self::new(
-            layout_hash,
+        Self::keyed(
             node_count,
             edge_count,
             words,
@@ -312,15 +287,7 @@ impl AdaptiveTraversalPlanCacheKey {
         queue_capacity: u32,
         device_features: u64,
     ) -> Self {
-        let layout_hash = adaptive_traversal_program_layout_hash(
-            node_count,
-            edge_count,
-            words,
-            queue_capacity,
-            AdaptiveTraversalProgramKind::FrontierWordPrefixQueue,
-        );
-        Self::new(
-            layout_hash,
+        Self::keyed(
             node_count,
             edge_count,
             words,
@@ -342,15 +309,7 @@ impl AdaptiveTraversalPlanCacheKey {
         queue_capacity: u32,
         device_features: u64,
     ) -> Self {
-        let layout_hash = adaptive_traversal_program_layout_hash(
-            node_count,
-            edge_count,
-            words,
-            queue_capacity,
-            AdaptiveTraversalProgramKind::FrontierWordBlockOffsetsQueue,
-        );
-        Self::new(
-            layout_hash,
+        Self::keyed(
             node_count,
             edge_count,
             words,
@@ -373,15 +332,7 @@ impl AdaptiveTraversalPlanCacheKey {
         allow_mask: u32,
         device_features: u64,
     ) -> Self {
-        let layout_hash = adaptive_traversal_program_layout_hash(
-            node_count,
-            edge_count,
-            words,
-            queue_capacity,
-            AdaptiveTraversalProgramKind::QueueForward,
-        );
-        Self::new(
-            layout_hash,
+        Self::keyed(
             node_count,
             edge_count,
             words,
@@ -404,15 +355,7 @@ impl AdaptiveTraversalPlanCacheKey {
         allow_mask: u32,
         device_features: u64,
     ) -> Self {
-        let layout_hash = adaptive_traversal_program_layout_hash(
-            node_count,
-            edge_count,
-            words,
-            queue_capacity,
-            AdaptiveTraversalProgramKind::QueueForwardStrided,
-        );
-        Self::new(
-            layout_hash,
+        Self::keyed(
             node_count,
             edge_count,
             words,
@@ -468,15 +411,7 @@ impl AdaptiveTraversalPlanCacheKey {
         words: u32,
         device_features: u64,
     ) -> Self {
-        let layout_hash = adaptive_traversal_program_layout_hash(
-            node_count,
-            0,
-            words,
-            0,
-            AdaptiveTraversalProgramKind::FourRussiansDense,
-        );
-        Self::new(
-            layout_hash,
+        Self::keyed(
             node_count,
             0,
             words,

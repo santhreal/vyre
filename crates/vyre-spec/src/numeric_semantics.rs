@@ -173,44 +173,49 @@ pub const NF4_QUANTILE_TABLE: [f32; 16] = [
 /// Canonical 16-element FP4 (E2M1) decode table.
 /// Format: 1 sign bit, 2 exponent bits (bias=1), 1 mantissa bit.
 pub const FP4_DECODE_TABLE: [f32; 16] = [
-    0.0,  // 0000: +0.0
-    0.5,  // 0001: +0.5 (subnormal: 2^0 * 0.5)
-    1.0,  // 0010: +1.0 (normal: 2^(1-1) * 1.0)
-    1.5,  // 0011: +1.5 (normal: 2^(1-1) * 1.5)
-    2.0,  // 0100: +2.0 (normal: 2^(2-1) * 1.0)
-    3.0,  // 0101: +3.0 (normal: 2^(2-1) * 1.5)
-    4.0,  // 0110: +4.0 (normal: 2^(3-1) * 1.0)
-    6.0,  // 0111: +6.0 (normal: 2^(3-1) * 1.5)
-    -0.0, // 1000: -0.0
-    -0.5, // 1001: -0.5
-    -1.0, // 1010: -1.0
-    -1.5, // 1011: -1.5
-    -2.0, // 1100: -2.0
-    -3.0, // 1101: -3.0
-    -4.0, // 1110: -4.0
-    -6.0, // 1111: -6.0
+    0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0, -0.0, -0.5, -1.0, -1.5, -2.0, -3.0, -4.0, -6.0,
 ];
 
-/// Canonical 16-element I4 decode table.
-/// Range: [-8, 7]
+/// Canonical 16-element I4 decode table (`[-8, 7]`).
 pub const I4_DECODE_TABLE: [i32; 16] = [0, 1, 2, 3, 4, 5, 6, 7, -8, -7, -6, -5, -4, -3, -2, -1];
 
+fn nearest_codebook_index(table: &[f32; 16], target: f32) -> u8 {
+    let mut best_idx = 0u8;
+    let mut best_diff = f32::INFINITY;
+    for (i, &entry) in table.iter().enumerate() {
+        let diff = (entry - target).abs();
+        if diff < best_diff {
+            best_diff = diff;
+            best_idx = i as u8;
+        }
+    }
+    best_idx
+}
+
+fn nearest_f8_byte(decode: fn(u8) -> f32, max_code: u8, abs_val: f32) -> u8 {
+    let mut best_byte = 0u8;
+    let mut best_diff = f32::INFINITY;
+    for byte in 0..=max_code {
+        let diff = (decode(byte) - abs_val).abs();
+        if diff < best_diff {
+            best_diff = diff;
+            best_byte = byte;
+        }
+    }
+    best_byte
+}
+
 /// Decode one 8-bit F8E4M3 float value to f32.
-/// E4M3: 1 sign, 4 exponent (bias 7), 3 mantissa.
-/// Max finite = 448.0 (0x7E / 0xFE).
-/// NaN = 0x7F / 0xFF.
 #[must_use]
 pub fn f8e4m3_to_f32(byte: u8) -> f32 {
     let sign = (byte & 0x80) != 0;
     let exp = (byte >> 3) & 0x0F;
     let mant = byte & 0x07;
-
     let sign_mult = if sign { -1.0 } else { 1.0 };
 
     if exp == 0x0F && mant == 0x07 {
         return f32::NAN;
     }
-
     if exp == 0 {
         if mant == 0 {
             if sign {
@@ -222,8 +227,7 @@ pub fn f8e4m3_to_f32(byte: u8) -> f32 {
             sign_mult * (2.0f32.powi(-6)) * (mant as f32 / 8.0)
         }
     } else {
-        let e = exp as i32 - 7;
-        sign_mult * (2.0f32.powi(e)) * (1.0 + mant as f32 / 8.0)
+        sign_mult * (2.0f32.powi(exp as i32 - 7)) * (1.0 + mant as f32 / 8.0)
     }
 }
 
@@ -239,58 +243,34 @@ pub fn f32_to_f8e4m3(val: f32) -> u8 {
         0x00u8
     };
     let abs_val = val.abs();
-
-    if abs_val == 0.0 {
+    if abs_val == 0.0 || abs_val < (2.0f32.powi(-9) * 0.5) {
         return sign_bit;
     }
     if abs_val > 448.0 {
-        return sign_bit | 0x7E; // Saturate to max finite
+        return sign_bit | 0x7E;
     }
-
-    // Smallest subnormal is 2^-6 * (1/8) = 2^-9 = 1/512 ~ 0.001953125
-    if abs_val < (2.0f32.powi(-9) * 0.5) {
-        return sign_bit;
-    }
-
-    let mut best_byte = 0u8;
-    let mut best_diff = f32::INFINITY;
-
-    for byte in 0..=0x7E_u8 {
-        let decoded = f8e4m3_to_f32(byte);
-        let diff = (decoded - abs_val).abs();
-        if diff < best_diff {
-            best_diff = diff;
-            best_byte = byte;
-        }
-    }
-
-    sign_bit | best_byte
+    sign_bit | nearest_f8_byte(f8e4m3_to_f32, 0x7E, abs_val)
 }
 
 /// Decode one 8-bit F8E5M2 float value to f32.
-/// E5M2: 1 sign, 5 exponent (bias 15), 2 mantissa.
-/// Max finite = 57344.0.
-/// Inf = 0x7C / 0xFC.
-/// NaN = 0x7D..0x7F / 0xFD..0xFF.
 #[must_use]
 pub fn f8e5m2_to_f32(byte: u8) -> f32 {
     let sign = (byte & 0x80) != 0;
     let exp = (byte >> 2) & 0x1F;
     let mant = byte & 0x03;
-
     let sign_mult = if sign { -1.0 } else { 1.0 };
 
     if exp == 0x1F {
-        if mant == 0 {
-            return if sign {
+        return if mant == 0 {
+            if sign {
                 f32::NEG_INFINITY
             } else {
                 f32::INFINITY
-            };
-        }
-        return f32::NAN;
+            }
+        } else {
+            f32::NAN
+        };
     }
-
     if exp == 0 {
         if mant == 0 {
             if sign {
@@ -302,33 +282,20 @@ pub fn f8e5m2_to_f32(byte: u8) -> f32 {
             sign_mult * (2.0f32.powi(-14)) * (mant as f32 / 4.0)
         }
     } else {
-        let e = exp as i32 - 15;
-        sign_mult * (2.0f32.powi(e)) * (1.0 + mant as f32 / 4.0)
+        sign_mult * (2.0f32.powi(exp as i32 - 15)) * (1.0 + mant as f32 / 4.0)
     }
 }
 
 /// Generate the 256-element F8E4M3 decode table.
 #[must_use]
 pub fn f8e4m3_decode_table() -> [f32; 256] {
-    let mut table = [0.0f32; 256];
-    let mut i = 0usize;
-    while i < 256 {
-        table[i] = f8e4m3_to_f32(i as u8);
-        i += 1;
-    }
-    table
+    core::array::from_fn(|i| f8e4m3_to_f32(i as u8))
 }
 
 /// Generate the 256-element F8E5M2 decode table.
 #[must_use]
 pub fn f8e5m2_decode_table() -> [f32; 256] {
-    let mut table = [0.0f32; 256];
-    let mut i = 0usize;
-    while i < 256 {
-        table[i] = f8e5m2_to_f32(i as u8);
-        i += 1;
-    }
-    table
+    core::array::from_fn(|i| f8e5m2_to_f32(i as u8))
 }
 
 /// Encode one f32 value to 8-bit F8E5M2.
@@ -346,27 +313,13 @@ pub fn f32_to_f8e5m2(val: f32) -> u8 {
         return sign_bit | 0x7C;
     }
     let abs_val = val.abs();
-
     if abs_val == 0.0 {
         return sign_bit;
     }
     if abs_val > 57344.0 {
-        return sign_bit | 0x7C; // Infinity
+        return sign_bit | 0x7C;
     }
-
-    let mut best_byte = 0u8;
-    let mut best_diff = f32::INFINITY;
-
-    for byte in 0..=0x7C_u8 {
-        let decoded = f8e5m2_to_f32(byte);
-        let diff = (decoded - abs_val).abs();
-        if diff < best_diff {
-            best_diff = diff;
-            best_byte = byte;
-        }
-    }
-
-    sign_bit | best_byte
+    sign_bit | nearest_f8_byte(f8e5m2_to_f32, 0x7C, abs_val)
 }
 
 /// Decode one 4-bit FP4 nibble (0..15) to f32.
@@ -379,21 +332,9 @@ pub fn fp4_to_f32(nibble: u8) -> f32 {
 #[must_use]
 pub fn f32_to_fp4(val: f32) -> u8 {
     if val.is_nan() {
-        return 0x07; // Saturated max finite
+        return 0x07;
     }
-    let mut best_nibble = 0u8;
-    let mut best_diff = f32::INFINITY;
-
-    for i in 0..16u8 {
-        let decoded = FP4_DECODE_TABLE[i as usize];
-        let diff = (decoded - val).abs();
-        if diff < best_diff {
-            best_diff = diff;
-            best_nibble = i;
-        }
-    }
-
-    best_nibble
+    nearest_codebook_index(&FP4_DECODE_TABLE, val)
 }
 
 /// Decode one 4-bit NF4 nibble (0..15) to normalized f32 in [-1.0, 1.0].
@@ -410,19 +351,7 @@ pub fn f32_to_nf4(val: f32) -> u8 {
     } else {
         val.clamp(-1.0, 1.0)
     };
-    let mut best_idx = 0u8;
-    let mut best_diff = f32::INFINITY;
-
-    for i in 0..16u8 {
-        let q = NF4_QUANTILE_TABLE[i as usize];
-        let diff = (q - clamped).abs();
-        if diff < best_diff {
-            best_diff = diff;
-            best_idx = i;
-        }
-    }
-
-    best_idx
+    nearest_codebook_index(&NF4_QUANTILE_TABLE, clamped)
 }
 
 /// Decode one 4-bit signed I4 nibble to i32 in [-8, 7].
@@ -439,8 +368,18 @@ pub fn i4_to_i32(nibble: u8) -> i32 {
 /// Encode one i32 value to 4-bit signed I4 nibble (0..15), saturated to [-8, 7].
 #[must_use]
 pub fn i32_to_i4(val: i32) -> u8 {
-    let clamped = val.clamp(-8, 7);
-    (clamped as u8) & 0x0F
+    (val.clamp(-8, 7) as u8) & 0x0F
+}
+
+fn unpack_nibble(storage_bytes: &[u8], elem_index: usize) -> Result<u8, &'static str> {
+    let byte = *storage_bytes
+        .get(elem_index / 2)
+        .ok_or("storage_bytes truncated")?;
+    Ok(if elem_index % 2 != 0 {
+        (byte >> 4) & 0x0F
+    } else {
+        byte & 0x0F
+    })
 }
 
 /// Dequantize a packed buffer of quantized values using per-group or per-tensor scales.
@@ -456,11 +395,10 @@ pub fn dequantize_grouped_f32(
     element_count: usize,
 ) -> Result<Vec<f32>, String> {
     if group_size == 0 {
-        return Err("group_size must be greater than zero".to_string());
+        return Err("group_size must be greater than zero".into());
     }
 
     let mut result = Vec::with_capacity(element_count);
-
     for i in 0..element_count {
         let group_idx = i / group_size;
         let scale = *scales.get(group_idx).unwrap_or(&1.0);
@@ -469,346 +407,244 @@ pub fn dequantize_grouped_f32(
             .unwrap_or(0.0);
 
         let unscaled = match storage_type {
-            DataType::I4 => {
-                let byte_idx = i / 2;
-                let is_high = (i % 2) != 0;
-                let byte = *storage_bytes
-                    .get(byte_idx)
-                    .ok_or("storage_bytes truncated")?;
-                let nibble = if is_high {
-                    (byte >> 4) & 0x0F
-                } else {
-                    byte & 0x0F
-                };
-                i4_to_i32(nibble) as f32
-            }
-            DataType::FP4 => {
-                let byte_idx = i / 2;
-                let is_high = (i % 2) != 0;
-                let byte = *storage_bytes
-                    .get(byte_idx)
-                    .ok_or("storage_bytes truncated")?;
-                let nibble = if is_high {
-                    (byte >> 4) & 0x0F
-                } else {
-                    byte & 0x0F
-                };
-                fp4_to_f32(nibble)
-            }
-            DataType::NF4 => {
-                let byte_idx = i / 2;
-                let is_high = (i % 2) != 0;
-                let byte = *storage_bytes
-                    .get(byte_idx)
-                    .ok_or("storage_bytes truncated")?;
-                let nibble = if is_high {
-                    (byte >> 4) & 0x0F
-                } else {
-                    byte & 0x0F
-                };
-                nf4_to_f32(nibble)
-            }
+            DataType::I4 => i4_to_i32(unpack_nibble(storage_bytes, i)?) as f32,
+            DataType::FP4 => fp4_to_f32(unpack_nibble(storage_bytes, i)?),
+            DataType::NF4 => nf4_to_f32(unpack_nibble(storage_bytes, i)?),
             DataType::F8E4M3 => {
-                let byte = *storage_bytes.get(i).ok_or("storage_bytes truncated")?;
-                f8e4m3_to_f32(byte)
+                f8e4m3_to_f32(*storage_bytes.get(i).ok_or("storage_bytes truncated")?)
             }
             DataType::F8E5M2 => {
-                let byte = *storage_bytes.get(i).ok_or("storage_bytes truncated")?;
-                f8e5m2_to_f32(byte)
+                f8e5m2_to_f32(*storage_bytes.get(i).ok_or("storage_bytes truncated")?)
             }
-            DataType::I8 => {
-                let byte = *storage_bytes.get(i).ok_or("storage_bytes truncated")?;
-                (byte as i8) as f32
-            }
-            DataType::U8 => {
-                let byte = *storage_bytes.get(i).ok_or("storage_bytes truncated")?;
-                byte as f32
-            }
+            DataType::I8 => (*storage_bytes.get(i).ok_or("storage_bytes truncated")? as i8) as f32,
+            DataType::U8 => *storage_bytes.get(i).ok_or("storage_bytes truncated")? as f32,
             _ => return Err(format!("unsupported storage datatype `{storage_type}`")),
         };
-
         result.push((unscaled - zp) * scale);
     }
-
     Ok(result)
+}
+
+fn int_semantics(
+    datatype: DataType,
+    bits: usize,
+    format: NumericFormat,
+    saturation: SaturationBehavior,
+    min_finite: f64,
+    max_finite: f64,
+) -> NumericSemantics {
+    NumericSemantics {
+        datatype,
+        bit_width: Some(bits),
+        format,
+        exponent_bits: None,
+        mantissa_bits: None,
+        exponent_bias: None,
+        rounding: RoundingMode::Exact,
+        overflow: OverflowBehavior::WrapTwoComplement,
+        saturation,
+        signed_zero: SignedZeroBehavior::UnsignedZero,
+        subnormal: SubnormalBehavior::Unsupported,
+        infinity: InfinityBehavior::Unsupported,
+        nan: NanBehavior::NotApplicable,
+        min_finite,
+        max_finite,
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn float_semantics(
+    datatype: DataType,
+    bits: usize,
+    format: NumericFormat,
+    exp_mant_bias: Option<(u32, u32, i32)>,
+    rounding: RoundingMode,
+    overflow: OverflowBehavior,
+    saturation: SaturationBehavior,
+    signed_zero: SignedZeroBehavior,
+    subnormal: SubnormalBehavior,
+    infinity: InfinityBehavior,
+    nan: NanBehavior,
+    max_finite: f64,
+) -> NumericSemantics {
+    NumericSemantics {
+        datatype,
+        bit_width: Some(bits),
+        format,
+        exponent_bits: exp_mant_bias.map(|(e, _, _)| e),
+        mantissa_bits: exp_mant_bias.map(|(_, m, _)| m),
+        exponent_bias: exp_mant_bias.map(|(_, _, b)| b),
+        rounding,
+        overflow,
+        saturation,
+        signed_zero,
+        subnormal,
+        infinity,
+        nan,
+        min_finite: -max_finite,
+        max_finite,
+    }
+}
+
+fn ieee_flushed_semantics(
+    datatype: DataType,
+    bits: usize,
+    exp: u32,
+    mant: u32,
+    bias: i32,
+    max_finite: f64,
+) -> NumericSemantics {
+    float_semantics(
+        datatype,
+        bits,
+        NumericFormat::IeeeFloat,
+        Some((exp, mant, bias)),
+        RoundingMode::RoundToNearestEven,
+        OverflowBehavior::SignedInfinity,
+        SaturationBehavior::None,
+        SignedZeroBehavior::PreservedWithCanonicalFlushing,
+        SubnormalBehavior::FlushedToSignedZero,
+        InfinityBehavior::SignedInfinity,
+        NanBehavior::CanonicalQuietNan,
+        max_finite,
+    )
 }
 
 /// Return the authoritative numeric semantics specification for `dtype`.
 #[must_use]
 pub fn numeric_semantics_for(dtype: &DataType) -> NumericSemantics {
     match dtype {
-        DataType::U8 => NumericSemantics {
-            datatype: DataType::U8,
-            bit_width: Some(8),
-            format: NumericFormat::UnsignedInteger,
-            exponent_bits: None,
-            mantissa_bits: None,
-            exponent_bias: None,
-            rounding: RoundingMode::Exact,
-            overflow: OverflowBehavior::WrapTwoComplement,
-            saturation: SaturationBehavior::None,
-            signed_zero: SignedZeroBehavior::UnsignedZero,
-            subnormal: SubnormalBehavior::Unsupported,
-            infinity: InfinityBehavior::Unsupported,
-            nan: NanBehavior::NotApplicable,
-            min_finite: 0.0,
-            max_finite: 255.0,
-        },
-        DataType::U16 => NumericSemantics {
-            datatype: DataType::U16,
-            bit_width: Some(16),
-            format: NumericFormat::UnsignedInteger,
-            exponent_bits: None,
-            mantissa_bits: None,
-            exponent_bias: None,
-            rounding: RoundingMode::Exact,
-            overflow: OverflowBehavior::WrapTwoComplement,
-            saturation: SaturationBehavior::None,
-            signed_zero: SignedZeroBehavior::UnsignedZero,
-            subnormal: SubnormalBehavior::Unsupported,
-            infinity: InfinityBehavior::Unsupported,
-            nan: NanBehavior::NotApplicable,
-            min_finite: 0.0,
-            max_finite: 65535.0,
-        },
-        DataType::U32 => NumericSemantics {
-            datatype: DataType::U32,
-            bit_width: Some(32),
-            format: NumericFormat::UnsignedInteger,
-            exponent_bits: None,
-            mantissa_bits: None,
-            exponent_bias: None,
-            rounding: RoundingMode::Exact,
-            overflow: OverflowBehavior::WrapTwoComplement,
-            saturation: SaturationBehavior::None,
-            signed_zero: SignedZeroBehavior::UnsignedZero,
-            subnormal: SubnormalBehavior::Unsupported,
-            infinity: InfinityBehavior::Unsupported,
-            nan: NanBehavior::NotApplicable,
-            min_finite: 0.0,
-            max_finite: u32::MAX as f64,
-        },
-        DataType::U64 => NumericSemantics {
-            datatype: DataType::U64,
-            bit_width: Some(64),
-            format: NumericFormat::UnsignedInteger,
-            exponent_bits: None,
-            mantissa_bits: None,
-            exponent_bias: None,
-            rounding: RoundingMode::Exact,
-            overflow: OverflowBehavior::WrapTwoComplement,
-            saturation: SaturationBehavior::None,
-            signed_zero: SignedZeroBehavior::UnsignedZero,
-            subnormal: SubnormalBehavior::Unsupported,
-            infinity: InfinityBehavior::Unsupported,
-            nan: NanBehavior::NotApplicable,
-            min_finite: 0.0,
-            max_finite: u64::MAX as f64,
-        },
-        DataType::I8 => NumericSemantics {
-            datatype: DataType::I8,
-            bit_width: Some(8),
-            format: NumericFormat::SignedInteger,
-            exponent_bits: None,
-            mantissa_bits: None,
-            exponent_bias: None,
-            rounding: RoundingMode::Exact,
-            overflow: OverflowBehavior::WrapTwoComplement,
-            saturation: SaturationBehavior::None,
-            signed_zero: SignedZeroBehavior::UnsignedZero,
-            subnormal: SubnormalBehavior::Unsupported,
-            infinity: InfinityBehavior::Unsupported,
-            nan: NanBehavior::NotApplicable,
-            min_finite: -128.0,
-            max_finite: 127.0,
-        },
-        DataType::I16 => NumericSemantics {
-            datatype: DataType::I16,
-            bit_width: Some(16),
-            format: NumericFormat::SignedInteger,
-            exponent_bits: None,
-            mantissa_bits: None,
-            exponent_bias: None,
-            rounding: RoundingMode::Exact,
-            overflow: OverflowBehavior::WrapTwoComplement,
-            saturation: SaturationBehavior::None,
-            signed_zero: SignedZeroBehavior::UnsignedZero,
-            subnormal: SubnormalBehavior::Unsupported,
-            infinity: InfinityBehavior::Unsupported,
-            nan: NanBehavior::NotApplicable,
-            min_finite: -32768.0,
-            max_finite: 32767.0,
-        },
-        DataType::I32 => NumericSemantics {
-            datatype: DataType::I32,
-            bit_width: Some(32),
-            format: NumericFormat::SignedInteger,
-            exponent_bits: None,
-            mantissa_bits: None,
-            exponent_bias: None,
-            rounding: RoundingMode::Exact,
-            overflow: OverflowBehavior::WrapTwoComplement,
-            saturation: SaturationBehavior::None,
-            signed_zero: SignedZeroBehavior::UnsignedZero,
-            subnormal: SubnormalBehavior::Unsupported,
-            infinity: InfinityBehavior::Unsupported,
-            nan: NanBehavior::NotApplicable,
-            min_finite: i32::MIN as f64,
-            max_finite: i32::MAX as f64,
-        },
-        DataType::I64 => NumericSemantics {
-            datatype: DataType::I64,
-            bit_width: Some(64),
-            format: NumericFormat::SignedInteger,
-            exponent_bits: None,
-            mantissa_bits: None,
-            exponent_bias: None,
-            rounding: RoundingMode::Exact,
-            overflow: OverflowBehavior::WrapTwoComplement,
-            saturation: SaturationBehavior::None,
-            signed_zero: SignedZeroBehavior::UnsignedZero,
-            subnormal: SubnormalBehavior::Unsupported,
-            infinity: InfinityBehavior::Unsupported,
-            nan: NanBehavior::NotApplicable,
-            min_finite: i64::MIN as f64,
-            max_finite: i64::MAX as f64,
-        },
-        DataType::I4 => NumericSemantics {
-            datatype: DataType::I4,
-            bit_width: Some(4),
-            format: NumericFormat::SignedInteger,
-            exponent_bits: None,
-            mantissa_bits: None,
-            exponent_bias: None,
-            rounding: RoundingMode::Exact,
-            overflow: OverflowBehavior::WrapTwoComplement,
-            saturation: SaturationBehavior::ClampsToFiniteRange,
-            signed_zero: SignedZeroBehavior::UnsignedZero,
-            subnormal: SubnormalBehavior::Unsupported,
-            infinity: InfinityBehavior::Unsupported,
-            nan: NanBehavior::NotApplicable,
-            min_finite: -8.0,
-            max_finite: 7.0,
-        },
-        DataType::FP4 => NumericSemantics {
-            datatype: DataType::FP4,
-            bit_width: Some(4),
-            format: NumericFormat::IeeeLikeFloat,
-            exponent_bits: Some(2),
-            mantissa_bits: Some(1),
-            exponent_bias: Some(1),
-            rounding: RoundingMode::RoundToNearestEven,
-            overflow: OverflowBehavior::SaturateToFiniteRange,
-            saturation: SaturationBehavior::ClampsToFiniteRange,
-            signed_zero: SignedZeroBehavior::Preserved,
-            subnormal: SubnormalBehavior::PreservedIEEE,
-            infinity: InfinityBehavior::SaturatedToMaxFinite,
-            nan: NanBehavior::UnsupportedOrZero,
-            min_finite: -6.0,
-            max_finite: 6.0,
-        },
-        DataType::NF4 => NumericSemantics {
-            datatype: DataType::NF4,
-            bit_width: Some(4),
-            format: NumericFormat::NormalFloat,
-            exponent_bits: None,
-            mantissa_bits: None,
-            exponent_bias: None,
-            rounding: RoundingMode::NearestQuantile,
-            overflow: OverflowBehavior::SaturateToFiniteRange,
-            saturation: SaturationBehavior::ClampsToUnitInterval,
-            signed_zero: SignedZeroBehavior::UnsignedZero,
-            subnormal: SubnormalBehavior::Unsupported,
-            infinity: InfinityBehavior::SaturatedToMaxFinite,
-            nan: NanBehavior::UnsupportedOrZero,
-            min_finite: -1.0,
-            max_finite: 1.0,
-        },
-        DataType::F8E4M3 => NumericSemantics {
-            datatype: DataType::F8E4M3,
-            bit_width: Some(8),
-            format: NumericFormat::IeeeLikeFloat,
-            exponent_bits: Some(4),
-            mantissa_bits: Some(3),
-            exponent_bias: Some(7),
-            rounding: RoundingMode::RoundToNearestEven,
-            overflow: OverflowBehavior::NanOrSaturate,
-            saturation: SaturationBehavior::ClampsToFiniteRange,
-            signed_zero: SignedZeroBehavior::Preserved,
-            subnormal: SubnormalBehavior::PreservedIEEE,
-            infinity: InfinityBehavior::SaturatedToMaxFinite,
-            nan: NanBehavior::DedicatedNanBitPattern,
-            min_finite: -448.0,
-            max_finite: 448.0,
-        },
-        DataType::F8E5M2 => NumericSemantics {
-            datatype: DataType::F8E5M2,
-            bit_width: Some(8),
-            format: NumericFormat::IeeeLikeFloat,
-            exponent_bits: Some(5),
-            mantissa_bits: Some(2),
-            exponent_bias: Some(15),
-            rounding: RoundingMode::RoundToNearestEven,
-            overflow: OverflowBehavior::SignedInfinity,
-            saturation: SaturationBehavior::None,
-            signed_zero: SignedZeroBehavior::Preserved,
-            subnormal: SubnormalBehavior::PreservedIEEE,
-            infinity: InfinityBehavior::SignedInfinity,
-            nan: NanBehavior::CanonicalQuietNan,
-            min_finite: -57344.0,
-            max_finite: 57344.0,
-        },
-        DataType::F16 => NumericSemantics {
-            datatype: DataType::F16,
-            bit_width: Some(16),
-            format: NumericFormat::IeeeFloat,
-            exponent_bits: Some(5),
-            mantissa_bits: Some(10),
-            exponent_bias: Some(15),
-            rounding: RoundingMode::RoundToNearestEven,
-            overflow: OverflowBehavior::SignedInfinity,
-            saturation: SaturationBehavior::None,
-            signed_zero: SignedZeroBehavior::PreservedWithCanonicalFlushing,
-            subnormal: SubnormalBehavior::FlushedToSignedZero,
-            infinity: InfinityBehavior::SignedInfinity,
-            nan: NanBehavior::CanonicalQuietNan,
-            min_finite: -65504.0,
-            max_finite: 65504.0,
-        },
-        DataType::BF16 => NumericSemantics {
-            datatype: DataType::BF16,
-            bit_width: Some(16),
-            format: NumericFormat::IeeeFloat,
-            exponent_bits: Some(8),
-            mantissa_bits: Some(7),
-            exponent_bias: Some(127),
-            rounding: RoundingMode::RoundToNearestEven,
-            overflow: OverflowBehavior::SignedInfinity,
-            saturation: SaturationBehavior::None,
-            signed_zero: SignedZeroBehavior::PreservedWithCanonicalFlushing,
-            subnormal: SubnormalBehavior::FlushedToSignedZero,
-            infinity: InfinityBehavior::SignedInfinity,
-            nan: NanBehavior::CanonicalQuietNan,
-            min_finite: -3.3895314e38,
-            max_finite: 3.3895314e38,
-        },
-        DataType::F32 => NumericSemantics {
-            datatype: DataType::F32,
-            bit_width: Some(32),
-            format: NumericFormat::IeeeFloat,
-            exponent_bits: Some(8),
-            mantissa_bits: Some(23),
-            exponent_bias: Some(127),
-            rounding: RoundingMode::RoundToNearestEven,
-            overflow: OverflowBehavior::SignedInfinity,
-            saturation: SaturationBehavior::None,
-            signed_zero: SignedZeroBehavior::PreservedWithCanonicalFlushing,
-            subnormal: SubnormalBehavior::FlushedToSignedZero,
-            infinity: InfinityBehavior::SignedInfinity,
-            nan: NanBehavior::CanonicalQuietNan,
-            min_finite: -f32::MAX as f64,
-            max_finite: f32::MAX as f64,
-        },
+        DataType::U8 => int_semantics(
+            DataType::U8,
+            8,
+            NumericFormat::UnsignedInteger,
+            SaturationBehavior::None,
+            0.0,
+            255.0,
+        ),
+        DataType::U16 => int_semantics(
+            DataType::U16,
+            16,
+            NumericFormat::UnsignedInteger,
+            SaturationBehavior::None,
+            0.0,
+            65535.0,
+        ),
+        DataType::U32 => int_semantics(
+            DataType::U32,
+            32,
+            NumericFormat::UnsignedInteger,
+            SaturationBehavior::None,
+            0.0,
+            u32::MAX as f64,
+        ),
+        DataType::U64 => int_semantics(
+            DataType::U64,
+            64,
+            NumericFormat::UnsignedInteger,
+            SaturationBehavior::None,
+            0.0,
+            u64::MAX as f64,
+        ),
+        DataType::I8 => int_semantics(
+            DataType::I8,
+            8,
+            NumericFormat::SignedInteger,
+            SaturationBehavior::None,
+            -128.0,
+            127.0,
+        ),
+        DataType::I16 => int_semantics(
+            DataType::I16,
+            16,
+            NumericFormat::SignedInteger,
+            SaturationBehavior::None,
+            -32768.0,
+            32767.0,
+        ),
+        DataType::I32 => int_semantics(
+            DataType::I32,
+            32,
+            NumericFormat::SignedInteger,
+            SaturationBehavior::None,
+            i32::MIN as f64,
+            i32::MAX as f64,
+        ),
+        DataType::I64 => int_semantics(
+            DataType::I64,
+            64,
+            NumericFormat::SignedInteger,
+            SaturationBehavior::None,
+            i64::MIN as f64,
+            i64::MAX as f64,
+        ),
+        DataType::I4 => int_semantics(
+            DataType::I4,
+            4,
+            NumericFormat::SignedInteger,
+            SaturationBehavior::ClampsToFiniteRange,
+            -8.0,
+            7.0,
+        ),
+        DataType::FP4 => float_semantics(
+            DataType::FP4,
+            4,
+            NumericFormat::IeeeLikeFloat,
+            Some((2, 1, 1)),
+            RoundingMode::RoundToNearestEven,
+            OverflowBehavior::SaturateToFiniteRange,
+            SaturationBehavior::ClampsToFiniteRange,
+            SignedZeroBehavior::Preserved,
+            SubnormalBehavior::PreservedIEEE,
+            InfinityBehavior::SaturatedToMaxFinite,
+            NanBehavior::UnsupportedOrZero,
+            6.0,
+        ),
+        DataType::NF4 => float_semantics(
+            DataType::NF4,
+            4,
+            NumericFormat::NormalFloat,
+            None,
+            RoundingMode::NearestQuantile,
+            OverflowBehavior::SaturateToFiniteRange,
+            SaturationBehavior::ClampsToUnitInterval,
+            SignedZeroBehavior::UnsignedZero,
+            SubnormalBehavior::Unsupported,
+            InfinityBehavior::SaturatedToMaxFinite,
+            NanBehavior::UnsupportedOrZero,
+            1.0,
+        ),
+        DataType::F8E4M3 => float_semantics(
+            DataType::F8E4M3,
+            8,
+            NumericFormat::IeeeLikeFloat,
+            Some((4, 3, 7)),
+            RoundingMode::RoundToNearestEven,
+            OverflowBehavior::NanOrSaturate,
+            SaturationBehavior::ClampsToFiniteRange,
+            SignedZeroBehavior::Preserved,
+            SubnormalBehavior::PreservedIEEE,
+            InfinityBehavior::SaturatedToMaxFinite,
+            NanBehavior::DedicatedNanBitPattern,
+            448.0,
+        ),
+        DataType::F8E5M2 => float_semantics(
+            DataType::F8E5M2,
+            8,
+            NumericFormat::IeeeLikeFloat,
+            Some((5, 2, 15)),
+            RoundingMode::RoundToNearestEven,
+            OverflowBehavior::SignedInfinity,
+            SaturationBehavior::None,
+            SignedZeroBehavior::Preserved,
+            SubnormalBehavior::PreservedIEEE,
+            InfinityBehavior::SignedInfinity,
+            NanBehavior::CanonicalQuietNan,
+            57344.0,
+        ),
+        DataType::F16 => ieee_flushed_semantics(DataType::F16, 16, 5, 10, 15, 65504.0),
+        DataType::BF16 => ieee_flushed_semantics(DataType::BF16, 16, 8, 7, 127, 3.3895314e38),
+        DataType::F32 => ieee_flushed_semantics(DataType::F32, 32, 8, 23, 127, f32::MAX as f64),
         DataType::F64 => NumericSemantics {
             datatype: DataType::F64,
             bit_width: Some(64),

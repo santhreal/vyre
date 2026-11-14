@@ -363,16 +363,15 @@ pub fn csr_closure_with_step_hook_witness(
     seed_frontier: &[u32],
     mut step_hook: impl FnMut(&[u32]),
 ) -> Vec<u32> {
-    let mut current = seed_frontier.to_vec();
     let num_words = (node_count as usize).div_ceil(32);
-    if current.len() < num_words {
-        current.resize(num_words, 0);
-    }
+    let mut current = Vec::with_capacity(num_words.max(seed_frontier.len()));
+    prepare_copied_buffer(&mut current, num_words, seed_frontier);
     assert!(
         edge_offsets.len() > node_count as usize,
         "complete CSR offset table"
     );
-    let mut next = current.clone();
+    let mut next = Vec::with_capacity(current.len());
+    next.extend_from_slice(&current);
     for _ in 0..max_iters {
         let mut changed = false;
         for_each_active_edge(
@@ -395,7 +394,8 @@ pub fn csr_closure_with_step_hook_witness(
             break;
         }
         step_hook(&next);
-        current = next.clone();
+        current.clear();
+        current.extend_from_slice(&next);
     }
     current
 }
